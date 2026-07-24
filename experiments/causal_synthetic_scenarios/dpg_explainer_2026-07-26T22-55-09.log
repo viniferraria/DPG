@@ -1,0 +1,94 @@
+2026-07-26 19:55:09,428 - __main__ - INFO - Starting DPG explainer experiments...
+2026-07-26 19:55:09,428 - __main__ - INFO - Processing datasets/scenario_1.csv...
+2026-07-26 19:55:19,836 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_RandomForest_split0_dpg_explainer_2026-07-26T22-55-19.pkl
+2026-07-26 19:55:19,839 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=0...
+2026-07-26 19:55:19,977 - __main__ - INFO - Global explanation generated in 0.14s
+2026-07-26 19:55:19,977 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_RandomForest_split0_explanation_2026-07-26T22-55-19.pkl
+2026-07-26 19:55:19,980 - __main__ - INFO - Collected 476 node records for scenario_1_RandomForest split=0
+2026-07-26 19:55:29,194 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_RandomForest_split1_dpg_explainer_2026-07-26T22-55-29.pkl
+2026-07-26 19:55:29,200 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=1...
+2026-07-26 19:55:29,326 - __main__ - INFO - Global explanation generated in 0.13s
+2026-07-26 19:55:29,326 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_RandomForest_split1_explanation_2026-07-26T22-55-29.pkl
+2026-07-26 19:55:29,329 - __main__ - INFO - Collected 448 node records for scenario_1_RandomForest split=1
+2026-07-26 19:55:29,342 - __main__ - INFO - [scenario_1_RandomForest] mean accuracy over 2 splits: 1.0000
+2026-07-26 19:55:40,132 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_ExtraTrees_split0_dpg_explainer_2026-07-26T22-55-40.pkl
+2026-07-26 19:55:40,169 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=0...
+2026-07-26 19:56:54,160 - __main__ - INFO - Global explanation generated in 73.99s
+2026-07-26 19:56:54,163 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_ExtraTrees_split0_explanation_2026-07-26T22-55-40.pkl
+2026-07-26 19:56:54,207 - __main__ - INFO - Collected 4942 node records for scenario_1_ExtraTrees split=0
+2026-07-26 19:57:02,864 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_ExtraTrees_split1_dpg_explainer_2026-07-26T22-57-02.pkl
+2026-07-26 19:57:02,881 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=1...
+2026-07-26 19:58:16,137 - __main__ - INFO - Global explanation generated in 73.26s
+2026-07-26 19:58:16,140 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_1_ExtraTrees_split1_explanation_2026-07-26T22-57-02.pkl
+2026-07-26 19:58:16,183 - __main__ - INFO - Collected 4979 node records for scenario_1_ExtraTrees split=1
+2026-07-26 19:58:16,297 - __main__ - INFO - [scenario_1_ExtraTrees] mean accuracy over 2 splits: 0.9925
+2026-07-26 19:58:16,297 - __main__ - INFO - Processing datasets/scenario_2_updated.csv...
+2026-07-26 19:58:26,431 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_RandomForest_split0_dpg_explainer_2026-07-26T22-58-26.pkl
+2026-07-26 19:58:26,443 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=0...
+2026-07-26 19:58:29,948 - __main__ - INFO - Global explanation generated in 3.51s
+2026-07-26 19:58:29,948 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_RandomForest_split0_explanation_2026-07-26T22-58-26.pkl
+2026-07-26 19:58:29,961 - __main__ - INFO - Collected 1721 node records for scenario_2_updated_RandomForest split=0
+2026-07-26 19:58:38,737 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_RandomForest_split1_dpg_explainer_2026-07-26T22-58-38.pkl
+2026-07-26 19:58:38,746 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=1...
+2026-07-26 19:58:42,841 - __main__ - INFO - Global explanation generated in 4.10s
+2026-07-26 19:58:42,841 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_RandomForest_split1_explanation_2026-07-26T22-58-38.pkl
+2026-07-26 19:58:42,857 - __main__ - INFO - Collected 1812 node records for scenario_2_updated_RandomForest split=1
+2026-07-26 19:58:42,898 - __main__ - INFO - [scenario_2_updated_RandomForest] mean accuracy over 2 splits: 0.9900
+2026-07-26 19:58:57,160 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_ExtraTrees_split0_dpg_explainer_2026-07-26T22-58-57.pkl
+2026-07-26 19:58:57,181 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=0...
+2026-07-26 20:00:44,712 - __main__ - INFO - Global explanation generated in 107.53s
+2026-07-26 20:00:44,714 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_ExtraTrees_split0_explanation_2026-07-26T22-58-57.pkl
+2026-07-26 20:00:44,860 - __main__ - INFO - Collected 5778 node records for scenario_2_updated_ExtraTrees split=0
+2026-07-26 20:00:57,891 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_ExtraTrees_split1_dpg_explainer_2026-07-26T23-00-57.pkl
+2026-07-26 20:00:57,918 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=1...
+2026-07-26 20:02:23,345 - __main__ - INFO - Global explanation generated in 85.43s
+2026-07-26 20:02:23,347 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_2_updated_ExtraTrees_split1_explanation_2026-07-26T23-00-57.pkl
+2026-07-26 20:02:23,405 - __main__ - INFO - Collected 5670 node records for scenario_2_updated_ExtraTrees split=1
+2026-07-26 20:02:23,577 - __main__ - INFO - [scenario_2_updated_ExtraTrees] mean accuracy over 2 splits: 0.9775
+2026-07-26 20:02:23,577 - __main__ - INFO - Processing datasets/scenario_3.csv...
+2026-07-26 20:02:36,126 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_RandomForest_split0_dpg_explainer_2026-07-26T23-02-36.pkl
+2026-07-26 20:02:36,158 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=0...
+2026-07-26 20:03:04,681 - __main__ - INFO - Global explanation generated in 28.52s
+2026-07-26 20:03:04,682 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_RandomForest_split0_explanation_2026-07-26T23-02-36.pkl
+2026-07-26 20:03:04,712 - __main__ - INFO - Collected 3824 node records for scenario_3_RandomForest split=0
+2026-07-26 20:03:14,065 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_RandomForest_split1_dpg_explainer_2026-07-26T23-03-14.pkl
+2026-07-26 20:03:14,082 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=1...
+2026-07-26 20:03:42,947 - __main__ - INFO - Global explanation generated in 28.86s
+2026-07-26 20:03:42,947 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_RandomForest_split1_explanation_2026-07-26T23-03-14.pkl
+2026-07-26 20:03:42,977 - __main__ - INFO - Collected 3984 node records for scenario_3_RandomForest split=1
+2026-07-26 20:03:43,067 - __main__ - INFO - [scenario_3_RandomForest] mean accuracy over 2 splits: 0.9575
+2026-07-26 20:03:56,327 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_ExtraTrees_split0_dpg_explainer_2026-07-26T23-03-56.pkl
+2026-07-26 20:03:56,355 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=0...
+2026-07-26 20:06:17,692 - __main__ - INFO - Global explanation generated in 141.34s
+2026-07-26 20:06:17,694 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_ExtraTrees_split0_explanation_2026-07-26T23-03-56.pkl
+2026-07-26 20:06:17,757 - __main__ - INFO - Collected 6795 node records for scenario_3_ExtraTrees split=0
+2026-07-26 20:06:31,516 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_ExtraTrees_split1_dpg_explainer_2026-07-26T23-06-31.pkl
+2026-07-26 20:06:31,550 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=1...
+2026-07-26 20:09:15,139 - __main__ - INFO - Global explanation generated in 163.59s
+2026-07-26 20:09:15,142 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_3_ExtraTrees_split1_explanation_2026-07-26T23-06-31.pkl
+2026-07-26 20:09:15,225 - __main__ - INFO - Collected 6992 node records for scenario_3_ExtraTrees split=1
+2026-07-26 20:09:15,432 - __main__ - INFO - [scenario_3_ExtraTrees] mean accuracy over 2 splits: 0.9675
+2026-07-26 20:09:15,432 - __main__ - INFO - Processing datasets/scenario_5.csv...
+2026-07-26 20:09:24,933 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_RandomForest_split0_dpg_explainer_2026-07-26T23-09-24.pkl
+2026-07-26 20:09:24,955 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=0...
+2026-07-26 20:10:51,054 - __main__ - INFO - Global explanation generated in 86.10s
+2026-07-26 20:10:51,055 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_RandomForest_split0_explanation_2026-07-26T23-09-24.pkl
+2026-07-26 20:10:51,108 - __main__ - INFO - Collected 6113 node records for scenario_5_RandomForest split=0
+2026-07-26 20:10:58,778 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_RandomForest_split1_dpg_explainer_2026-07-26T23-10-58.pkl
+2026-07-26 20:10:58,797 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=1...
+2026-07-26 20:12:14,628 - __main__ - INFO - Global explanation generated in 75.83s
+2026-07-26 20:12:14,629 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_RandomForest_split1_explanation_2026-07-26T23-10-58.pkl
+2026-07-26 20:12:14,672 - __main__ - INFO - Collected 5901 node records for scenario_5_RandomForest split=1
+2026-07-26 20:12:14,803 - __main__ - INFO - [scenario_5_RandomForest] mean accuracy over 2 splits: 0.8750
+2026-07-26 20:12:27,631 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_ExtraTrees_split0_dpg_explainer_2026-07-26T23-12-27.pkl
+2026-07-26 20:12:27,650 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=0...
+2026-07-26 20:13:04,285 - __main__ - INFO - Global explanation generated in 36.63s
+2026-07-26 20:13:04,287 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_ExtraTrees_split0_explanation_2026-07-26T23-12-27.pkl
+2026-07-26 20:13:04,321 - __main__ - INFO - Collected 5379 node records for scenario_5_ExtraTrees split=0
+2026-07-26 20:13:17,141 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_ExtraTrees_split1_dpg_explainer_2026-07-26T23-13-17.pkl
+2026-07-26 20:13:17,165 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=1...
+2026-07-26 20:13:53,025 - __main__ - INFO - Global explanation generated in 35.86s
+2026-07-26 20:13:53,026 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/causal_synthetic_scenarios/states/scenario_5_ExtraTrees_split1_explanation_2026-07-26T23-13-17.pkl
+2026-07-26 20:13:53,060 - __main__ - INFO - Collected 5441 node records for scenario_5_ExtraTrees split=1
+2026-07-26 20:13:53,179 - __main__ - INFO - [scenario_5_ExtraTrees] mean accuracy over 2 splits: 0.8525
+2026-07-26 20:13:54,054 - __main__ - INFO - All experiments completed.
