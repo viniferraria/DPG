@@ -1,6 +1,4 @@
 import pandas as pd
-import networkx as nx
-
 
 class EdgeMetrics:
     """Handles edge-level metric calculations."""
@@ -22,17 +20,14 @@ class EdgeMetrics:
         # Map node IDs to labels for fast lookup.
         node_id_to_label = {node_id: label for node_id, label in nodes_list}
 
-        # Calculate edge weights (assuming edges have 'weight' attribute).
-        edge_weights = nx.get_edge_attributes(dpg_model, "weight")
-
         # Build edge rows with labels and IDs.
         edge_data_with_labels = []
-        for u, v in dpg_model.edges():
+        for u, v, data in dpg_model.edges(data=True):
             u_label = node_id_to_label.get(u)
             v_label = node_id_to_label.get(v)
             edge_data_with_labels.append([
                 f"{u}-{v}",
-                edge_weights.get((u, v), 0),
+                data.get("weight", 0),
                 u_label,
                 v_label,
                 u,

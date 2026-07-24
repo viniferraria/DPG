@@ -12,7 +12,7 @@ ENV/
 
 # Data files (keep specific patterns if needed)
 *.jpg
-*.csv
+# *.csv
 *.txt
 !docs/requirements.txt
 
