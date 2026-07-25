@@ -1,0 +1,94 @@
+2026-06-25 00:44:05,425 - __main__ - INFO - Starting DPG explainer experiments...
+2026-06-25 00:44:05,425 - __main__ - INFO - Processing test_datasets/scenario_1.csv...
+2026-06-25 00:44:11,253 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split0_dpg_explainer_2026-06-25T00-44-11.pkl
+2026-06-25 00:44:11,258 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=0...
+2026-06-25 00:44:11,417 - __main__ - INFO - Global explanation generated in 0.16s
+2026-06-25 00:44:11,417 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split0_explanation_2026-06-25T00-44-11.pkl
+2026-06-25 00:44:11,421 - __main__ - INFO - Collected 476 node records for scenario_1_RandomForest split=0
+2026-06-25 00:44:18,517 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split1_dpg_explainer_2026-06-25T00-44-18.pkl
+2026-06-25 00:44:18,522 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=1...
+2026-06-25 00:44:18,688 - __main__ - INFO - Global explanation generated in 0.17s
+2026-06-25 00:44:18,688 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split1_explanation_2026-06-25T00-44-18.pkl
+2026-06-25 00:44:18,691 - __main__ - INFO - Collected 448 node records for scenario_1_RandomForest split=1
+2026-06-25 00:44:18,713 - __main__ - INFO - [scenario_1_RandomForest] mean accuracy over 2 splits: 1.0000
+2026-06-25 00:44:26,698 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split0_dpg_explainer_2026-06-25T00-44-26.pkl
+2026-06-25 00:44:26,715 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=0...
+2026-06-25 00:45:36,634 - __main__ - INFO - Global explanation generated in 69.92s
+2026-06-25 00:45:36,635 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split0_explanation_2026-06-25T00-44-26.pkl
+2026-06-25 00:45:36,678 - __main__ - INFO - Collected 4942 node records for scenario_1_ExtraTrees split=0
+2026-06-25 00:45:44,136 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split1_dpg_explainer_2026-06-25T00-45-44.pkl
+2026-06-25 00:45:44,152 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=1...
+2026-06-25 00:46:56,271 - __main__ - INFO - Global explanation generated in 72.12s
+2026-06-25 00:46:56,271 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split1_explanation_2026-06-25T00-45-44.pkl
+2026-06-25 00:46:56,310 - __main__ - INFO - Collected 4979 node records for scenario_1_ExtraTrees split=1
+2026-06-25 00:46:56,483 - __main__ - INFO - [scenario_1_ExtraTrees] mean accuracy over 2 splits: 0.9925
+2026-06-25 00:46:56,483 - __main__ - INFO - Processing test_datasets/scenario_2_updated.csv...
+2026-06-25 00:47:02,550 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split0_dpg_explainer_2026-06-25T00-47-02.pkl
+2026-06-25 00:47:02,556 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=0...
+2026-06-25 00:47:06,168 - __main__ - INFO - Global explanation generated in 3.61s
+2026-06-25 00:47:06,168 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split0_explanation_2026-06-25T00-47-02.pkl
+2026-06-25 00:47:06,179 - __main__ - INFO - Collected 1721 node records for scenario_2_updated_RandomForest split=0
+2026-06-25 00:47:12,407 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split1_dpg_explainer_2026-06-25T00-47-12.pkl
+2026-06-25 00:47:12,415 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=1...
+2026-06-25 00:47:16,644 - __main__ - INFO - Global explanation generated in 4.23s
+2026-06-25 00:47:16,644 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split1_explanation_2026-06-25T00-47-12.pkl
+2026-06-25 00:47:16,657 - __main__ - INFO - Collected 1812 node records for scenario_2_updated_RandomForest split=1
+2026-06-25 00:47:16,719 - __main__ - INFO - [scenario_2_updated_RandomForest] mean accuracy over 2 splits: 0.9900
+2026-06-25 00:47:23,637 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split0_dpg_explainer_2026-06-25T00-47-23.pkl
+2026-06-25 00:47:23,657 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=0...
+2026-06-25 00:49:09,768 - __main__ - INFO - Global explanation generated in 106.11s
+2026-06-25 00:49:09,770 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split0_explanation_2026-06-25T00-47-23.pkl
+2026-06-25 00:49:09,827 - __main__ - INFO - Collected 5778 node records for scenario_2_updated_ExtraTrees split=0
+2026-06-25 00:49:18,683 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split1_dpg_explainer_2026-06-25T00-49-18.pkl
+2026-06-25 00:49:18,710 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=1...
+2026-06-25 00:50:41,269 - __main__ - INFO - Global explanation generated in 82.56s
+2026-06-25 00:50:41,270 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split1_explanation_2026-06-25T00-49-18.pkl
+2026-06-25 00:50:41,322 - __main__ - INFO - Collected 5670 node records for scenario_2_updated_ExtraTrees split=1
+2026-06-25 00:50:41,613 - __main__ - INFO - [scenario_2_updated_ExtraTrees] mean accuracy over 2 splits: 0.9775
+2026-06-25 00:50:41,613 - __main__ - INFO - Processing test_datasets/scenario_3.csv...
+2026-06-25 00:50:48,866 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split0_dpg_explainer_2026-06-25T00-50-48.pkl
+2026-06-25 00:50:48,878 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=0...
+2026-06-25 00:51:17,752 - __main__ - INFO - Global explanation generated in 28.87s
+2026-06-25 00:51:17,753 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split0_explanation_2026-06-25T00-50-48.pkl
+2026-06-25 00:51:17,785 - __main__ - INFO - Collected 3824 node records for scenario_3_RandomForest split=0
+2026-06-25 00:51:25,055 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split1_dpg_explainer_2026-06-25T00-51-25.pkl
+2026-06-25 00:51:25,068 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=1...
+2026-06-25 00:51:54,949 - __main__ - INFO - Global explanation generated in 29.88s
+2026-06-25 00:51:54,950 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split1_explanation_2026-06-25T00-51-25.pkl
+2026-06-25 00:51:54,988 - __main__ - INFO - Collected 3984 node records for scenario_3_RandomForest split=1
+2026-06-25 00:51:55,133 - __main__ - INFO - [scenario_3_RandomForest] mean accuracy over 2 splits: 0.9575
+2026-06-25 00:52:03,011 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split0_dpg_explainer_2026-06-25T00-52-03.pkl
+2026-06-25 00:52:03,048 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=0...
+2026-06-25 00:54:27,715 - __main__ - INFO - Global explanation generated in 144.67s
+2026-06-25 00:54:27,716 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split0_explanation_2026-06-25T00-52-03.pkl
+2026-06-25 00:54:27,783 - __main__ - INFO - Collected 6795 node records for scenario_3_ExtraTrees split=0
+2026-06-25 00:54:35,402 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split1_dpg_explainer_2026-06-25T00-54-35.pkl
+2026-06-25 00:54:35,434 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=1...
+2026-06-25 00:57:12,366 - __main__ - INFO - Global explanation generated in 156.93s
+2026-06-25 00:57:12,368 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split1_explanation_2026-06-25T00-54-35.pkl
+2026-06-25 00:57:12,423 - __main__ - INFO - Collected 6992 node records for scenario_3_ExtraTrees split=1
+2026-06-25 00:57:12,666 - __main__ - INFO - [scenario_3_ExtraTrees] mean accuracy over 2 splits: 0.9675
+2026-06-25 00:57:12,666 - __main__ - INFO - Processing test_datasets/scenario_5.csv...
+2026-06-25 00:57:19,624 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split0_dpg_explainer_2026-06-25T00-57-19.pkl
+2026-06-25 00:57:19,648 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=0...
+2026-06-25 00:58:43,264 - __main__ - INFO - Global explanation generated in 83.62s
+2026-06-25 00:58:43,266 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split0_explanation_2026-06-25T00-57-19.pkl
+2026-06-25 00:58:43,404 - __main__ - INFO - Collected 6113 node records for scenario_5_RandomForest split=0
+2026-06-25 00:58:50,702 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split1_dpg_explainer_2026-06-25T00-58-50.pkl
+2026-06-25 00:58:50,728 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=1...
+2026-06-25 01:00:11,083 - __main__ - INFO - Global explanation generated in 80.36s
+2026-06-25 01:00:11,084 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split1_explanation_2026-06-25T00-58-50.pkl
+2026-06-25 01:00:11,213 - __main__ - INFO - Collected 5901 node records for scenario_5_RandomForest split=1
+2026-06-25 01:00:11,413 - __main__ - INFO - [scenario_5_RandomForest] mean accuracy over 2 splits: 0.8750
+2026-06-25 01:00:17,629 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split0_dpg_explainer_2026-06-25T01-00-17.pkl
+2026-06-25 01:00:17,651 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=0...
+2026-06-25 01:00:52,909 - __main__ - INFO - Global explanation generated in 35.26s
+2026-06-25 01:00:52,910 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split0_explanation_2026-06-25T01-00-17.pkl
+2026-06-25 01:00:52,956 - __main__ - INFO - Collected 5379 node records for scenario_5_ExtraTrees split=0
+2026-06-25 01:00:59,821 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split1_dpg_explainer_2026-06-25T01-00-59.pkl
+2026-06-25 01:00:59,845 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=1...
+2026-06-25 01:01:37,477 - __main__ - INFO - Global explanation generated in 37.63s
+2026-06-25 01:01:37,479 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split1_explanation_2026-06-25T01-00-59.pkl
+2026-06-25 01:01:37,521 - __main__ - INFO - Collected 5441 node records for scenario_5_ExtraTrees split=1
+2026-06-25 01:01:37,718 - __main__ - INFO - [scenario_5_ExtraTrees] mean accuracy over 2 splits: 0.8525
+2026-06-25 01:01:37,723 - __main__ - INFO - All experiments completed.
