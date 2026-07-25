@@ -23,10 +23,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --locked --dev
 
       - name: Run ruff
         run: uv run ruff check $(git ls-files '*.py')
+
+      - name: Run mypy
+        run: uv run mypy dpg/ metrics/
 
       - name: Run pytest
         run: uv run pytest
@@ -42,6 +45,6 @@ jobs:
               --base develop \
               --head "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
-              --body "Automated PR: ruff and pytest passed on \`$GITHUB_REF_NAME\`." \
+              --body "Automated PR: ruff, mypy, and pytest passed on \`$GITHUB_REF_NAME\`." \
               || echo "::warning::Could not open PR (e.g. no diff against develop)."
           fi
