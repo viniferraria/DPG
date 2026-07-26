@@ -259,7 +259,8 @@ def write_causal_accuracy_to_csv(
         "precision",
         "recall",
     ]
-    file_path = output_path / "causal_accuracy_2.csv"
+    ts = timestamp()
+    file_path = output_path / f"causal_accuracy_{ts}.csv"
     file_exists = file_path.exists()
     with open(file_path, "a+", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
