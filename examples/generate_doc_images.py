@@ -1,18 +1,24 @@
 """Generate documentation images for quickstart and visualization guides."""
 import sys
-import os
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
 import matplotlib
+
 matplotlib.use("Agg")
 
 from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
-from dpg import DPGExplainer, plot_class_feature_complexity, plot_lrc_vs_rf_importance, plot_top_lrc_predicate_splits
+
+from dpg import (
+    DPGExplainer,
+    plot_class_feature_complexity,
+    plot_lrc_vs_rf_importance,
+    plot_top_lrc_predicate_splits,
+)
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Setup paths
 QUICKSTART_DIR = PROJECT_ROOT / "docs" / "_static" / "quickstart"

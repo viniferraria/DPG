@@ -1,26 +1,29 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
-from sklearn.decomposition import PCA
+
+
 
 # ============================================================
-# Scenario 2
+# Scenario 3
 # 5 features
-# Causal feature: F1
+# Causal features: F1, F2
 #
 # Mechanism:
-#     Y <- F1 + ε
+#     Y <- 0.6*F1 + 0.4*F2 + ε
 #
 # Characteristics:
-# - F1 is the only causal variable.
-# - Moderate Gaussian noise.
-# - Non-causal features exhibit weak correlations among themselves.
-# - Correlated predictors may appear predictive due to finite sampling,
-#   but they do not participate in the data-generating mechanism.
+# - Two additive causal variables.
+# - F1 has a stronger effect than F2.
+# - Remaining features are non-causal.
+# - Moderate noise.
 #
 # Goal:
-# Distinguish a true cause from correlated but non-causal variables.
+# Evaluate whether DPG:
+#   1. Recovers both causal features.
+#   2. Preserves the relative importance:
+#        F1 > F2.
+#   3. Remains robust when tree predicates create
+#      threshold-based partitions of continuous variables.
 # ============================================================
 
 # Reproducibility
@@ -34,28 +37,13 @@ N = 1000
 # Feature generation
 # ------------------------------------------------------------
 
-# True causal feature
-F1 = rng.normal(0, 1, N)
+# Causal features
+F1 = rng.normal(loc=0.0, scale=1.0, size=N)
+F2 = rng.normal(loc=0.0, scale=1.0, size=N)
 
-# Generate weakly correlated non-causal continuous features
-#
-# Covariance matrix produces pairwise correlations ≈ 0.20
-#
-cov = np.array([
-    [1.0, 0.2, 0.2],
-    [0.2, 1.0, 0.2],
-    [0.2, 0.2, 1.0]
-])
-
-F2_F3_F4 = rng.multivariate_normal(
-    mean=[0, 0, 0],
-    cov=cov,
-    size=N
-)
-
-F2 = F2_F3_F4[:, 0]
-F3 = F2_F3_F4[:, 1]
-F4 = F2_F3_F4[:, 2]
+# Non-causal continuous features
+F3 = rng.normal(loc=0.0, scale=1.0, size=N)
+F4 = rng.normal(loc=0.0, scale=1.0, size=N)
 
 # Non-causal categorical feature
 F5 = rng.choice(
@@ -67,10 +55,13 @@ F5 = rng.choice(
 # ------------------------------------------------------------
 # Noise term
 # ------------------------------------------------------------
-# Moderate noise
 #
-# Signal variance ≈ Var(F1) = 1
-# Noise variance = 0.5² = 0.25
+# Signal variance:
+# Var(0.6F1 + 0.4F2)
+# = 0.36 + 0.16
+# = 0.52
+#
+# Moderate noise
 #
 epsilon = rng.normal(
     loc=0.0,
@@ -82,14 +73,21 @@ epsilon = rng.normal(
 # Target generation
 # ------------------------------------------------------------
 #
-# Only F1 is causal
+# True causal mechanism:
 #
-latent_score = F1 + epsilon
+# Y <- 0.6F1 + 0.4F2 + ε
+#
+latent_score = (
+    0.6 * F1 +
+    0.4 * F2 +
+    epsilon
+)
 
+# Binary classification target
 Y = (latent_score > 0).astype(int)
 
 # ------------------------------------------------------------
-# Create DataFrame
+# Build dataset
 # ------------------------------------------------------------
 df = pd.DataFrame({
     "F1": F1,
@@ -101,7 +99,7 @@ df = pd.DataFrame({
 })
 
 # ------------------------------------------------------------
-# One-hot encode categorical features
+# One-hot encoding
 # ------------------------------------------------------------
 X = pd.get_dummies(
     df.drop(columns=["Y"]),
@@ -110,7 +108,6 @@ X = pd.get_dummies(
     dtype=int
 )
 
-# Final dataset
 dataset = pd.concat(
     [X, df["Y"]],
     axis=1
@@ -124,16 +121,6 @@ print("Dataset shape:", dataset.shape)
 print("\nClass distribution:")
 print(dataset["Y"].value_counts(normalize=True))
 
-print("\nCorrelation matrix (continuous variables):")
-print(
-    pd.DataFrame({
-        "F1": F1,
-        "F2": F2,
-        "F3": F3,
-        "F4": F4
-    }).corr()
-)
-
 print("\nColumns:")
 print(dataset.columns.tolist())
 
@@ -141,9 +128,7 @@ print("\nFirst rows:")
 print(dataset.head())
 
 # Optional
-parent_dir = Path(__file__).parent.parent
-save_path = parent_dir / "test_datasets" / "scenario_2_updated.csv"
-dataset.to_csv(str(save_path.resolve()), index=False)
+dataset.to_csv("test_datasets/scenario_3.csv", index=False)
 
 # def plot_pca(df, title):
 #     pca = PCA(n_components=2)
@@ -170,4 +155,4 @@ dataset.to_csv(str(save_path.resolve()), index=False)
 #     plt.show()
 
 
-# plot_pca(dataset, "PCA of Synthetic Dataset (Scenario 2 - Binary Y)")
+# plot_pca(dataset, "PCA of Synthetic Dataset (Scenario 3 - Binary Y)")

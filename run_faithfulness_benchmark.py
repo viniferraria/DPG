@@ -6,22 +6,21 @@ This script executes the same benchmark as the Jupyter notebook.
 Usage:
     python3 run_faithfulness_benchmark.py
 """
-
 import os
-import sys
 import warnings
-warnings.filterwarnings('ignore')
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.datasets import load_iris, load_wine, load_breast_cancer
+from sklearn.datasets import load_breast_cancer, load_iris, load_wine
 from sklearn.ensemble import RandomForestClassifier
 
 from dpg import DPGExplainer
+
+warnings.filterwarnings('ignore')
+matplotlib.use('Agg')
 
 # Set style
 sns.set_style('whitegrid')
@@ -104,7 +103,7 @@ for dataset_name, data in datasets.items():
     target_names = data['target_names']
 
     # Train model
-    print(f"  Training RandomForest (10 estimators)...", end=" ", flush=True)
+    print("  Training RandomForest (10 estimators)...", end=" ", flush=True)
     model = RandomForestClassifier(
         n_estimators=10,
         max_depth=6,
@@ -116,7 +115,7 @@ for dataset_name, data in datasets.items():
     print(f"✓ (acc={train_acc:.3f})")
 
     # Fit DPG explainer
-    print(f"  Fitting DPG explainer...", end=" ", flush=True)
+    print("  Fitting DPG explainer...", end=" ", flush=True)
     explainer = DPGExplainer(
         model=model,
         feature_names=feature_names,
@@ -148,7 +147,7 @@ for dataset_name, data in datasets.items():
     print("✓")
 
     # Print results
-    print(f"\n  Results:")
+    print("\n  Results:")
     print(f"    Composite Score:      {faith_results['faithfulness_score']:.4f}")
     print(f"    Output Fidelity:      {faith_results['output_fidelity']:.4f}")
     print(f"    Trace Coverage:       {faith_results['mean_trace_coverage_score']:.4f}")
@@ -165,7 +164,7 @@ output_dir = 'tutorials/faithfulness_results'
 os.makedirs(output_dir, exist_ok=True)
 
 # 1. Composite scores
-print(f"\n  Creating composite scores chart...", end=" ", flush=True)
+print("\n  Creating composite scores chart...", end=" ", flush=True)
 fig, ax = plt.subplots(figsize=(10, 5))
 composite_scores = {name: results[name]['faithfulness_score'] for name in results.keys()}
 datasets_list = list(composite_scores.keys())
@@ -193,7 +192,7 @@ plt.savefig(f'{output_dir}/01_composite_scores.png', dpi=150, bbox_inches='tight
 print("✓")
 
 # 2. Metric breakdown
-print(f"  Creating metric breakdown chart...", end=" ", flush=True)
+print("  Creating metric breakdown chart...", end=" ", flush=True)
 fig, ax = plt.subplots(figsize=(12, 6))
 
 x = np.arange(len(datasets_list))

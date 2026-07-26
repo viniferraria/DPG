@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
-from typing import Iterable, Sequence, Tuple
+from typing import Sequence, Tuple
 
 import pandas as pd
 

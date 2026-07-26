@@ -5,7 +5,6 @@ All tests use Iris with a fixed seed (160898) so that the expected metric
 values are deterministic and reproducible.
 """
 
-import math
 import re
 
 import numpy as np

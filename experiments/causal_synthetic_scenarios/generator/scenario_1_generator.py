@@ -1,7 +1,26 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
+
+"""
+Synthetic Dataset — Scenario 1
+================================
+DGP:
+    Y = F1
+
+    F1 ~ N(0, 1)              [continuous, CAUSAL]
+    F2 ~ N(0, 1)              [continuous, IRRELEVANT]
+    F3 ∈ {A, B, C}     [categorical, IRRELEVANT]  → OHE → F2_mid, F2_high
+
+Challenge:
+    Sanity check. A tree ensemble must recover F1 as the sole driver.
+    F2 and F3 carry zero population-level information about Y.
+
+Dependencies:
+    numpy==1.26.4
+    pandas==2.2.2
+    scikit-learn==1.5.0
+    scipy==1.13.0
+"""
 
 # ============================================================
 # Scenario 1

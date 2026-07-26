@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import ntpath
 import os
-from typing import Any, Optional, Tuple, Union
-import yaml
+from typing import Any, Optional, Tuple
 
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -20,7 +19,7 @@ from sklearn.metrics import (accuracy_score, classification_report,
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import (load_iris, load_digits, load_wine,
                              load_breast_cancer, load_diabetes)
-from sklearn.base import is_classifier, is_regressor
+from sklearn.base import is_classifier
 
 from .core import DecisionPredicateGraph
 from .visualizer import plot_dpg, plot_dpg_communities
