@@ -13,9 +13,10 @@ import logging
 import pickle
 import time
 import traceback
+from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -117,7 +118,7 @@ class NodeMetricRecord:
 
 def timestamp(now: datetime.datetime | None = None) -> str:
     """Return a filesystem-safe timestamp string."""
-    return (now or datetime.datetime.now()).strftime("%Y-%m-%dT%H-%M-%S")
+    return (now or datetime.datetime.now(tz=datetime.timezone.utc)).strftime("%Y-%m-%dT%H-%M-%S")
 
 
 def make_splitter() -> StratifiedShuffleSplit:
@@ -148,7 +149,7 @@ def extract_top_k_features(
 ) -> list[str]:
     """Return the top-k features by local reaching centrality from a DPG explanation."""
     results = explanation[~(explanation["Label"].str.startswith("Class"))].copy()
-    results["Label"] = results["Label"].str.extract("([^\s]+)")
+    results["Label"] = results["Label"].str.extract(r"([^\s]+)")
     top_features = (
         results.sort_values(by=metric, ascending=False).head(top_k)["Label"].tolist()
     )

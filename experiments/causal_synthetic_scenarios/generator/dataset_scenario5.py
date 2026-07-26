@@ -46,16 +46,16 @@ Dependencies:
 # ── 1. Imports & config ────────────────────────────────────────────────────────
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from scipy import stats
 from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.inspection import permutation_importance
-from sklearn.metrics import roc_auc_score, log_loss
+from sklearn.metrics import log_loss, roc_auc_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 SEED       = 42
 N          = 1000
@@ -230,8 +230,8 @@ ev       = pca.explained_variance_ratio_
 
 fig, ax = plt.subplots(figsize=(5.2, 4.6))
 styles = {
-    0: dict(marker="o", color="black",   label="0"),
-    1: dict(marker="s", color="#E6A817", label="1"),   # goldenrod
+    0: {"marker": "o", "color": "black",   "label": "0"},
+    1: {"marker": "s", "color": "#E6A817", "label": "1"},   # goldenrod
 }
 for cls, st in styles.items():
     idx = (Y == cls)

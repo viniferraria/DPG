@@ -1,13 +1,15 @@
 import os
 import re
 import shutil
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 import yaml
 from graphviz import Digraph
 
-def highlight_class_node(dot: Digraph, dpg_config: Optional[Dict[str, Any]] = None) -> Digraph:
+from .exceptions import DPGConfigurationError, DPGValidationError
+
+
+def highlight_class_node(dot: Digraph, dpg_config: dict[str, Any] | None = None) -> Digraph:
     """
     Highlights nodes in the Graphviz Digraph that contain "Class" in their identifiers by changing their fill color
     and adding a rounded shape.
@@ -21,7 +23,7 @@ def highlight_class_node(dot: Digraph, dpg_config: Optional[Dict[str, Any]] = No
     """
 
     if not isinstance(dot, Digraph):
-        raise ValueError("Input must be a Graphviz Digraph object")
+        raise DPGValidationError.graphviz_type_required()
 
     # Get class node styling from config or use defaults
     if dpg_config is not None:
@@ -40,7 +42,7 @@ def highlight_class_node(dot: Digraph, dpg_config: Optional[Dict[str, Any]] = No
         except FileNotFoundError:
             class_style = {}
         except yaml.YAMLError as e:
-            raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
+            raise DPGConfigurationError.invalid_yaml(e) from e
 
     # Get values with defaults
     fillcolor = class_style.get("fillcolor", "#a4c2f4")  # Default light blue
@@ -82,7 +84,7 @@ def change_node_color(graph: Digraph, node_id: str, new_color: str) -> None:
     None
     """
     if not any(node_id in line for line in graph.body):
-        raise ValueError(f"Node {node_id} not found in graph")
+        raise DPGValidationError.graph_node_not_found(node_id)
 
     # Remove existing color attribute if present
     for i, line in enumerate(graph.body):
@@ -106,7 +108,7 @@ def delete_folder_contents(folder_path: str) -> None:
     """
 
     if not os.path.isdir(folder_path):
-        raise ValueError(f"Path {folder_path} is not a valid directory")
+        raise DPGValidationError.directory_required(folder_path)
 
     # Iterate over each item in the folder
     for item in os.listdir(folder_path):
@@ -117,6 +119,6 @@ def delete_folder_contents(folder_path: str) -> None:
                 os.unlink(item_path)  # Remove the file or link
             elif os.path.isdir(item_path):
                 shutil.rmtree(item_path)  # Remove the directory and its contents
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - continue cleaning remaining entries
             # Print an error message if the deletion fails
             print(f"Failed to delete {item_path}. Reason: {e}")

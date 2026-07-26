@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import copy
 import math
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, List
 
 import matplotlib
 
@@ -25,12 +25,11 @@ from dpg import (
 )
 from dpg.visualizer import plot_dpg_communities, plot_dpg_reg
 
-
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "dpg_image_examples" / "plot_gallery"
 
 
-def build_explainer() -> tuple[DPGExplainer, object, object, object, List[str], RandomForestClassifier]:
+def build_explainer() -> tuple[DPGExplainer, object, object, object, list[str], RandomForestClassifier]:
     X, y = load_iris(return_X_y=True, as_frame=True)
     target_names = ["setosa", "versicolor", "virginica"]
 
@@ -46,12 +45,12 @@ def build_explainer() -> tuple[DPGExplainer, object, object, object, List[str], 
     return explainer, explanation, X, y, target_names, model
 
 
-def build_constraints_dict(explanation) -> Dict[str, Dict[str, Dict[str, float | None]]]:
+def build_constraints_dict(explanation) -> dict[str, dict[str, dict[str, float | None]]]:
     class_bounds = classwise_feature_bounds_from_communities(explanation)
     if class_bounds.empty:
         return {}
 
-    normalized: Dict[str, Dict[str, Dict[str, float | None]]] = {}
+    normalized: dict[str, dict[str, dict[str, float | None]]] = {}
     grouped = class_bounds.groupby(["class_name", "feature"], as_index=False).agg(
         lower_bound=("lower_bound", "min"),
         upper_bound=("upper_bound", "max"),
@@ -75,7 +74,7 @@ def main() -> None:
     base_dot = copy.deepcopy(explanation.dot)
     normalized_constraints = build_constraints_dict(explanation)
 
-    renderers: Dict[str, Callable[[], None]] = {
+    renderers: dict[str, Callable[[], None]] = {
         "explainer_plot": lambda: explainer.plot(
             "explainer_plot",
             explanation=type(explanation)(
@@ -233,15 +232,15 @@ def main() -> None:
         ),
     }
 
-    results: List[str] = []
-    failures: List[str] = []
+    results: list[str] = []
+    failures: list[str] = []
 
     for name, render in renderers.items():
         try:
             render()
             results.append(name)
             print(f"OK  {name}")
-        except Exception as exc:  # pragma: no cover - helper script
+        except Exception as exc:  # noqa: BLE001 - keep rendering all gallery plots
             failures.append(f"{name}: {type(exc).__name__}: {exc}")
             print(f"ERR {name}: {type(exc).__name__}: {exc}")
 
