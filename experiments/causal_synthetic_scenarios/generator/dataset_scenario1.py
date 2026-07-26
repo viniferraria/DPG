@@ -49,7 +49,7 @@ rng = np.random.default_rng(SEED)
 F1 = rng.standard_normal(N)
 
 # F2 — categorical, irrelevant; uniform across 3 levels
-F2_raw = rng.choice(["low", "mid", "high"], size=N)
+F2_raw = rng.choice(["low", "mid", "high"], size=N, p=[0.4, 0.3, 0.3])
 
 # F3 — continuous, irrelevant
 F3 = rng.standard_normal(N)
@@ -89,7 +89,7 @@ print("=" * 55)
 print(f"\n[Shape]  X: {X.shape}  |  y: {y.shape}")
 print(f"\n[Dtypes]\n{X.dtypes.to_string()}")
 
-print(f"\n[Target Y]")
+print("\n[Target Y]")
 print(f"  mean = {Y.mean():.4f}  (expected ≈ 0)")
 print(f"  std  = {Y.std():.4f}  (expected ≈ sqrt(BETA1²+σ²) = {np.sqrt(BETA1**2 + SIGMA**2):.4f})")
 

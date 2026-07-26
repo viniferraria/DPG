@@ -1,28 +1,25 @@
 """Generate all visualization documentation images."""
 import sys
-import os
 from pathlib import Path
+
+import matplotlib
+from sklearn.datasets import load_iris
+from sklearn.ensemble import RandomForestClassifier
+
+from dpg import (
+    DPGExplainer,
+    plot_class_feature_complexity,
+    plot_dpg_class_bounds_vs_dataset_feature_ranges,
+    plot_lrc_vs_rf_importance,
+    plot_top_lrc_predicate_splits,
+)
+from dpg.visualizer import plot_sample_using_bc_weights
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-import matplotlib
 matplotlib.use("Agg")
-
-import numpy as np
-import pandas as pd
-from sklearn.datasets import load_iris
-from sklearn.ensemble import RandomForestClassifier
-from dpg import (
-    DPGExplainer,
-    plot_class_feature_complexity,
-    plot_lrc_vs_rf_importance,
-    plot_top_lrc_predicate_splits,
-    plot_dpg_class_bounds_vs_dataset_feature_ranges,
-    classwise_feature_bounds_from_communities,
-)
-from dpg.visualizer import plot_sample_using_bc_weights
 
 # Setup paths
 VISUALIZATION_DIR = PROJECT_ROOT / "docs" / "_static" / "visualization"

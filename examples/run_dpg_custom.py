@@ -1,13 +1,16 @@
-import sys
+import argparse
 import os
+import sys
+
+import yaml
+
+import dpg.sklearn_dpg as test
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
 
-import yaml
-import argparse
-import dpg.sklearn_dpg as test
+
 
 
 

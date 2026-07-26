@@ -5,10 +5,8 @@ Validates end-to-end pipeline: dataset loading, model training, DPG extraction,
 and metric computation through the same entry point used by run_dpg_standard.py.
 """
 
-import numpy as np
 import pandas as pd
 import pytest
-from sklearn.metrics import accuracy_score, f1_score
 
 import dpg.sklearn_dpg as sklearn_dpg
 from dpg.sklearn_dpg import select_dataset

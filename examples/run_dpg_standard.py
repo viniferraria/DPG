@@ -1,19 +1,17 @@
-import sys
+import argparse
 import os
+import re
+import sys
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+import yaml
+import dpg.sklearn_dpg as test
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
-
-from collections import defaultdict
-import re
-import pandas as pd
-import yaml
-import argparse
-import random
-import dpg.sklearn_dpg as test
-import numpy as np
-from metrics.graph import GraphMetrics
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

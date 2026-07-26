@@ -6,7 +6,6 @@ AdaBoost, and other ensemble methods to provide a consistent interface for DPG.
 """
 
 import copy
-import numpy as np
 from sklearn.ensemble import (
     GradientBoostingClassifier,
     GradientBoostingRegressor,

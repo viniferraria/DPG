@@ -1,19 +1,23 @@
-import pandas as pd
-pd.set_option("display.max_colwidth", 255)
-import re
-import math
+import hashlib
 import os
-import numpy as np
+import re
+from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
 
-from tqdm import tqdm
 import graphviz
 import networkx as nx
-import hashlib
+import pandas as pd
 import yaml
 from joblib import Parallel, delayed
+from sklearn.ensemble import (
+    AdaBoostRegressor,
+    ExtraTreesRegressor,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestRegressor,
+)
+from tqdm import tqdm
 
-from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
-from sklearn.base import is_classifier, is_regressor
+from dpg.sklearn_normalizer import SklearnEnsembleNormalizer
 
 # Handle OmegaConf DictConfig if available
 try:
@@ -22,14 +26,8 @@ try:
 except ImportError:
     HAS_OMEGACONF = False
 
-from sklearn.ensemble import (
-    AdaBoostRegressor,
-    RandomForestRegressor,
-    ExtraTreesRegressor,
-    GradientBoostingClassifier,
-    GradientBoostingRegressor,
-)
-from dpg.sklearn_normalizer import SklearnEnsembleNormalizer
+pd.set_option("display.max_colwidth", 255)
+
 
 DEFAULT_DPG_CONFIG = {
     "dpg": {

@@ -177,7 +177,7 @@ print(f"\n[Dtypes]\n{X.dtypes.to_string()}")
 
 # Target distribution
 expected_std = np.sqrt(BETA1**2 + SIGMA**2)
-print(f"\n[Target Y distribution]")
+print("\n[Target Y distribution]")
 print(f"  mean = {Y.mean():.4f}   (expected ≈ 0)")
 print(f"  std  = {Y.std():.4f}   (expected ≈ {expected_std:.4f}  =  √(β₁²+σ²))")
 

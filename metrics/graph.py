@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 from joblib import Parallel, delayed
-from typing import Dict, List, Set
+from typing import Dict, List
 import re
 import math
 from collections import defaultdict
@@ -330,8 +330,8 @@ class GraphMetrics:
         R = Pp[:t, t:]
 
         # N
-        I = np.eye(t)
-        N = np.linalg.solve(I - Q, I)
+        identity_matrix = np.eye(t)
+        N = np.linalg.solve(identity_matrix - Q, identity_matrix)
 
         # Absorbing probability for each node
         B = N @ R

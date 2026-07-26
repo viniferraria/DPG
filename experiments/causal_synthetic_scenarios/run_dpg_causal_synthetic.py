@@ -70,18 +70,15 @@ TEST_SIZE = 0.2
 TOP_K = 3
 
 STATES_DIR = Path(__file__).parent / "states"
-OUTPUT_PATH = Path(__file__).parent / "datasets"
+OUTPUT_PATH = Path(__file__).parent / "results"
 
-SCENARIOS_WITH_GT: dict[str, list[str]] = {
-    # "test_datasets/scenario_01_sanity_check.csv": ["F1"],
-    # "test_datasets/scenario_02_moderate_noise_weak_corr.csv": ["F1"],
-    # "test_datasets/scenario_01b_binary_y.csv": ["F1"],
-    # "test_datasets/scenario_02b_binary_y.csv": ["F1"],
-    "test_datasets/scenario_1.csv": ["F1"],
-    "test_datasets/scenario_2_updated.csv": ["F1"],
-    "test_datasets/scenario_3.csv": ["F1", "F2"],
-    "test_datasets/scenario_5.csv": ["F1", "F2"],
+SCENARIO_GROUND_TRUTH: dict[str, list[str]] = {
+    "datasets/scenario_1.csv": ["F1"],
+    "datasets/scenario_2_updated.csv": ["F1"],
+    "datasets/scenario_3.csv": ["F1", "F2"],
+    "datasets/scenario_5.csv": ["F1", "F2"],
 }
+SCENARIOS_WITH_GT: list[str] = list(SCENARIO_GROUND_TRUTH)
 
 METRICS = [
     "Local reaching centrality",
@@ -120,6 +117,13 @@ class NodeMetricRecord:
 def timestamp(now: datetime.datetime | None = None) -> str:
     """Return a filesystem-safe timestamp string."""
     return (now or datetime.datetime.now()).strftime("%Y-%m-%dT%H-%M-%S")
+
+
+def make_splitter() -> StratifiedShuffleSplit:
+    """Return a fresh, reproducible train/test splitter using the module config."""
+    return StratifiedShuffleSplit(
+        n_splits=N_SPLITS, test_size=TEST_SIZE, random_state=RANDOM_STATE
+    )
 
 
 def load_dataset(path: str | Path) -> tuple[pd.DataFrame, pd.Series]:
@@ -208,10 +212,9 @@ def records_from_explanation(
 def write_records_to_csv(records: list[NodeMetricRecord], output_path: Path) -> None:
     """Write all ``records`` to ``output_path`` (header + one row each)."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path = output_path / "node_metrics_4.csv"
-    file_exists = file_path.exists()
+    file_exists = output_path.exists()
     fieldnames = [f.name for f in fields(NodeMetricRecord)]
-    with open(file_path, "a+", newline="") as csvfile:
+    with open(output_path, "a+", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if not file_exists:
             writer.writeheader()
@@ -325,7 +328,7 @@ def iter_splits(
         )
 
 
-def explain_split(
+def _build_explanation(
     model: Any,
     X_train: pd.DataFrame,
     y: pd.Series,
@@ -333,7 +336,7 @@ def explain_split(
     split_idx: int,
     processing_logger: Any,
 ) -> tuple[DPGExplanation, float]:
-    """Fit a DPG explainer on one split, persist artifacts, return its records."""
+    """Fit a DPG explainer on one split, persist artifacts, return its explanation."""
     explainer = DPGExplainer(
         model=model,
         feature_names=X_train.columns,
@@ -365,19 +368,45 @@ def explain_split(
     return explanation, processing_time
 
 
+def explain_split(
+    *,
+    model: Any,
+    X: pd.DataFrame,
+    X_train: pd.DataFrame,
+    y: pd.Series,
+    run_key: str,
+    split_idx: int,
+    processing_logger: Any,
+) -> list[NodeMetricRecord]:
+    """Fit a DPG explainer on one split and return its node-metric records.
+
+    ``X`` is the held-out split for this fold; the explanation itself is built
+    from ``X_train`` only, to avoid test-data leak.
+    """
+    processing_logger.info(
+        f"Explaining {run_key} split={split_idx} against {len(X)} held-out rows"
+    )
+    explanation, processing_time = _build_explanation(
+        model=model,
+        X_train=X_train,
+        y=y,
+        run_key=run_key,
+        split_idx=split_idx,
+        processing_logger=processing_logger,
+    )
+    return records_from_explanation(explanation, run_key, split_idx, processing_time)
+
+
 def run_experiments(
-    scenario_files: dict[str, list[str]],
-    n_splits: int,
+    scenario_files: list[str],
     output_path: Path,
     logger: Any,
-) -> None:
-    """Run every (scenario, model, split) combination and collect node records."""
-    # all_records: list[NodeMetricRecord] = []
-    splitter = StratifiedShuffleSplit(
-        n_splits=n_splits, test_size=TEST_SIZE, random_state=RANDOM_STATE
-    )
+) -> list[NodeMetricRecord]:
+    """Run every (scenario, model, split) combination and return their node-metric records."""
+    all_records: list[NodeMetricRecord] = []
+    splitter = make_splitter()
 
-    for scenario_file, gt_features in scenario_files.items():
+    for scenario_file in scenario_files:
         logger.info(f"Processing {scenario_file}...")
         scenario_name = Path(scenario_file).stem
         X, y = load_dataset(scenario_file)
@@ -394,10 +423,67 @@ def run_experiments(
 
                 accuracy = evaluate_accuracy(model, X_test, y_test)
                 split_accuracies.append(accuracy)
-                # logger.info(f"[{run_key}] split={split_idx} accuracy={accuracy:.4f}")
-                #
+
                 try:
-                    explanation, processing_time = explain_split(
+                    all_records.extend(
+                        explain_split(
+                            model=model,
+                            X=X_test,
+                            X_train=X_train,
+                            y=y,
+                            run_key=run_key,
+                            split_idx=split_idx,
+                            processing_logger=logger,
+                        )
+                    )
+                except Exception as exc:  # noqa: BLE001 - keep batch resilient
+                    logger.error(f"Failed: {run_key} split={split_idx}: {exc}")
+                    traceback.print_exc()
+
+            mean_accuracy = mean_or_nan(split_accuracies)
+            logger.info(
+                f"[{run_key}] mean accuracy over {len(split_accuracies)} splits: "
+                f"{mean_accuracy:.4f}"
+            )
+
+    write_records_to_csv(all_records, output_path)
+    return all_records
+
+
+def run_experiments_with_ground_truth(
+    scenarios_with_gt: dict[str, list[str]],
+    output_dir: Path,
+    logger: Any,
+) -> list[NodeMetricRecord]:
+    """Run experiments per scenario, additionally tracking causal accuracy against
+    each scenario's ground-truth causal features.
+
+    Node-metric records are persisted to a timestamped CSV under ``output_dir``;
+    causal-accuracy rows are appended to ``output_dir / "causal_accuracy_2.csv"``.
+    """
+    all_records: list[NodeMetricRecord] = []
+    splitter = make_splitter()
+
+    for scenario_file, gt_features in scenarios_with_gt.items():
+        logger.info(f"Processing {scenario_file}...")
+        scenario_name = Path(scenario_file).stem
+        X, y = load_dataset(scenario_file)
+
+        for model_name, model_factory in MODEL_FACTORIES.items():
+            run_key = f"{scenario_name}_{model_name}"
+            split_accuracies: list[float] = []
+
+            for split_idx, X_train, X_test, y_train, y_test in iter_splits(
+                X, y, splitter
+            ):
+                model = model_factory()
+                model.fit(X_train, y_train)
+
+                accuracy = evaluate_accuracy(model, X_test, y_test)
+                split_accuracies.append(accuracy)
+
+                try:
+                    explanation, processing_time = _build_explanation(
                         model=model,
                         X_train=X_train,
                         y=y,
@@ -405,32 +491,20 @@ def run_experiments(
                         split_idx=split_idx,
                         processing_logger=logger,
                     )
-                    records = records_from_explanation(
-                        explanation, run_key, split_idx, processing_time
+                    all_records.extend(
+                        records_from_explanation(
+                            explanation, run_key, split_idx, processing_time
+                        )
                     )
-                    write_records_to_csv(records, output_path)
 
                     for metric_name in METRICS:
-                        explanation_top_features_lrc = extract_top_k_features(
+                        extract_top_k_features_to_file(
                             explanation=explanation.node_metrics,
-                            top_k=TOP_K,
-                            metric=metric_name,
-                        )
-                        intersection, precision, recall = evaluate_causal_accuracy(
-                            ground_truth=gt_features,
-                            explanation=explanation_top_features_lrc,
-                        )
-                        write_causal_accuracy_to_csv(
+                            gt_features=gt_features,
                             run_key=run_key,
-                            k=TOP_K,
-                            ground_truth=gt_features,
-                            explanation_top_features=explanation_top_features_lrc,
                             split_idx=split_idx,
-                            metric=metric_name,
-                            intersection=intersection,
-                            precision=precision,
-                            recall=recall,
-                            output_path=output_path,
+                            metric_name=metric_name,
+                            output_path=output_dir,
                         )
 
                 except Exception as exc:  # noqa: BLE001 - keep batch resilient
@@ -443,6 +517,9 @@ def run_experiments(
                 f"{mean_accuracy:.4f}"
             )
 
+    write_records_to_csv(all_records, output_dir / f"node_metrics_{timestamp()}.csv")
+    return all_records
+
 
 def main() -> None:
     """Entry point: configure logging and run all experiments."""
@@ -450,7 +527,7 @@ def main() -> None:
     logger = get_logger(__name__, log_file=f"dpg_explainer_{timestamp()}.log")
 
     logger.info("Starting DPG explainer experiments...")
-    run_experiments(SCENARIOS_WITH_GT, N_SPLITS, OUTPUT_PATH, logger)
+    run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH, OUTPUT_PATH, logger)
     logger.info("All experiments completed.")
 
 
