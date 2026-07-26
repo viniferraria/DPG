@@ -250,16 +250,20 @@ def resolve_theme_context(theme: str = "dpg", palette: str = "default") -> Dict[
             "mpl_style": LEGACY_MPL_STYLE,
             "class_palette": class_palette,
             "predicate_palette": ["#1F77B4", "#2CA02C", "#9467BD", "#17BECF"],
-            "sequential_cmap": cm.Blues,
-            "edge_cmap": cm.Greys,
+            # matplotlib ships no stub entries for the module-level colormap
+            # attributes, though they exist at runtime.
+            "sequential_cmap": cm.Blues,  # type: ignore[attr-defined]
+            "edge_cmap": cm.Greys,  # type: ignore[attr-defined]
             "community_cmap": cm.get_cmap("tab20"),
             "class_cmap": lambda n: cm.get_cmap("viridis", n),
             "feature_color_map": lambda features: {
-                feature: cm.tab20(i / max(1, len(list(dict.fromkeys(features))) - 1))
+                feature: cm.tab20(  # type: ignore[attr-defined]
+                    i / max(1, len(list(dict.fromkeys(features))) - 1)
+                )
                 for i, feature in enumerate(list(dict.fromkeys(features)))
             },
             "predicate_line_color_map": lambda features: {
-                feature: cm.tab10((i + 5) / 10)
+                feature: cm.tab10((i + 5) / 10)  # type: ignore[attr-defined]
                 for i, feature in enumerate(list(dict.fromkeys(features)))
             },
         }
