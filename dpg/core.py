@@ -295,7 +295,12 @@ class DecisionPredicateGraph:
             )
 
         log = [item for sublist in log for item in sublist]
-        return pd.DataFrame(log, columns=["case:concept:name", "concept:name"])
+        # pandas-stubs declares every DataFrame(...) overload as -> Any, so the
+        # cast is what restores the real return type rather than widening it.
+        return cast(
+            pd.DataFrame,
+            pd.DataFrame(log, columns=["case:concept:name", "concept:name"]),
+        )
 
     @staticmethod
     def _decimal_places(value: Any) -> int:
