@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import matplotlib.colors as mcolors
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 
 from .exceptions import DPGConfigurationError
@@ -253,18 +253,18 @@ def resolve_theme_context(theme: str = "dpg", palette: str = "default") -> dict[
             "predicate_palette": ["#1F77B4", "#2CA02C", "#9467BD", "#17BECF"],
             # matplotlib ships no stub entries for the module-level colormap
             # attributes, though they exist at runtime.
-            "sequential_cmap": cm.Blues,  # type: ignore[attr-defined]
-            "edge_cmap": cm.Greys,  # type: ignore[attr-defined]
-            "community_cmap": cm.get_cmap("tab20"),
-            "class_cmap": lambda n: cm.get_cmap("viridis", n),
+            "sequential_cmap": colormaps.get("Blues"),
+            "edge_cmap": colormaps.get("Greys"),
+            "community_cmap": colormaps.get_cmap("tab20"),
+            "class_cmap": lambda n: colormaps.get_cmap("viridis").resampled(n),
             "feature_color_map": lambda features: {
-                feature: cm.tab20(  # type: ignore[attr-defined]
+                feature: colormaps.get_cmap("tab20")(
                     i / max(1, len(list(dict.fromkeys(features))) - 1)
                 )
                 for i, feature in enumerate(list(dict.fromkeys(features)))
             },
             "predicate_line_color_map": lambda features: {
-                feature: cm.tab10((i + 5) / 10)  # type: ignore[attr-defined]
+                feature: colormaps.get_cmap("tab10")((i + 5) / 10)
                 for i, feature in enumerate(list(dict.fromkeys(features)))
             },
         }

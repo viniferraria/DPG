@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 from graphviz import Source
 from graphviz.backend.execute import ExecutableNotFound
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib.artist import Artist
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
@@ -516,12 +516,12 @@ def plot_dpg(
             [ax_pos.x0, cbar_y, ax_pos.width, cbar_height]
         )
         cbar = fig.colorbar(
-            cm.ScalarMappable(norm=norm, cmap=colormap),
+            ScalarMappable(norm=norm, cmap=colormap),
             cax=cax,
             orientation='horizontal',
         )
         cbar.set_label(attribute)
-        cbar.outline.set_edgecolor(colors["light_gray"])  # type: ignore[operator]
+        cbar.outline.set_edgecolor(colors["light_gray"])
         cbar.ax.xaxis.label.set_color(colors["charcoal"])
         cbar.ax.tick_params(colors=colors["charcoal"])
 
@@ -1050,7 +1050,7 @@ def plot_dpg_reg(
         norm = Normalize(vmin=df[attribute].min(), vmax=df[attribute].max())
         cbar = fig.colorbar(ScalarMappable(norm=norm, cmap=theme_context["sequential_cmap"]), cax=cax, orientation='horizontal')
         cbar.set_label(attribute)
-        cbar.outline.set_edgecolor(colors["light_gray"])  # type: ignore[operator]
+        cbar.outline.set_edgecolor(colors["light_gray"])
         cbar.ax.tick_params(colors=colors["charcoal"])
 
     fig.savefig(os.path.join(save_dir, f"{plot_name}_REG.png"), dpi=300, bbox_inches="tight", pad_inches=0.04)
@@ -1375,7 +1375,7 @@ def parse_feature_from_predicate(label: str) -> str:
 
 def _feature_color_map(features: list[str]) -> dict[str, Any]:
     unique = list(dict.fromkeys(features))
-    cmap = cm.get_cmap("tab20")
+    cmap = colormaps.get_cmap("tab20")
     if len(unique) <= 1:
         return {unique[0]: cmap(0)} if unique else {}
     return {f: cmap(i / (len(unique) - 1)) for i, f in enumerate(unique)}
@@ -2117,11 +2117,12 @@ def plot_class_feature_complexity(
     for row_idx in range(len(h.index)):
         for col_idx in range(len(h.columns)):
             value = int(h.iat[row_idx, col_idx])
-            text_color = colors["paper"] if im.norm(value) > 0.55 else colors["charcoal"]
+            normalized = cast(float, im.norm(value))  # type: ignore[arg-type]
+            text_color = colors["paper"] if normalized > 0.55 else colors["charcoal"]
             ax_heat.text(col_idx, row_idx, str(value), ha="center", va="center", fontsize=9, color=text_color)
     cbar = fig_heat.colorbar(im, ax=ax_heat, fraction=0.046, pad=0.04)
     cbar.set_label("Predicate count")
-    cbar.outline.set_edgecolor(colors["light_gray"])  # type: ignore[operator]
+    cbar.outline.set_edgecolor(colors["light_gray"])
     _style_figure(fig_heat, theme_context)
     fig_heat.subplots_adjust(left=0.12, right=0.94, bottom=0.22, top=0.88, wspace=0.08)
 
