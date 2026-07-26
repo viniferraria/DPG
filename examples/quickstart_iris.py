@@ -6,20 +6,21 @@ This script demonstrates a complete workflow for:
 2. Generating Decision Predicate Graphs (DPG)
 3. Extracting and visualizing interpretability metrics
 """
-import sys
 import os
+import sys
+
+import numpy as np
+import pandas as pd
+import yaml
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import KFold
+
+from dpg import DPGExplainer
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
-
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import KFold
-from dpg import DPGExplainer
-import yaml
 
 def load_config(config_path):
     # Read YAML configuration used by the DPG library (percentile, thresholds, etc.)

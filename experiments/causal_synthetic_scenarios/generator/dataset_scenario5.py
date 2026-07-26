@@ -137,19 +137,19 @@ print(f"\n[Dtypes]\n{X.dtypes.to_string()}")
 
 # Noise calibration
 realised_snr = signal.var() / sigma**2
-print(f"\n[Signal / noise]")
+print("\n[Signal / noise]")
 print(f"  Var(signal) = {signal.var():.4f}")
 print(f"  σ (noise)   = {sigma:.4f}")
 print(f"  realised SNR = {realised_snr:.4f}  (target {TARGET_SNR})")
 
 # Class balance
 n1, n0 = int(Y.sum()), int((1 - Y).sum())
-print(f"\n[Class balance]")
+print("\n[Class balance]")
 print(f"  Y=1 : {n1} ({100*n1/N:.1f}%)   Y=0 : {n0} ({100*n0/N:.1f}%)   (median split → ≈50/50)")
 
 # Point-biserial r with Y (continuous features) — captures *linear* association.
 # F1's effect is periodic → near-zero linear r despite being causal (expected).
-print(f"\n[Point-biserial r with Y]  (linear screen — misses F1's periodicity)")
+print("\n[Point-biserial r with Y]  (linear screen — misses F1's periodicity)")
 for col in ["F1", "F2", "F3", "F4", "F5", "F6"]:
     r_pb, p_val = stats.pointbiserialr(Y, X[col].values)
     tag = " <-- CAUSAL" if col in ("F1", "F2") else ""
@@ -205,7 +205,7 @@ cv_auc = cross_val_score(
     X, y, cv=StratifiedKFold(5, shuffle=True, random_state=SEED),
     scoring="roc_auc", n_jobs=-1,
 )
-print(f"\n[Stratified 5-fold CV AUC — RandomForest]")
+print("\n[Stratified 5-fold CV AUC — RandomForest]")
 print(f"  folds : {np.round(cv_auc, 4)}")
 print(f"  mean  : {cv_auc.mean():.4f} ± {cv_auc.std():.4f}")
 

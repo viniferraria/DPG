@@ -17,11 +17,12 @@ import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 
+from dpg import DPGExplainer
+
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
 
-from dpg import DPGExplainer
 
 
 def main() -> None:

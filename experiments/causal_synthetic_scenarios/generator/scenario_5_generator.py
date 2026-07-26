@@ -4,6 +4,40 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.decomposition import PCA
 
+"""
+Synthetic Dataset — Scenario 5  (Non-linear additive, Binary Y)
+================================================================
+DGP:
+    s = sin(F1) + exp(F2) + ε              [latent non-linear additive score]
+    Y = 1{ s > median(s) }                  [binary outcome, balanced by construction]
+
+    F1 ~ U(-2π, 2π)              [continuous, CAUSAL — periodic contribution]
+    F2 ~ U(-1.5, 1.5)            [continuous, CAUSAL — exponential contribution]
+    F3..F6 ~ N(0, 1)            [continuous, IRRELEVANT]
+    F7 ∈ {A, B, C}             [categorical, IRRELEVANT] → OHE → F7_A, F7_B, F7_C
+    F8 ∈ {X, Y, Z}             [categorical, IRRELEVANT] → OHE → F8_X, F8_Y, F8_Z
+
+Design notes:
+    - F1 drawn over [-2π, 2π] so the model sees multiple sine cycles; a single
+      monotone segment would be indistinguishable from a linear effect.
+    - F2 bounded to [-1.5, 1.5] so exp(F2) stays in [0.22, 4.48] — avoids a
+      heavy right tail dominating the signal variance.
+    - Binary label via the *median* of the latent score → exactly balanced
+      classes, removing class-imbalance as a confounder for importance metrics.
+
+Challenge for DPG / tree ensembles:
+    Recover F1 and F2 as the causal pair when their effect is non-linear and
+    additive, while {F3..F8} carry zero population information about Y. Tree
+    predicates must tile the sine/exp surfaces with axis-aligned thresholds.
+
+Dependencies:
+    numpy>=1.26.4
+    pandas>=2.2.2
+    scikit-learn>=1.5.0
+    scipy>=1.13.0
+    matplotlib>=3.8.0
+"""
+
 # ============================================================
 # Scenario 5
 # 8 features

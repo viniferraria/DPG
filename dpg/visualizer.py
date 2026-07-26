@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 from io import BytesIO
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple
 from graphviz import Source
 from graphviz.backend.execute import ExecutableNotFound
 import matplotlib.patches as mpatches
@@ -18,7 +18,6 @@ from matplotlib.lines import Line2D
 from PIL import Image
 from .utils import delete_folder_contents
 from .themes import (
-    DPG_COLORS,
     resolve_theme_context,
 )
 
@@ -106,7 +105,7 @@ def _style_legend(legend, theme_context: Dict[str, Any]) -> None:
 
 def _style_figure(fig, theme_context: Dict[str, Any], title: Optional[str] = None, subtitle: Optional[str] = None) -> None:
     colors = theme_context["colors"]
-    fig.patch.set_facecolor(colors["paper"])
+    fig.set_facecolor(colors["paper"])
     if title:
         fig.suptitle(title, color=colors["ink"], fontsize=14, fontweight="semibold")
     if subtitle:
@@ -187,11 +186,11 @@ def _apply_layout_template(dot, theme_context: Dict[str, Any], layout_template=N
         merged_edge.update(edge_style)
 
     if merged_graph:
-        dot.attr("graph", **{str(k): str(v) for k, v in merged_graph.items()})
+        dot.attr("graph", **{k: v for k, v in merged_graph.items()})
     if merged_node:
-        dot.attr("node", **{str(k): str(v) for k, v in merged_node.items()})
+        dot.attr("node", **{k: v for k, v in merged_node.items()})
     if merged_edge:
-        dot.attr("edge", **{str(k): str(v) for k, v in merged_edge.items()})
+        dot.attr("edge", **{k: v for k, v in merged_edge.items()})
 
 
 def _graphviz_not_found_error() -> RuntimeError:
@@ -207,7 +206,7 @@ def _graphviz_not_found_error() -> RuntimeError:
 
 
 def _shorten_feature_name(feature: str) -> str:
-    shortened = str(feature)
+    shortened = feature
     replacements = {
         "sepal": "sep.",
         "petal": "pet.",
@@ -1375,7 +1374,11 @@ def parse_feature_from_predicate(label: str) -> str:
 
 
 def _feature_color_map(features: List[str]) -> Dict[str, Any]:
-    return feature_color_map(features)
+    unique = list(dict.fromkeys(features))
+    cmap = cm.get_cmap("tab20")
+    if len(unique) <= 1:
+        return {unique[0]: cmap(0)} if unique else {}
+    return {f: cmap(i / (len(unique) - 1)) for i, f in enumerate(unique)}
 
 
 def lrc_predicate_scores(explanation, top_k: int = 10) -> Any:
@@ -1449,7 +1452,7 @@ def plot_lrc_vs_rf_importance(
     feature_to_color = theme_context["feature_color_map"](all_features)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, max(5, top_k * 0.45)))
-    fig.patch.set_facecolor(colors["paper"])
+    fig.set_facecolor(colors["paper"])
 
     axes[0].barh(
         top_lrc_plot["predicate"],

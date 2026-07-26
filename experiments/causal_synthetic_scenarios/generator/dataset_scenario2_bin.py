@@ -48,7 +48,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.metrics import roc_auc_score, log_loss, confusion_matrix
+from sklearn.metrics import roc_auc_score, log_loss
 
 SEED      = 42
 N         = 1000
@@ -163,18 +163,18 @@ print(f"\n[Dtypes]\n{X.dtypes.to_string()}")
 
 # Class balance
 n1, n0 = Y.sum(), (1 - Y).sum()
-print(f"\n[Class balance]")
+print("\n[Class balance]")
 print(f"  Y=1 : {n1} ({100*n1/N:.1f}%)   Y=0 : {n0} ({100*n0/N:.1f}%)")
-print(f"  Expected ≈ 50/50  (symmetric η distribution centred at 0)")
+print("  Expected ≈ 50/50  (symmetric η distribution centred at 0)")
 
 # Latent score distribution
-print(f"\n[Latent score η = β₁·F1 + ε]")
+print("\n[Latent score η = β₁·F1 + ε]")
 print(f"  mean  = {eta.mean():.4f}  (expected ≈ 0)")
 print(f"  std   = {eta.std():.4f}  (expected ≈ √(β₁²+σ²) = {np.sqrt(BETA1**2+SIGMA**2):.4f})")
 print(f"  p̄     = {p.mean():.4f}  (expected ≈ 0.5)")
 
 # Point-biserial r with Y — population truth: only F1 ≠ 0
-print(f"\n[Point-biserial r with Y]")
+print("\n[Point-biserial r with Y]")
 for col in feature_cols:
     r_pb, p_val = point_biserial_r(X[col].values, Y)
     tag = " <-- CAUSAL" if col == "F1" else ""
@@ -262,7 +262,7 @@ cv_auc = cross_val_score(
     X, y, cv=StratifiedKFold(5, shuffle=True, random_state=SEED),
     scoring="roc_auc", n_jobs=-1,
 )
-print(f"\n[Stratified 5-fold CV AUC — RandomForest]")
+print("\n[Stratified 5-fold CV AUC — RandomForest]")
 print(f"  folds : {np.round(cv_auc, 4)}")
 print(f"  mean  : {cv_auc.mean():.4f} ± {cv_auc.std():.4f}")
 
