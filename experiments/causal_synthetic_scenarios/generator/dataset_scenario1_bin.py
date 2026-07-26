@@ -42,13 +42,13 @@ Dependencies:
 import numpy as np
 import pandas as pd
 from scipy import stats
-from scipy.special import expit           # numerically stable sigmoid
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from scipy.special import expit  # numerically stable sigmoid
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.metrics import roc_auc_score, log_loss, confusion_matrix
+from sklearn.metrics import confusion_matrix, log_loss, roc_auc_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
 SEED      = 42
 N         = 1000

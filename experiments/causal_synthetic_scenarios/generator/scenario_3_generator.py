@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 
-
-
 # ============================================================
 # Scenario 3
 # 5 features

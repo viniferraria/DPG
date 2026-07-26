@@ -167,7 +167,7 @@ def generate_all_visualizations():
 if __name__ == "__main__":
     try:
         generate_all_visualizations()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - report failures from the top-level script
         print(f"Error generating images: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()

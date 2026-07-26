@@ -1,15 +1,16 @@
 import logging
 import time
 import warnings
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 import igraph as ig
 import networkx as nx
 import pandas as pd
 
 
-def get_logger(name: str, log_file: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
     """
     Factory function to create and configure a logger.
 
@@ -75,7 +76,7 @@ def log_timer(func: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @log_timer
-def _nx_to_igraph(nx_graph: nx.DiGraph) -> Tuple[ig.Graph, List[str]]:
+def _nx_to_igraph(nx_graph: nx.DiGraph) -> tuple[ig.Graph, list[str]]:
     """Convert a NetworkX DiGraph to igraph, preserving node ID mapping.
 
     Returns:
@@ -105,7 +106,7 @@ def _nx_to_igraph(nx_graph: nx.DiGraph) -> Tuple[ig.Graph, List[str]]:
 @log_timer
 def calc_node_metrics(
     dpg_model: nx.DiGraph,
-) -> Tuple[dict[str, int], Dict[str, int], Dict[str, int]]:
+) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
     in_nodes = {}
     out_nodes = {}
     degree = {}
@@ -117,7 +118,7 @@ def calc_node_metrics(
 
 
 @log_timer
-def calc_betweenness_centrality(ig_graph: ig.Graph) -> Dict[int, float]:
+def calc_betweenness_centrality(ig_graph: ig.Graph) -> dict[int, float]:
     """Compute betweenness centrality for an igraph graph."""
     n = ig_graph.vcount()
     # Betweenness centrality (igraph returns unnormalised values).
@@ -131,8 +132,8 @@ def calc_betweenness_centrality(ig_graph: ig.Graph) -> Dict[int, float]:
 
 @log_timer
 def calc_local_reaching_centrality(
-    ig_graph: ig.Graph, node_ids: List[str]
-) -> Dict[str, float]:
+    ig_graph: ig.Graph, node_ids: list[str]
+) -> dict[str, float]:
     """Compute local reaching centrality for an igraph graph."""
     # Local reaching centrality (weighted), matching NetworkX's algorithm:
     # 1. Invert weights to get distances: distance = total_weight / w
@@ -143,7 +144,9 @@ def calc_local_reaching_centrality(
     total_weight = sum(ig_graph.es["weight"])
     num_edges = ig_graph.ecount()
     if total_weight <= 0:
-        raise ValueError("Total edge weight must be positive for LRC")
+        from dpg.exceptions import DPGMetricError
+
+        raise DPGMetricError.non_positive_lrc_weight()
 
     # Build edge weight lookup: (source, target) → original weight
     edge_weight_lookup = {}
@@ -179,14 +182,16 @@ def calc_local_reaching_centrality(
 
 @log_timer
 def calc_closeness_centrality(
-    ig_graph: ig.Graph, node_ids: List[str]
-) -> Dict[str, float]:
+    ig_graph: ig.Graph, node_ids: list[str]
+) -> dict[str, float]:
     """Compute closeness centrality for an igraph graph."""
     n = ig_graph.vcount()
-    ig_graph.distances
+
     total_weight = sum(ig_graph.es["weight"])
     if total_weight <= 0:
-        raise ValueError("Total edge weight must be positive for closeness centrality")
+        from dpg.exceptions import DPGMetricError
+
+        raise DPGMetricError.non_positive_closeness_weight()
 
     closeness_centrality = {}
     for i in range(n):
@@ -213,13 +218,15 @@ def calc_closeness_centrality(
 
 @log_timer
 def calc_harmonic_centrality(
-    ig_graph: ig.Graph, node_ids: List[str]
-) -> Dict[str, float]:
+    ig_graph: ig.Graph, node_ids: list[str]
+) -> dict[str, float]:
     """Compute harmonic centrality for an igraph graph."""
     n = ig_graph.vcount()
     total_weight = sum(ig_graph.es["weight"])
     if total_weight <= 0:
-        raise ValueError("Total edge weight must be positive for harmonic centrality")
+        from dpg.exceptions import DPGMetricError
+
+        raise DPGMetricError.non_positive_harmonic_weight()
 
     harmonic_centrality: dict[str, float] = {}
     for i in range(n):
@@ -239,7 +246,7 @@ class NodeMetrics:
 
     @staticmethod
     @log_timer
-    def extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: List[List[str]]) -> Any:
+    def extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any:
         """Compute per-node graph metrics for a DPG model.
 
         Args:

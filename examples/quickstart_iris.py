@@ -30,7 +30,7 @@ def load_config(config_path):
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found at {config_path}")
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
+        raise yaml.YAMLError(f"Invalid YAML in config file: {e!s}")
 
 
 IRIS_DATASET_URL = "https://huggingface.co/datasets/MLLab-TS/iris/resolve/main/dataset.csv"
@@ -127,7 +127,7 @@ def main():
     metric_suffix, last_train = train_model_cv(
         model, features_matrix, labels, random_state=42
     )
-    X_train, y_train = last_train
+    X_train, _y_train = last_train
 
     # Compose a shared run id for all outputs
     run_id = (
@@ -155,8 +155,7 @@ def main():
         config["results_dir"], f"{run_id}_dpg_class_boundaries.txt"
     )
     with open(class_boundaries_path, "w") as f:
-        for key, value in explanation.class_boundaries.items():
-            f.write(f"{key}: {value}\n")
+        f.writelines(f"{key}: {value}\n" for key, value in explanation.class_boundaries.items())
 
     # Save node and edge metrics
     node_metrics_path = os.path.join(

@@ -84,7 +84,7 @@ try:
         'target_names': ['Kama', 'Rosa', 'Canadian'],
     }
     print("✓ Wheat Seeds (210 samples, 7 features, 3 classes)")
-except Exception as e:
+except Exception as e:  # noqa: BLE001 - optional benchmark dataset is non-critical
     print(f"⚠ Wheat Seeds could not be loaded: {e}")
 
 # Run benchmark
@@ -166,7 +166,7 @@ os.makedirs(output_dir, exist_ok=True)
 # 1. Composite scores
 print("\n  Creating composite scores chart...", end=" ", flush=True)
 fig, ax = plt.subplots(figsize=(10, 5))
-composite_scores = {name: results[name]['faithfulness_score'] for name in results.keys()}
+composite_scores = {name: results[name]['faithfulness_score'] for name in results}
 datasets_list = list(composite_scores.keys())
 scores_list = list(composite_scores.values())
 colors_bar = ['#2ecc71' if s >= 0.7 else '#f39c12' if s >= 0.5 else '#e74c3c' for s in scores_list]

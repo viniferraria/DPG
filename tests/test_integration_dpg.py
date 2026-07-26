@@ -9,9 +9,9 @@ from sklearn.ensemble import RandomForestClassifier
 
 from dpg.core import DecisionPredicateGraph
 from dpg.visualizer import plot_dpg, plot_dpg_communities
+from metrics.edges import EdgeMetrics
 from metrics.graph import GraphMetrics
 from metrics.nodes import NodeMetrics
-from metrics.edges import EdgeMetrics
 
 
 def _build_small_dpg():

@@ -214,6 +214,6 @@ if __name__ == "__main__":
         generate_quickstart_images()
         generate_visualization_images()
         print("\nAll images generated successfully!")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - report failures from the top-level script
         print(f"Error generating images: {e}", file=sys.stderr)
         sys.exit(1)

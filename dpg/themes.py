@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
+from matplotlib import cm
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 
+from .exceptions import DPGConfigurationError
 
-DPG_COLORS: Dict[str, str] = {
+DPG_COLORS: dict[str, str] = {
     "gold": "#E3C800",
     "amber": "#F0A30A",
     "orange": "#FA6800",
@@ -39,7 +40,7 @@ DPG_COLORS: Dict[str, str] = {
 }
 
 
-DPG_CLASS_PALETTE: List[str] = [
+DPG_CLASS_PALETTE: list[str] = [
     DPG_COLORS["gold"],
     DPG_COLORS["steel"],
     DPG_COLORS["orange"],
@@ -57,7 +58,7 @@ DPG_CLASS_PALETTE: List[str] = [
 ]
 
 
-DPG_PREDICATE_LINE_PALETTE: List[str] = [
+DPG_PREDICATE_LINE_PALETTE: list[str] = [
     DPG_COLORS["gold"],
     DPG_COLORS["olive_light"],
     DPG_COLORS["amber"],
@@ -68,7 +69,7 @@ DPG_PREDICATE_LINE_PALETTE: List[str] = [
     DPG_COLORS["pine"],
 ]
 
-DPG_OLIVE_CLASS_PALETTE: List[str] = [
+DPG_OLIVE_CLASS_PALETTE: list[str] = [
     DPG_COLORS["sand"],
     DPG_COLORS["olive_light"],
     DPG_COLORS["sage"],
@@ -85,7 +86,7 @@ DPG_OLIVE_CLASS_PALETTE: List[str] = [
     DPG_COLORS["orange"],
 ]
 
-LEGACY_COLORS: Dict[str, str] = {
+LEGACY_COLORS: dict[str, str] = {
     "paper": "#FFFFFF",
     "ink": "#111111",
     "charcoal": "#222222",
@@ -103,7 +104,7 @@ LEGACY_COLORS: Dict[str, str] = {
 }
 
 
-DPG_MPL_STYLE: Dict[str, Any] = {
+DPG_MPL_STYLE: dict[str, Any] = {
     "figure.facecolor": DPG_COLORS["paper"],
     "axes.facecolor": DPG_COLORS["paper"],
     "savefig.facecolor": DPG_COLORS["paper"],
@@ -125,7 +126,7 @@ DPG_MPL_STYLE: Dict[str, Any] = {
     "legend.edgecolor": DPG_COLORS["light_gray"],
 }
 
-LEGACY_MPL_STYLE: Dict[str, Any] = {
+LEGACY_MPL_STYLE: dict[str, Any] = {
     "figure.facecolor": LEGACY_COLORS["paper"],
     "axes.facecolor": LEGACY_COLORS["paper"],
     "savefig.facecolor": LEGACY_COLORS["paper"],
@@ -181,20 +182,20 @@ def class_cmap(n_classes: int) -> ListedColormap:
     return ListedColormap(discrete_palette(n_classes), name="dpg_classes")
 
 
-def discrete_palette(n_colors: int) -> List[str]:
+def discrete_palette(n_colors: int) -> list[str]:
     if n_colors <= 0:
         return []
     repeats = (n_colors // len(DPG_CLASS_PALETTE)) + 1
     return (DPG_CLASS_PALETTE * repeats)[:n_colors]
 
 
-def feature_color_map(features: List[str]) -> Dict[str, Any]:
+def feature_color_map(features: list[str]) -> dict[str, Any]:
     unique = list(dict.fromkeys(features))
     palette = discrete_palette(len(unique))
     return {feature: mcolors.to_rgba(color) for feature, color in zip(unique, palette)}
 
 
-def predicate_line_color_map(features: List[str]) -> Dict[str, Any]:
+def predicate_line_color_map(features: list[str]) -> dict[str, Any]:
     unique = list(dict.fromkeys(features))
     if not unique:
         return {}
@@ -203,16 +204,16 @@ def predicate_line_color_map(features: List[str]) -> Dict[str, Any]:
     return {feature: mcolors.to_rgba(color) for feature, color in zip(unique, palette)}
 
 
-def _palette_values(palette: str) -> List[str]:
+def _palette_values(palette: str) -> list[str]:
     name = str(palette or "default").lower()
     if name in {"default", "brand", "extended"}:
         return DPG_CLASS_PALETTE
     if name == "olive":
         return DPG_OLIVE_CLASS_PALETTE
-    raise ValueError(f"Unknown palette '{palette}'. Expected one of: default, extended, olive.")
+    raise DPGConfigurationError.unknown_palette(palette)
 
 
-def _spaced_palette(palette_values: List[str], n_colors: int) -> List[str]:
+def _spaced_palette(palette_values: list[str], n_colors: int) -> list[str]:
     if n_colors <= 0:
         return []
     if not palette_values:
@@ -223,7 +224,7 @@ def _spaced_palette(palette_values: List[str], n_colors: int) -> List[str]:
     if n_colors <= len(palette_values):
         max_index = len(palette_values) - 1
         raw_positions = [round(i * max_index / (n_colors - 1)) for i in range(n_colors)]
-        deduped_positions: List[int] = []
+        deduped_positions: list[int] = []
         for pos in raw_positions:
             candidate = int(pos)
             while candidate in deduped_positions and candidate < max_index:
@@ -237,7 +238,7 @@ def _spaced_palette(palette_values: List[str], n_colors: int) -> List[str]:
     return (palette_values * repeats)[:n_colors]
 
 
-def resolve_theme_context(theme: str = "dpg", palette: str = "default") -> Dict[str, Any]:
+def resolve_theme_context(theme: str = "dpg", palette: str = "default") -> dict[str, Any]:
     theme_name = str(theme or "dpg").lower()
     palette_name = str(palette or "default").lower()
 
@@ -269,7 +270,7 @@ def resolve_theme_context(theme: str = "dpg", palette: str = "default") -> Dict[
         }
 
     if theme_name != "dpg":
-        raise ValueError(f"Unknown theme '{theme}'. Expected one of: dpg, legacy.")
+        raise DPGConfigurationError.unknown_theme(theme)
 
     class_palette = _palette_values(palette_name)
     predicate_palette = DPG_PREDICATE_LINE_PALETTE if palette_name != "olive" else [

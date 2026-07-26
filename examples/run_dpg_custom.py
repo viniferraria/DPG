@@ -36,7 +36,7 @@ if __name__ == "__main__":
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found at {config_path}")
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
+        raise yaml.YAMLError(f"Invalid YAML in config file: {e!s}")
     
     pv = config['dpg']['default']['perc_var']
     t = config['dpg']['default']['decimal_threshold']
@@ -65,6 +65,5 @@ if __name__ == "__main__":
                 encoding='utf-8')
 
     with open(os.path.join(args.dir, f'custom_l{args.n_learners}_pv{pv}_t{t}_dpg_metrics.txt'), 'w') as f:
-        for key, value in df_dpg_metrics.items():
-            f.write(f"{key}: {value}\n")
+        f.writelines(f"{key}: {value}\n" for key, value in df_dpg_metrics.items())
         

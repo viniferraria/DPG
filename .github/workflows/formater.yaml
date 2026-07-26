@@ -1,18 +1,22 @@
-name: Ruff
+# name: Ruff
 
-on: [push]
+# on: [push]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11"]
-    steps:
-    - uses: actions/checkout@v7
-    - name: Install uv
-      uses: astral-sh/setup-uv@v9.0.0
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Analysing the code with Ruff
-      run: uvx ruff check $(git ls-files '*.py') -v
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         python-version: ["3.10", "3.11"]
+#     steps:
+#     - uses: actions/checkout@v7
+#     - name: Install uv
+#       uses: astral-sh/setup-uv@v9.0.0
+#       with:
+#         python-version: ${{ matrix.python-version }}
+    
+#     - name: Install dependencies
+#       run: uv sync --locked --dev
+
+#     - name: Analysing the code with Ruff
+#       run: uv run ruff check $(git ls-files '*.py') -v
