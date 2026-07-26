@@ -6,6 +6,8 @@ AdaBoost, and other ensemble methods to provide a consistent interface for DPG.
 """
 
 import copy
+from typing import Any, List, Optional
+
 from sklearn.ensemble import (
     GradientBoostingClassifier,
     GradientBoostingRegressor,
@@ -27,7 +29,7 @@ class SklearnEnsembleNormalizer:
     GB_MODELS = (GradientBoostingClassifier, GradientBoostingRegressor)
 
     @staticmethod
-    def needs_normalization(model):
+    def needs_normalization(model: Any) -> bool:
         """
         Check if a model needs tree structure normalization.
 
@@ -40,7 +42,7 @@ class SklearnEnsembleNormalizer:
         return isinstance(model, SklearnEnsembleNormalizer.GB_MODELS)
 
     @staticmethod
-    def normalize(model):
+    def normalize(model: Any) -> Any:
         """
         Normalize a sklearn ensemble model's tree structure.
 
@@ -67,8 +69,8 @@ class SklearnEnsembleNormalizer:
 
         # Flatten 2D (n_estimators, n_trees_per_iteration) to 1D list.
         # For multiclass GradientBoostingClassifier the column index is the class slot.
-        flat_estimators = []
-        tree_class_indices = []
+        flat_estimators: List[Any] = []
+        tree_class_indices: List[Optional[int]] = []
         for row in model.estimators_:
             for class_index, tree in enumerate(row):
                 flat_estimators.append(tree)
@@ -83,11 +85,12 @@ class SklearnEnsembleNormalizer:
         return normalized_model
 
     @staticmethod
-    def get_tree_class_index(model, tree_index):
+    def get_tree_class_index(model: Any, tree_index: int) -> Optional[int]:
         """Return the preserved class-slot index for a normalized GB tree."""
         indices = getattr(model, "_dpg_tree_class_indices", None)
         if indices is None:
             return None
         if tree_index < 0 or tree_index >= len(indices):
             return None
-        return indices[tree_index]
+        class_index: Optional[int] = indices[tree_index]
+        return class_index

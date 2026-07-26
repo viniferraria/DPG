@@ -1,8 +1,9 @@
 import hashlib
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import (
@@ -127,8 +128,8 @@ class DPGExplainer:
     def __init__(
         self,
         model: Any,
-        feature_names: Iterable[str],
-        target_names: Optional[Iterable[str]] = None,
+        feature_names: Sequence[str],
+        target_names: Optional[Sequence[str]] = None,
         config_file: str = "config.yaml",
         dpg_config: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -149,16 +150,28 @@ class DPGExplainer:
             dpg_config=dpg_config,
         )
         self._is_fitted = False
-        self._dot = None
-        self._graph = None
-        self._nodes = None
-        self._node_metrics = None
-        self._node_metrics_lookup = None
-        self._edge_metrics = None
+        self._dot: Optional[Any] = None
+        self._graph: Optional[nx.DiGraph] = None
+        self._nodes: Optional[List[List[str]]] = None
+        self._node_metrics: Optional[pd.DataFrame] = None
+        self._node_metrics_lookup: Optional[Dict[str, Dict[str, Any]]] = None
+        self._edge_metrics: Optional[Any] = None
 
     @property
     def builder(self) -> DecisionPredicateGraph:
         return self._builder
+
+    def _require_graph(self) -> nx.DiGraph:
+        """Return the fitted graph, or raise if fit() has not been called."""
+        if self._graph is None:
+            raise ValueError("DPGExplainer is not fitted. Call fit(X) first.")
+        return self._graph
+
+    def _require_nodes(self) -> List[List[str]]:
+        """Return the fitted node list, or raise if fit() has not been called."""
+        if self._nodes is None:
+            raise ValueError("DPGExplainer is not fitted. Call fit(X) first.")
+        return self._nodes
 
     def fit(self, X: Any) -> "DPGExplainer":
         """Fit the DPG structure from training data."""
@@ -189,26 +202,29 @@ class DPGExplainer:
         if not self._is_fitted:
             raise ValueError("DPGExplainer is not fitted. Call fit(X) or explain_global(X=...).")
 
+        graph = self._require_graph()
+        nodes = self._require_nodes()
+
         node_metrics = self._get_node_metrics()
-        edge_metrics = EdgeMetrics.extract_edge_metrics(self._graph, self._nodes)
+        edge_metrics = EdgeMetrics.extract_edge_metrics(graph, nodes)
         class_boundaries = GraphMetrics.extract_class_boundaries(
-            self._graph,
-            self._nodes,
+            graph,
+            nodes,
             target_names=self._builder.target_names or [],
         )
 
         communities_out = None
         if communities:
             communities_out = GraphMetrics.extract_communities(
-                self._graph,
+                graph,
                 node_metrics,
-                self._nodes,
+                nodes,
                 threshold_clusters=community_threshold,
             )
 
         return DPGExplanation(
-            graph=self._graph,
-            nodes=self._nodes,
+            graph=graph,
+            nodes=nodes,
             dot=self._dot,
             node_metrics=node_metrics,
             edge_metrics=edge_metrics,
@@ -246,10 +262,11 @@ class DPGExplainer:
                 f"Sample has {sample_array.shape[0]} features, expected {expected_features}."
             )
 
+        node_lookup = {label: node_id for node_id, label in self._require_nodes()}
         node_metrics_lookup = self._get_node_metrics_lookup()
 
         tree_paths = []
-        class_votes = Counter()
+        class_votes: Counter = Counter()
         for tree_index, tree in enumerate(self._builder.model.estimators_):
             path = self._trace_tree_path(
                 tree=tree,
@@ -434,13 +451,13 @@ class DPGExplainer:
 
     def evaluate_faithfulness(
         self,
-        X,
-        y_true=None,
-        max_samples=None,
-        weights=None,
-        return_details=False,
-        sample_ids=None,
-    ):
+        X: Any,
+        y_true: Optional[Any] = None,
+        max_samples: Optional[int] = None,
+        weights: Optional[Dict[str, float]] = None,
+        return_details: bool = False,
+        sample_ids: Optional[List[int]] = None,
+    ) -> Union[float, Dict[str, Any]]:
         """
         Evaluate local DPG explanations against the fitted black-box model.
 
@@ -671,7 +688,9 @@ class DPGExplainer:
 
         edge_exists = []
         for i in range(len(native_node_ids) - 1):
-            edge_exists.append(self._graph.has_edge(native_node_ids[i], native_node_ids[i + 1]))
+            edge_exists.append(
+                self._require_graph().has_edge(native_node_ids[i], native_node_ids[i + 1])
+            )
 
         graph_path_valid = all(native_node_id in node_metrics_lookup for native_node_id in native_node_ids) and all(edge_exists)
 
@@ -719,6 +738,9 @@ class DPGExplainer:
 
     def _leaf_class_label(self, tree_index: int, tree_: Any, node_index: int) -> str:
         """Return the class label for a classifier leaf node."""
+        # Starts as a class index, then re-bound to the class name when
+        # target_names / classes_ are available.
+        pred_class: Any
         gb_class_index = SklearnEnsembleNormalizer.get_tree_class_index(
             self._builder.model,
             tree_index,
@@ -767,7 +789,9 @@ class DPGExplainer:
 
     def _get_edge_metrics(self) -> Any:
         if self._edge_metrics is None:
-            self._edge_metrics = EdgeMetrics.extract_edge_metrics(self._graph, self._nodes)
+            self._edge_metrics = EdgeMetrics.extract_edge_metrics(
+                self._require_graph(), self._require_nodes()
+            )
         return self._edge_metrics
 
     def _compute_sample_confidence(
@@ -827,7 +851,7 @@ class DPGExplainer:
         trace_diagnostics = self._compute_trace_diagnostics(tree_paths, sample_array)
         evidence_score_pred = None
         if class_votes:
-            majority_vote = max(class_votes, key=class_votes.get)
+            majority_vote = max(class_votes, key=lambda name: class_votes[name])
             evidence_score_pred = evidence_scores.get(majority_vote)
 
         sorted_evidence = sorted(
@@ -1009,27 +1033,37 @@ class DPGExplainer:
         leaf_id = int(tree.apply(sample_array)[0])
         labels: List[str] = []
 
-        for position, node_index in enumerate(path):
-            if int(node_index) == leaf_id:
+        while True:
+            left = tree_.children_left[node_index]
+            right = tree_.children_right[node_index]
+            if left == right:
+                if is_regressor:
+                    pred = round(tree_.value[node_index][0][0], 2)
+                    labels.append(f"Pred {pred}")
+                else:
+                    if tree_index is None:
+                        # Starts as a class index, then re-bound to the class
+                        # name when target_names / classes_ are available.
+                        pred_class: Any = int(tree_.value[node_index].argmax())
+                        if self._builder.target_names is not None:
+                            pred_class = self._builder.target_names[pred_class]
+                        elif hasattr(self._builder.model, "classes_"):
+                            pred_class = self._builder.model.classes_[pred_class]
+                        labels.append(f"Class {pred_class}")
+                    else:
+                        labels.append(self._leaf_class_label(tree_index, tree_, node_index))
                 break
-            feature_index = int(tree_.feature[node_index])
-            threshold = round(float(tree_.threshold[node_index]), self._builder.get_decimal_threshold())
-            feature_name = self._builder.feature_names[feature_index]
-            went_left = int(path[position + 1]) == int(tree_.children_left[node_index])
-            labels.append(f"{feature_name} {'<=' if went_left else '>'} {threshold}")
 
-        if is_regressor:
-            pred = round(float(tree_.value[leaf_id][0][0]), 2)
-            labels.append(f"Pred {pred}")
-        elif tree_index is None:
-            pred_class = int(tree_.value[leaf_id].argmax())
-            if self._builder.target_names is not None:
-                pred_class = self._builder.target_names[pred_class]
-            elif hasattr(self._builder.model, "classes_"):
-                pred_class = self._builder.model.classes_[pred_class]
-            labels.append(f"Class {pred_class}")
-        else:
-            labels.append(self._leaf_class_label(tree_index, tree_, leaf_id))
+            feature_index = tree_.feature[node_index]
+            threshold = round(tree_.threshold[node_index], self._builder.decimal_threshold)
+            feature_name = self._builder.feature_names[feature_index]
+            sample_val = sample[feature_index]
+            if sample_val <= threshold:
+                labels.append(f"{feature_name} <= {threshold}")
+                node_index = left
+            else:
+                labels.append(f"{feature_name} > {threshold}")
+                node_index = right
 
         return labels
 
@@ -1219,7 +1253,7 @@ class DPGExplainer:
     def plot_top_lrc_splits(
         self,
         X_df: Any,
-        y,
+        y: Any,
         explanation: Optional[DPGExplanation] = None,
         top_predicates: int = 5,
         top_features: int = 2,
@@ -1301,7 +1335,7 @@ class DPGExplainer:
     def plot_sample_using_bc_weights(
         self,
         X_df: Any,
-        y,
+        y: Any,
         explanation: Optional[DPGExplanation] = None,
         top_k: int = 10,
         dataset_name: str = "Dataset",
@@ -1330,7 +1364,7 @@ class DPGExplainer:
     def plot_class_bounds_vs_dataset_ranges(
         self,
         X_df: Any,
-        y,
+        y: Any,
         explanation: Optional[DPGExplanation] = None,
         dataset_name: str = "Dataset",
         top_features: int = 4,

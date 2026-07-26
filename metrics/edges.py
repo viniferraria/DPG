@@ -1,10 +1,13 @@
+from typing import Any, List
+
+import networkx as nx
 import pandas as pd
 
 class EdgeMetrics:
     """Handles edge-level metric calculations."""
 
     @staticmethod
-    def extract_edge_metrics(dpg_model, nodes_list):
+    def extract_edge_metrics(dpg_model: nx.DiGraph, nodes_list: List[List[str]]) -> Any:
         """
         Extracts metrics from the edges of a DPG model, including:
         - Edge Load Centrality
@@ -12,7 +15,8 @@ class EdgeMetrics:
         
         Args:
             dpg_model: A NetworkX graph representing the DPG.
-            nodes_list: List of (node_id, label) tuples.
+            nodes_list: List of [node_id, label] pairs, as returned by
+                DecisionPredicateGraph.to_networkx.
 
         Returns:
             df: A pandas DataFrame containing the metrics for each edge in the DPG.

@@ -46,7 +46,9 @@ repository = "https://github.com/Meta-Group/DPG"
 
 [dependency-groups]
 dev = [
-    "matplotlib-stubs>=0.0.0",
+    # NOTE: do not add matplotlib-stubs here. matplotlib ships its own complete
+    # inline types (py.typed); a stub-only package shadows them and regresses
+    # Figure.patch, Colorbar.outline, Axes.set_yticks, to_rgba, ListedColormap.
     "mypy>=1.9",
     "pandas-stubs>=0.0.0",
     "pyrefly>=1.0.0",
@@ -105,8 +107,16 @@ module = [
     "scipy.*",
     "omegaconf.*",
     "PIL.*",
+    "igraph.*",
 ]
 ignore_missing_imports = true
+
+# TODO: annotate dpg/visualizer.py's plot functions and drop this override.
+# Every other check stays enabled for this module; only the missing-annotation
+# rule is relaxed.
+[[tool.mypy.overrides]]
+module = "dpg.visualizer"
+disallow_untyped_defs = false
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
