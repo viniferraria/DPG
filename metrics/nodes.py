@@ -83,7 +83,7 @@ def _nx_to_igraph(nx_graph: nx.DiGraph) -> Tuple[ig.Graph, List[str]]:
         NetworkX node ID for igraph vertex index *i*.
     """
     node_ids = list(nx_graph.nodes())
-    node_to_idx = {n: i for i, n in enumerate(node_ids)}
+    node_to_idx = {node_id: index for index, node_id in enumerate(node_ids)}
 
     edges = []
     weights = []
@@ -91,9 +91,15 @@ def _nx_to_igraph(nx_graph: nx.DiGraph) -> Tuple[ig.Graph, List[str]]:
         edges.append((node_to_idx[u], node_to_idx[v]))
         weights.append(data.get("weight", 1.0))
 
-    g = ig.Graph(n=len(node_ids), edges=edges, directed=True)
-    g.es["weight"] = weights
-    return g, node_ids
+    graph = ig.Graph(n=len(node_ids), edges=edges, directed=True)
+    graph.es["weight"] = weights
+
+    # Invert weights to distances for igraph shortest path calculations.
+    total_weight = sum(weights)
+    graph.es["distance"] = [
+        total_weight / w if w > 0 else float("inf") for w in graph.es["weight"]
+    ]
+    return graph, node_ids
 
 
 @log_timer
@@ -133,16 +139,11 @@ def calc_local_reaching_centrality(
     # 2. Find shortest paths using these distances (igraph C-level)
     # 3. For each reachable node, compute average original edge weight along path
     # 4. Sum averages, normalise by (total_weight / num_edges), divide by (n-1)
-    n = ig_graph.vcount()
+    num_vertex = ig_graph.vcount()
     total_weight = sum(ig_graph.es["weight"])
     num_edges = ig_graph.ecount()
     if total_weight <= 0:
         raise ValueError("Total edge weight must be positive for LRC")
-
-    # Build distance attribute: distance = total_weight / original_weight
-    ig_graph.es["distance"] = [
-        total_weight / w if w > 0 else float("inf") for w in ig_graph.es["weight"]
-    ]
 
     # Build edge weight lookup: (source, target) → original weight
     edge_weight_lookup = {}
@@ -152,7 +153,7 @@ def calc_local_reaching_centrality(
     lrc_norm = total_weight / num_edges if num_edges > 0 else 1.0
 
     local_reaching_centrality = {}
-    for i in range(n):
+    for i in range(num_vertex):
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", message="Couldn't reach some", category=RuntimeWarning
@@ -170,7 +171,7 @@ def calc_local_reaching_centrality(
                 for k in range(path_length)
             )
             sum_avg_weight += path_weight_sum / path_length
-        lrc = (sum_avg_weight / lrc_norm) / (n - 1) if n > 1 else 0.0
+        lrc = (sum_avg_weight / lrc_norm) / (num_vertex - 1) if num_vertex > 1 else 0.0
         local_reaching_centrality[node_ids[i]] = lrc
 
     return local_reaching_centrality
@@ -186,11 +187,6 @@ def calc_closeness_centrality(
     total_weight = sum(ig_graph.es["weight"])
     if total_weight <= 0:
         raise ValueError("Total edge weight must be positive for closeness centrality")
-
-    # Build distance attribute: distance = total_weight / original_weight
-    ig_graph.es["distance"] = [
-        total_weight / w if w > 0 else float("inf") for w in ig_graph.es["weight"]
-    ]
 
     closeness_centrality = {}
     for i in range(n):
@@ -224,11 +220,6 @@ def calc_harmonic_centrality(
     total_weight = sum(ig_graph.es["weight"])
     if total_weight <= 0:
         raise ValueError("Total edge weight must be positive for harmonic centrality")
-
-    # Build distance attribute: distance = total_weight / original_weight
-    ig_graph.es["distance"] = [
-        total_weight / w if w > 0 else float("inf") for w in ig_graph.es["weight"]
-    ]
 
     harmonic_centrality: dict[str, float] = {}
     for i in range(n):
