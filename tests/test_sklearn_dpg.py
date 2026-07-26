@@ -8,7 +8,7 @@ and metric computation through the same entry point used by run_dpg_standard.py.
 import pandas as pd
 import pytest
 
-import dpg.sklearn_dpg as sklearn_dpg
+from dpg import sklearn_dpg
 from dpg.sklearn_dpg import select_dataset
 
 SEED = 160898
@@ -237,14 +237,15 @@ class TestTestDpgFileOutput:
         import os
 
         assert os.path.isfile(stats_file)
-        content = open(stats_file).read()
-        assert "Accuracy" in content
-        assert "F1" in content
-        assert "Confusion Matrix" in content
+        with open(stats_file, "r") as f:
+            content = f.read()
+            assert "Accuracy" in content
+            assert "F1" in content
+            assert "Confusion Matrix" in content
 
     def test_custom_csv_output(self, tmp_path):
         stats_file = str(tmp_path / "custom_stats.txt")
-        df, df_edges, df_dpg, _, _, _ = sklearn_dpg.test_dpg(
+        df, _df_edges, _df_dpg, _, _, _ = sklearn_dpg.test_dpg(
             datasets="datasets/custom.csv",
             n_learners=5,
             seed=42,

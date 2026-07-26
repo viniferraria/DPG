@@ -1,8 +1,8 @@
 #!/usr/bin/env -S uv run python
 
-import logging
 import csv
 import datetime
+import logging
 import pickle
 import time
 import traceback
@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedShuffleSplit
 
 from dpg import DPGExplainer
+
 
 def get_logger(name, log_file=None):
     """
@@ -61,7 +62,7 @@ RNG = np.random.default_rng(RANDOM_STATE)
 STATES_DIR = Path(__file__).parent / "states"
 STATES_DIR.mkdir(exist_ok=True)
 
-current_time = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+current_time = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
 logger = get_logger(__name__, log_file=f"dpg_explainer_{current_time}.log")
 
 
@@ -138,7 +139,7 @@ for each in scenarios_files:
                 # Fix: fit on training data only to avoid test-data leak
                 explainer.fit(X_train.values)
 
-                ts = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+                ts = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
 
                 pkl_explainer = (
                     STATES_DIR / f"{run_key}_split{split_idx}_dpg_explainer_{ts}.pkl"
@@ -197,7 +198,7 @@ for each in scenarios_files:
                         writer.writerow(asdict(record))
                 logger.info(f"Saved {len(all_records)} total records to {output_path}")
 
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - continue remaining experiment runs
                 logger.error(f"Failed: {run_key} split={split_idx}: {exc}")
                 traceback.print_exc()
 

@@ -1,7 +1,8 @@
 import hashlib
 import os
 import re
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
+from collections.abc import Generator, Sequence
+from typing import Any, cast
 
 import graphviz
 import networkx as nx
@@ -19,6 +20,14 @@ from tqdm import tqdm
 
 from dpg.sklearn_normalizer import SklearnEnsembleNormalizer
 
+from .exceptions import (
+    DPGConfigurationError,
+    DPGError,
+    DPGGraphError,
+    DPGModelError,
+    DPGValidationError,
+)
+
 # Handle OmegaConf DictConfig if available
 try:
     from omegaconf import DictConfig, OmegaConf
@@ -29,7 +38,7 @@ except ImportError:
 pd.set_option("display.max_colwidth", 255)
 
 
-DEFAULT_DPG_CONFIG: Dict[str, Any] = {
+DEFAULT_DPG_CONFIG: dict[str, Any] = {
     "dpg": {
         "default": {
             "perc_var": 0.000000001,
@@ -43,17 +52,9 @@ DEFAULT_DPG_CONFIG: Dict[str, Any] = {
     }
 }
 
-class DPGError(Exception):
-    """Base exception class for DPG-specific errors"""
-    pass
-
+__all__ = ["DPGError", "DecisionPredicateGraph"]
 
 class DecisionPredicateGraph:
-    SUPPORTED_GRAPH_CONSTRUCTION_MODES = {
-        "aggregated_transitions",
-        "execution_trace",
-    }
-
     """
     Main class for converting tree-based ensemble models into interpretable graphs.
 
@@ -66,9 +67,9 @@ class DecisionPredicateGraph:
         self,
         model: Any,
         feature_names: Sequence[str],
-        target_names: Optional[Sequence[str]] = None,
+        target_names: Sequence[str] | None = None,
         config_file: str = "config.yaml",
-        dpg_config: Optional[Dict[str, Any]] = None,
+        dpg_config: dict[str, Any] | None = None,
     ) -> None:
         """
         Initialize DPG converter with model and configuration.
@@ -80,12 +81,17 @@ class DecisionPredicateGraph:
             config_file: Path to YAML config file (fallback if dpg_config not provided)
             dpg_config: Optional dict with DPG config parameters (overrides config_file)
         """
+        self.SUPPORTED_GRAPH_CONSTRUCTION_MODES = {
+            "aggregated_transitions",
+            "execution_trace",
+        }
+
         # Load configuration from provided config, file, or defaults
-        config: Dict[str, Any]
+        config: dict[str, Any]
         if dpg_config is not None:
             config = dpg_config
         else:
-            loaded_config: Optional[Dict[str, Any]] = None
+            loaded_config: dict[str, Any] | None = None
             if config_file:
                 if os.path.exists(config_file):
                     with open(config_file) as f:
@@ -96,16 +102,16 @@ class DecisionPredicateGraph:
 
         # Convert OmegaConf DictConfig to regular dict if needed
         if HAS_OMEGACONF and isinstance(config, DictConfig):
-            config = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
+            config = cast(dict[str, Any], OmegaConf.to_container(config, resolve=True))
         # Handle dict-like objects that have to_dict() method (like custom DictConfig)
         elif hasattr(config, 'to_dict'):
             config = cast(Any, config).to_dict()
         
         # Input validation
         if not hasattr(model, 'estimators_'):
-            raise DPGError("Model must be a tree-based ensemble")
+            raise DPGModelError.invalid_ensemble()
         if len(feature_names) == 0:
-            raise DPGError("Feature names cannot be empty")
+            raise DPGValidationError.empty_feature_names()
 
         # Normalize sklearn ensemble models for consistent tree structure
         model = SklearnEnsembleNormalizer.normalize(model)
@@ -130,16 +136,15 @@ class DecisionPredicateGraph:
 
         # Validate required config values
         if self.perc_var is None:
-            raise DPGError("perc_var not found in DPG config")
+            raise DPGConfigurationError.missing_perc_var()
         if self.decimal_threshold is None:
-            raise DPGError("decimal_threshold not found in DPG config")
+            raise DPGConfigurationError.missing_decimal_threshold()
         if self.n_jobs is None:
-            raise DPGError("n_jobs not found in DPG config")
+            raise DPGConfigurationError.missing_n_jobs()
         if self.graph_construction_mode not in self.SUPPORTED_GRAPH_CONSTRUCTION_MODES:
-            supported_modes = ", ".join(sorted(self.SUPPORTED_GRAPH_CONSTRUCTION_MODES))
-            raise DPGError(
-                f"Unsupported graph construction mode '{self.graph_construction_mode}'. "
-                f"Supported modes are: {supported_modes}"
+            raise DPGConfigurationError.unsupported_graph_mode(
+                self.graph_construction_mode,
+                sorted(self.SUPPORTED_GRAPH_CONSTRUCTION_MODES),
             )
 
         print(
@@ -226,7 +231,7 @@ class DecisionPredicateGraph:
             pred_class = self.model.classes_[pred_class]
         return f"Class {pred_class}"
 
-    def tracing_ensemble(self, case_id: int, sample: Any) -> Generator[List[str], None, None]:
+    def tracing_ensemble(self, case_id: int, sample: Any) -> Generator[list[str], None, None]:
         """
         Extract decision path for a single sample (generator version).
         
@@ -273,7 +278,7 @@ class DecisionPredicateGraph:
                     node_index = right
                 yield [prefix, condition]
 
-    def tracing_ensemble_parallel(self, case_id: int, sample: Any) -> List[List[str]]:
+    def tracing_ensemble_parallel(self, case_id: int, sample: Any) -> list[list[str]]:
         """
         Extract decision path for a single sample (list version for parallel workers).
 
@@ -347,7 +352,7 @@ class DecisionPredicateGraph:
                 case_ids_to_keep.update(case_ids)
         return log[log["case:concept:name"].isin(case_ids_to_keep)].copy()
 
-    def discover_dfg(self, log: Any) -> Dict[Tuple[str, str], int]:
+    def discover_dfg(self, log: Any) -> dict[tuple[str, str], int]:
         """
         Build directed frequency graph from path logs.
         
@@ -359,11 +364,11 @@ class DecisionPredicateGraph:
         """
         cases = log["case:concept:name"].unique()
         if len(cases) == 0:
-            raise Exception("There is no paths with the current value of perc_var and decimal_threshold!")
+            raise DPGGraphError.no_paths(self.perc_var, self.decimal_threshold)
 
         # Optimized: Group by case once, then process each group
         # This avoids repeated filtering of the dataframe for each case
-        dfg: Dict[Tuple[Any, Any], int] = {}
+        dfg: dict[tuple[Any, Any], int] = {}
         grouped = log.groupby("case:concept:name", sort=False)
         
         for case, trace_df in tqdm(grouped, desc="Processing cases", total=len(cases)):
@@ -375,7 +380,7 @@ class DecisionPredicateGraph:
 
         return dfg
 
-    def discover_dfg_execution_trace(self, log: Any) -> Dict[Tuple[str, str], int]:
+    def discover_dfg_execution_trace(self, log: Any) -> dict[tuple[str, str], int]:
         """
         Build a directed frequency graph directly from the raw execution trace.
 
@@ -399,7 +404,7 @@ class DecisionPredicateGraph:
             if count >= min_count
         }
 
-    def generate_dot(self, dfg: Dict[Tuple[str, str], int]) -> Any:
+    def generate_dot(self, dfg: dict[tuple[str, str], int]) -> Any:
         """
         Convert frequency graph to Graphviz format.
         
@@ -468,7 +473,7 @@ class DecisionPredicateGraph:
             )
         return dot
 
-    def to_networkx(self, graphviz_graph: Any) -> Tuple[Any, List[List[str]]]:
+    def to_networkx(self, graphviz_graph: Any) -> tuple[Any, list[list[str]]]:
         """
         Convert Graphviz graph to NetworkX format.
         

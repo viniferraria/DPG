@@ -1,34 +1,46 @@
-import pandas as pd
-import numpy as np
 import ntpath
 import os
-from typing import Any, Optional, Tuple
+from typing import Any
 
+import numpy as np
+import pandas as pd
+from sklearn.base import is_classifier
+from sklearn.datasets import (
+    load_breast_cancer,
+    load_diabetes,
+    load_digits,
+    load_iris,
+    load_wine,
+)
 from sklearn.ensemble import (
-    RandomForestClassifier,
-    RandomForestRegressor,
-    GradientBoostingClassifier,
-    GradientBoostingRegressor,
-    BaggingClassifier,
-    ExtraTreesClassifier,
     AdaBoostClassifier,
     AdaBoostRegressor,
+    BaggingClassifier,
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
 )
-from sklearn.metrics import (accuracy_score, classification_report,
-                            confusion_matrix, f1_score, mean_squared_error)
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    mean_squared_error,
+)
 from sklearn.model_selection import train_test_split
-from sklearn.datasets import (load_iris, load_digits, load_wine,
-                             load_breast_cancer, load_diabetes)
-from sklearn.base import is_classifier
+
+from metrics.edges import EdgeMetrics
+from metrics.graph import GraphMetrics
+from metrics.nodes import NodeMetrics
 
 from .core import DecisionPredicateGraph
+from .exceptions import DPGDatasetError, DPGModelError, DPGValidationError
 from .visualizer import plot_dpg, plot_dpg_communities
-from metrics.nodes import NodeMetrics
-from metrics.graph import GraphMetrics
-from metrics.edges import EdgeMetrics
 
 
-def select_dataset(source: str, target_column: Optional[str] = None) -> Tuple[Any, Any, Any]:
+def select_dataset(source: str, target_column: str | None = None) -> tuple[Any, Any, Any]:
     """
     Selects either a standard sklearn dataset or loads a custom CSV dataset.
     
@@ -53,50 +65,52 @@ def select_dataset(source: str, target_column: Optional[str] = None) -> Tuple[An
     if source in std_datasets:
         dataset = std_datasets[source]
         return dataset.data, dataset.feature_names, dataset.target
-    
+
     # Custom dataset from CSV
     try:
         df = pd.read_csv(source, sep=',')
-        
-        if target_column is None:
-            target_column = df.columns[-1]
-            print(f"[INFO] Using last column as target: {target_column}")
-        elif target_column not in df.columns:
-            raise ValueError(f"Target column '{target_column}' not found")
-            
+    except Exception as e:
+        raise DPGDatasetError.load_failed(source, e) from e
+
+    if target_column is None:
+        target_column = df.columns[-1]
+        print(f"[INFO] Using last column as target: {target_column}")
+    elif target_column not in df.columns:
+        raise DPGDatasetError.missing_target_column(target_column)
+
+    try:
         target = df[target_column].values
         df.drop(columns=[target_column], inplace=True)
-        
+
         # Clean data
         df = df.apply(pd.to_numeric, errors='coerce')
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.fillna(df.mean(), inplace=True)
-        
+
         data = np.round(df.values, 2).astype(np.float64)
         features = df.columns.values
-        
-        return data, features, target
-        
     except Exception as e:
-        raise ValueError(f"Failed to load dataset: {str(e)}")
+        raise DPGDatasetError.load_failed(source, e) from e
+
+    return data, features, target
 
 
 def test_dpg(datasets: str,
-             target_column: Optional[str] = None,
+             target_column: str | None = None,
              n_learners: int = 5,
              perc_var: float = 0.00000001,
              decimal_threshold: int = 3,
              n_jobs: int = -1,
              model_name: str = 'RandomForestClassifier',
-             file_name: Optional[str] = None,
+             file_name: str | None = None,
              plot: bool = False,
              save_plot_dir: str = "examples/",
-             attribute: Optional[str] = None,
+             attribute: str | None = None,
              communities: bool = False,
              clusters_flag: bool = False,
-             threshold_clusters: Optional[float] = None,
+             threshold_clusters: float | None = None,
              class_flag: bool = False,
-             seed:int = 160898) -> Tuple[Any, ...]:
+             seed:int = 160898) -> tuple[Any, ...]:
     
     """
     Unified function to train models and extract DPG for both standard and custom datasets.
@@ -112,7 +126,7 @@ def test_dpg(datasets: str,
 
     # Input validation
     if n_learners <= 0:
-        raise ValueError("Number of learners must be positive")
+        raise DPGValidationError.positive_learner_count()
     
     # Load data
     data, features, target = select_dataset(datasets, target_column)
@@ -135,7 +149,7 @@ def test_dpg(datasets: str,
     }
 
     if model_name not in model_classes:
-        raise ValueError(f"Unsupported model: {model_name}. Available: {list(model_classes.keys())}")
+        raise DPGModelError.unsupported_model(model_name, list(model_classes))
     
     model = model_classes[model_name](
         n_estimators=n_learners,
@@ -187,9 +201,9 @@ def test_dpg(datasets: str,
     
     class_nodes = {i[0] : i[1] for i in nodes_list if 'Class' in i[1]}
     
-    clusters: Optional[Any]
-    node_prob: Optional[Any]
-    confidence: Optional[Any]
+    clusters: Any | None
+    node_prob: Any | None
+    confidence: Any | None
     if clusters_flag:
         clusters, node_prob, confidence = GraphMetrics.clustering(dpg_model, class_nodes, threshold_clusters)
     else:

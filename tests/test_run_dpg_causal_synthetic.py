@@ -15,12 +15,11 @@ import pytest
 
 import experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic as m
 
-
 # --- timestamp ---------------------------------------------------------------
 
 
 def test_timestamp_uses_provided_datetime():
-    fixed = datetime.datetime(2026, 6, 20, 13, 5, 9)
+    fixed = datetime.datetime(2026, 6, 20, 13, 5, 9, tzinfo=datetime.timezone.utc)
     assert m.timestamp(fixed) == "2026-06-20T13-05-09"
 
 
@@ -217,7 +216,7 @@ def test_module_has_no_import_side_effects():
 
 
 def test_model_factories_produce_fresh_instances():
-    for name, factory in m.MODEL_FACTORIES.items():
+    for factory in m.MODEL_FACTORIES.values():
         a, b = factory(), factory()
         assert a is not b
         assert a.random_state == m.RANDOM_STATE

@@ -1,13 +1,14 @@
-from typing import Any, List
+from typing import Any
 
 import networkx as nx
 import pandas as pd
+
 
 class EdgeMetrics:
     """Handles edge-level metric calculations."""
 
     @staticmethod
-    def extract_edge_metrics(dpg_model: nx.DiGraph, nodes_list: List[List[str]]) -> Any:
+    def extract_edge_metrics(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any:
         """
         Extracts metrics from the edges of a DPG model, including:
         - Edge Load Centrality

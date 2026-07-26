@@ -6,7 +6,7 @@ AdaBoost, and other ensemble methods to provide a consistent interface for DPG.
 """
 
 import copy
-from typing import Any, List, Optional
+from typing import Any
 
 from sklearn.ensemble import (
     GradientBoostingClassifier,
@@ -69,8 +69,8 @@ class SklearnEnsembleNormalizer:
 
         # Flatten 2D (n_estimators, n_trees_per_iteration) to 1D list.
         # For multiclass GradientBoostingClassifier the column index is the class slot.
-        flat_estimators: List[Any] = []
-        tree_class_indices: List[Optional[int]] = []
+        flat_estimators: list[Any] = []
+        tree_class_indices: list[int | None] = []
         for row in model.estimators_:
             for class_index, tree in enumerate(row):
                 flat_estimators.append(tree)
@@ -85,12 +85,12 @@ class SklearnEnsembleNormalizer:
         return normalized_model
 
     @staticmethod
-    def get_tree_class_index(model: Any, tree_index: int) -> Optional[int]:
+    def get_tree_class_index(model: Any, tree_index: int) -> int | None:
         """Return the preserved class-slot index for a normalized GB tree."""
         indices = getattr(model, "_dpg_tree_class_indices", None)
         if indices is None:
             return None
         if tree_index < 0 or tree_index >= len(indices):
             return None
-        class_index: Optional[int] = indices[tree_index]
+        class_index: int | None = indices[tree_index]
         return class_index

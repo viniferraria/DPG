@@ -32,7 +32,7 @@ def iris_model():
 
 @pytest.fixture(scope="module")
 def explainer(iris_model):
-    model, X, feature_names, target_names = iris_model
+    model, _X, feature_names, target_names = iris_model
     return DPGExplainer(
         model=model,
         feature_names=feature_names,
@@ -124,7 +124,7 @@ class TestExplanationValues:
     def test_class_boundary_predicate_format(self, explanation):
         valid_re = re.compile(r"(<=|>|<)")
         bounds = explanation.class_boundaries["Class Bounds"]
-        for cls, preds in bounds.items():
+        for preds in bounds.values():
             for p in preds:
                 assert valid_re.search(p), f"Invalid predicate: {p!r}"
 
@@ -829,7 +829,7 @@ class TestFaithfulnessEvaluation:
         assert 0.0 <= score_np <= 1.0
 
     def test_uses_y_true_to_compute_local_accuracy(self, explainer, iris_model):
-        _, X, _, target_names = iris_model
+        _, X, _, _target_names = iris_model
         y_true = [str(i) for i in load_iris().target[:5]]
         explainer.fit(X)
         details = explainer.evaluate_faithfulness(X[:5], y_true=y_true, max_samples=5, return_details=True)

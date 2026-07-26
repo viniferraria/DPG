@@ -1,7 +1,8 @@
 import hashlib
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any
 
 import networkx as nx
 import numpy as np
@@ -13,24 +14,26 @@ from sklearn.ensemble import (
     RandomForestRegressor,
 )
 
+from metrics.edges import EdgeMetrics
+from metrics.graph import GraphMetrics
+from metrics.nodes import NodeMetrics
+
 from .core import DecisionPredicateGraph
+from .exceptions import DPGExplanationError, DPGNotFittedError, DPGValidationError
 from .sklearn_normalizer import SklearnEnsembleNormalizer
 from .visualizer import (
     class_feature_predicate_counts,
     class_lookup_from_target_names,
     plot_class_feature_complexity,
-    plot_dpg_local_paths_aggregate,
-    plot_sample_using_bc_weights,
     plot_dpg,
     plot_dpg_class_bounds_vs_dataset_feature_ranges,
     plot_dpg_communities,
+    plot_dpg_local_paths_aggregate,
     plot_lrc_vs_rf_importance,
+    plot_sample_using_bc_weights,
     plot_top_lrc_predicate_splits,
     sample_bc_weights,
 )
-from metrics.graph import GraphMetrics
-from metrics.nodes import NodeMetrics
-from metrics.edges import EdgeMetrics
 
 
 @dataclass
@@ -38,15 +41,15 @@ class DPGExplanation:
     """Container for global DPG outputs."""
 
     graph: Any
-    nodes: List[List[str]]
+    nodes: list[list[str]]
     dot: Any
     node_metrics: Any
     edge_metrics: Any
-    class_boundaries: Dict[str, Any]
-    communities: Optional[Dict[str, Any]] = None
-    community_threshold: Optional[float] = None
+    class_boundaries: dict[str, Any]
+    communities: dict[str, Any] | None = None
+    community_threshold: float | None = None
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "graph": self.graph,
             "nodes": self.nodes,
@@ -63,18 +66,18 @@ class DPGExplanation:
 class DPGTreePathExplanation:
     tree_index: int
     tree_prefix: str
-    labels: List[str]
-    node_ids: List[Optional[str]]
-    predicate_truths: List[bool]
-    edge_exists: List[bool]
+    labels: list[str]
+    node_ids: list[str | None]
+    predicate_truths: list[bool]
+    edge_exists: list[bool]
     starts_from_root: bool
     ends_in_leaf: bool
     graph_path_valid: bool
-    mean_lrc: Optional[float] = None
-    mean_bc: Optional[float] = None
-    path_confidence: Optional[float] = None
+    mean_lrc: float | None = None
+    mean_bc: float | None = None
+    path_confidence: float | None = None
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "tree_index": self.tree_index,
             "tree_prefix": self.tree_prefix,
@@ -94,16 +97,16 @@ class DPGTreePathExplanation:
 @dataclass
 class DPGLocalExplanation:
     sample_id: int
-    sample: List[float]
-    tree_paths: List[DPGTreePathExplanation]
+    sample: list[float]
+    tree_paths: list[DPGTreePathExplanation]
     graph_validated: bool
     all_trees_valid: bool
-    majority_vote: Optional[str]
-    class_votes: Dict[str, int]
+    majority_vote: str | None
+    class_votes: dict[str, int]
     path_mode: str
-    sample_confidence: Optional[Dict[str, Any]] = None
+    sample_confidence: dict[str, Any] | None = None
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "sample_id": self.sample_id,
             "sample": self.sample,
@@ -129,9 +132,9 @@ class DPGExplainer:
         self,
         model: Any,
         feature_names: Sequence[str],
-        target_names: Optional[Sequence[str]] = None,
+        target_names: Sequence[str] | None = None,
         config_file: str = "config.yaml",
-        dpg_config: Optional[Dict[str, Any]] = None,
+        dpg_config: dict[str, Any] | None = None,
     ) -> None:
         self._builder = DecisionPredicateGraph(
             model=model,
@@ -141,12 +144,12 @@ class DPGExplainer:
             dpg_config=dpg_config,
         )
         self._is_fitted = False
-        self._dot: Optional[Any] = None
-        self._graph: Optional[nx.DiGraph] = None
-        self._nodes: Optional[List[List[str]]] = None
-        self._node_metrics: Optional[pd.DataFrame] = None
-        self._node_metrics_lookup: Optional[Dict[str, Dict[str, Any]]] = None
-        self._edge_metrics: Optional[Any] = None
+        self._dot: Any | None = None
+        self._graph: nx.DiGraph | None = None
+        self._nodes: list[list[str]] | None = None
+        self._node_metrics: pd.DataFrame | None = None
+        self._node_metrics_lookup: dict[str, dict[str, Any]] | None = None
+        self._edge_metrics: Any | None = None
 
     @property
     def builder(self) -> DecisionPredicateGraph:
@@ -155,13 +158,13 @@ class DPGExplainer:
     def _require_graph(self) -> nx.DiGraph:
         """Return the fitted graph, or raise if fit() has not been called."""
         if self._graph is None:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) first.")
+            raise DPGNotFittedError.for_graph()
         return self._graph
 
-    def _require_nodes(self) -> List[List[str]]:
+    def _require_nodes(self) -> list[list[str]]:
         """Return the fitted node list, or raise if fit() has not been called."""
         if self._nodes is None:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) first.")
+            raise DPGNotFittedError.for_nodes()
         return self._nodes
 
     def fit(self, X: Any) -> "DPGExplainer":
@@ -176,7 +179,7 @@ class DPGExplainer:
 
     def explain_global(
         self,
-        X: Optional[Any] = None,
+        X: Any | None = None,
         communities: bool = False,
         community_threshold: float = 0.2,
     ) -> DPGExplanation:
@@ -191,7 +194,7 @@ class DPGExplainer:
         if X is not None:
             self.fit(X)
         if not self._is_fitted:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) or explain_global(X=...).")
+            raise DPGNotFittedError.for_global_explanation()
 
         graph = self._require_graph()
         nodes = self._require_nodes()
@@ -228,7 +231,7 @@ class DPGExplainer:
         self,
         sample: Any,
         sample_id: int = 0,
-        X: Optional[Any] = None,
+        X: Any | None = None,
         validate_graph: bool = True,
     ) -> DPGLocalExplanation:
         """
@@ -244,13 +247,13 @@ class DPGExplainer:
         if X is not None:
             self.fit(X)
         if not self._is_fitted:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) or explain_local(X=...).")
+            raise DPGNotFittedError.for_local_explanation()
 
         sample_array = np.asarray(sample).reshape(-1)
         expected_features = len(self._builder.feature_names)
         if sample_array.shape[0] != expected_features:
-            raise ValueError(
-                f"Sample has {sample_array.shape[0]} features, expected {expected_features}."
+            raise DPGValidationError.sample_feature_count(
+                sample_array.shape[0], expected_features
             )
 
         node_lookup = {label: node_id for node_id, label in self._require_nodes()}
@@ -297,22 +300,22 @@ class DPGExplainer:
     def plot_local_on_dpg(
         self,
         plot_name: str,
-        local_explanation: Optional[DPGLocalExplanation] = None,
-        sample: Optional[Any] = None,
+        local_explanation: DPGLocalExplanation | None = None,
+        sample: Any | None = None,
         sample_id: int = 0,
-        X: Optional[Any] = None,
+        X: Any | None = None,
         validate_graph: bool = True,
-        path_indices: Optional[List[int]] = None,
-        true_class_label: Optional[str] = None,
-        obtained_class_label: Optional[str] = None,
-        sample_metrics: Optional[Dict[str, Any]] = None,
+        path_indices: list[int] | None = None,
+        true_class_label: str | None = None,
+        obtained_class_label: str | None = None,
+        sample_metrics: dict[str, Any] | None = None,
         save_dir: str = "results/",
         class_flag: bool = True,
         layout_template: str = "default",
-        graph_style: Optional[Dict[str, Any]] = None,
-        node_style: Optional[Dict[str, Any]] = None,
-        edge_style: Optional[Dict[str, Any]] = None,
-        fig_size: Tuple[float, float] = (16, 8),
+        graph_style: dict[str, Any] | None = None,
+        node_style: dict[str, Any] | None = None,
+        edge_style: dict[str, Any] | None = None,
+        fig_size: tuple[float, float] = (16, 8),
         dpi: int = 300,
         pdf_dpi: int = 600,
         show: bool = True,
@@ -321,16 +324,16 @@ class DPGExplainer:
         palette: str = "default",
         label_mode: str = "wrapped",
         readability: str = "presentation",
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> Any:
         if X is not None:
             self.fit(X)
         if not self._is_fitted:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) or plot_local_on_dpg(X=...).")
+            raise DPGNotFittedError.for_local_plot()
 
         if local_explanation is None:
             if sample is None:
-                raise ValueError("Either local_explanation or sample must be provided.")
+                raise DPGValidationError.missing_local_input()
             local_explanation = self.explain_local(
                 sample=sample,
                 sample_id=sample_id,
@@ -343,7 +346,7 @@ class DPGExplainer:
             selected_paths = []
             for idx in path_indices:
                 if not isinstance(idx, int) or idx < 0 or idx >= len(local_explanation.tree_paths):
-                    raise ValueError("path_indices must reference valid path indices.")
+                    raise DPGValidationError.invalid_path_indices()
                 selected_paths.append(local_explanation.tree_paths[idx])
 
         if obtained_class_label is None:
@@ -410,7 +413,7 @@ class DPGExplainer:
         rows = []
         for path in sorted(local_explanation.tree_paths, key=lambda path: path.tree_index):
             for step_index, label in enumerate(path.labels):
-                is_leaf = label.startswith("Class ") or label.startswith("Pred ")
+                is_leaf = label.startswith(("Class ", "Pred "))
                 predicate_true = (
                     path.predicate_truths[step_index]
                     if step_index < len(path.predicate_truths)
@@ -444,12 +447,12 @@ class DPGExplainer:
     def evaluate_faithfulness(
         self,
         X: Any,
-        y_true: Optional[Any] = None,
-        max_samples: Optional[int] = None,
-        weights: Optional[Dict[str, float]] = None,
+        y_true: Any | None = None,
+        max_samples: int | None = None,
+        weights: dict[str, float] | None = None,
         return_details: bool = False,
-        sample_ids: Optional[List[int]] = None,
-    ) -> Union[float, Dict[str, Any]]:
+        sample_ids: list[int] | None = None,
+    ) -> float | dict[str, Any]:
         """
         Evaluate local DPG explanations against the fitted black-box model.
 
@@ -460,9 +463,9 @@ class DPGExplainer:
         probability.
         """
         if not self._is_fitted:
-            raise ValueError("DPGExplainer is not fitted. Call fit(X) before evaluate_faithfulness().")
+            raise DPGNotFittedError.for_faithfulness()
         if max_samples is not None and max_samples <= 0:
-            raise ValueError("max_samples must be a positive integer when provided.")
+            raise DPGValidationError.invalid_max_samples()
 
         weights = self._validate_faithfulness_weights(weights)
 
@@ -476,18 +479,18 @@ class DPGExplainer:
 
         n_samples = len(X_eval)
         if n_samples == 0:
-            raise ValueError("X must contain at least one sample for faithfulness evaluation.")
+            raise DPGValidationError.empty_evaluation_input()
         if y_true is not None:
             y_true_seq = list(y_true[:n_samples] if max_samples is not None else y_true)
             if len(y_true_seq) != n_samples:
-                raise ValueError("y_true length must match the number of evaluated samples.")
+                raise DPGValidationError.mismatched_y_true_length()
         else:
             y_true_seq = None
 
         if sample_ids is not None:
             sample_ids_seq = list(sample_ids[:n_samples] if max_samples is not None else sample_ids)
             if len(sample_ids_seq) != n_samples:
-                raise ValueError("sample_ids length must match the number of evaluated samples.")
+                raise DPGValidationError.mismatched_sample_ids_length()
         else:
             sample_ids_seq = list(range(n_samples))
 
@@ -540,7 +543,7 @@ class DPGExplainer:
 
                 per_sample_records.append(record)
                 successful_records.append(record)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - preserve per-sample failure details
                 n_local_failures += 1
                 failure_record = {
                     "sample_id": sample_id,
@@ -568,10 +571,7 @@ class DPGExplainer:
                 per_sample_records.append(failure_record)
 
         if not successful_records:
-            raise ValueError(
-                "All local explanations failed during faithfulness evaluation; "
-                "no faithfulness metrics could be computed."
-            )
+            raise DPGExplanationError.all_local_explanations_failed()
 
         output_fidelity = float(np.mean([record["matches_model"] for record in successful_records]))
         local_accuracy = None
@@ -640,8 +640,8 @@ class DPGExplainer:
         sample: np.ndarray,
         sample_id: int,
         tree_index: int,
-        node_lookup: Dict[str, str],
-        node_metrics_lookup: Dict[str, Dict[str, Any]],
+        node_lookup: dict[str, str],
+        node_metrics_lookup: dict[str, dict[str, Any]],
         validate_graph: bool,
     ) -> DPGTreePathExplanation:
         is_regressor = isinstance(
@@ -651,8 +651,8 @@ class DPGExplainer:
         tree_ = tree.tree_
         node_index = 0
         tree_prefix = f"sample{sample_id}_dt{tree_index}"
-        labels: List[str] = []
-        predicate_truths: List[bool] = []
+        labels: list[str] = []
+        predicate_truths: list[bool] = []
 
         while True:
             left = tree_.children_left[node_index]
@@ -759,14 +759,14 @@ class DPGExplainer:
 
     @staticmethod
     def _normalize_class_vote_label(label: str) -> str:
-        return label[len("Class ") :] if label.startswith("Class ") else label
+        return label.removeprefix("Class ")
 
     def _get_node_metrics(self) -> Any:
         if self._node_metrics is None:
             self._node_metrics = NodeMetrics.extract_node_metrics(self._graph, self._nodes)
         return self._node_metrics
 
-    def _get_node_metrics_lookup(self) -> Dict[str, Dict[str, Any]]:
+    def _get_node_metrics_lookup(self) -> dict[str, dict[str, Any]]:
         if self._node_metrics_lookup is None:
             node_metrics = self._get_node_metrics()
             self._node_metrics_lookup = {
@@ -784,10 +784,10 @@ class DPGExplainer:
 
     def _compute_sample_confidence(
         self,
-        tree_paths: List[DPGTreePathExplanation],
-        class_votes: Dict[str, int],
+        tree_paths: list[DPGTreePathExplanation],
+        class_votes: dict[str, int],
         sample_array: np.ndarray,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         num_paths = len(tree_paths)
         num_valid_paths = sum(path.graph_path_valid for path in tree_paths)
         active_node_ids = []
@@ -890,10 +890,10 @@ class DPGExplainer:
 
     def _compute_evidence_scores(
         self,
-        tree_paths: List[DPGTreePathExplanation],
-        class_scores: Dict[str, float],
-    ) -> Tuple[Dict[str, float], Dict[str, float]]:
-        class_support: Dict[str, float] = {}
+        tree_paths: list[DPGTreePathExplanation],
+        class_scores: dict[str, float],
+    ) -> tuple[dict[str, float], dict[str, float]]:
+        class_support: dict[str, float] = {}
         for path in tree_paths:
             if not path.labels:
                 continue
@@ -915,7 +915,7 @@ class DPGExplainer:
 
         return class_support, evidence_scores
 
-    def _extract_execution_trace_labels(self, sample_arr: np.ndarray) -> List[List[str]]:
+    def _extract_execution_trace_labels(self, sample_arr: np.ndarray) -> list[list[str]]:
         traces = []
         for tree_index, tree in enumerate(self._builder.model.estimators_):
             traces.append(
@@ -930,12 +930,12 @@ class DPGExplainer:
     def _trace_reference_sets(
         self,
         sample_arr: np.ndarray,
-    ) -> Tuple[set, set]:
+    ) -> tuple[set, set]:
         trace_node_labels = set()
         trace_edge_labels = set()
         for labels in self._extract_execution_trace_labels(sample_arr):
             for label in labels:
-                if not (label.startswith("Class ") or label.startswith("Pred ")):
+                if not (label.startswith(("Class ", "Pred "))):
                     trace_node_labels.add(label)
             for i in range(len(labels) - 1):
                 trace_edge_labels.add((labels[i], labels[i + 1]))
@@ -943,16 +943,16 @@ class DPGExplainer:
 
     def _compute_trace_diagnostics(
         self,
-        tree_paths: List[DPGTreePathExplanation],
+        tree_paths: list[DPGTreePathExplanation],
         sample_arr: np.ndarray,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         trace_node_labels, trace_edge_labels = self._trace_reference_sets(sample_arr)
 
         explanation_node_labels = set()
         explanation_edge_labels = set()
         for path in tree_paths:
             for label, node_id in zip(path.labels, path.node_ids):
-                if node_id is not None and not (label.startswith("Class ") or label.startswith("Pred ")):
+                if node_id is not None and not (label.startswith(("Class ", "Pred "))):
                     explanation_node_labels.add(label)
             for i in range(len(path.labels) - 1):
                 src_id = path.node_ids[i] if i < len(path.node_ids) else None
@@ -992,10 +992,10 @@ class DPGExplainer:
         )
 
         return {
-            "trace_node_count_unique": int(len(trace_node_labels)),
-            "trace_edge_count_unique": int(len(trace_edge_labels)),
-            "explanation_node_count_unique": int(len(explanation_node_labels)),
-            "explanation_edge_count_unique": int(len(explanation_edge_labels)),
+            "trace_node_count_unique": len(trace_node_labels),
+            "trace_edge_count_unique": len(trace_edge_labels),
+            "explanation_node_count_unique": len(explanation_node_labels),
+            "explanation_edge_count_unique": len(explanation_edge_labels),
             "node_recall": node_recall,
             "node_precision": node_precision,
             "edge_recall": edge_recall,
@@ -1008,15 +1008,15 @@ class DPGExplainer:
         self,
         tree: Any,
         sample: np.ndarray,
-        tree_index: Optional[int] = None,
-    ) -> List[str]:
+        tree_index: int | None = None,
+    ) -> list[str]:
         is_regressor = isinstance(
             self._builder.model,
             (RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor),
         )
         tree_ = tree.tree_
         node_index = 0
-        labels: List[str] = []
+        labels: list[str] = []
 
         while True:
             left = tree_.children_left[node_index]
@@ -1064,7 +1064,7 @@ class DPGExplainer:
             return value[len("Class ") :]
         return str(value)
 
-    def _validate_faithfulness_weights(self, weights: Optional[Dict[str, float]]) -> Dict[str, float]:
+    def _validate_faithfulness_weights(self, weights: dict[str, float] | None) -> dict[str, float]:
         default_weights = {
             "output_fidelity": 0.35,
             "trace_coverage": 0.30,
@@ -1077,23 +1077,21 @@ class DPGExplainer:
         weights = dict(weights)
         unsupported = set(weights) - set(default_weights)
         if unsupported:
-            raise ValueError(
-                f"Unsupported faithfulness weight keys: {sorted(unsupported)}. "
-                f"Supported keys are: {sorted(default_weights)}"
+            raise DPGExplanationError.unsupported_weight_keys(
+                unsupported, set(default_weights)
             )
         missing = set(default_weights) - set(weights)
         if missing:
-            raise ValueError(
-                f"Missing faithfulness weight keys: {sorted(missing)}. "
-                f"Supported keys are: {sorted(default_weights)}"
+            raise DPGExplanationError.missing_weight_keys(
+                missing, set(default_weights)
             )
         total = float(sum(weights.values()))
         if not np.isclose(total, 1.0, atol=1e-6):
-            raise ValueError("Faithfulness weights must sum to 1.0.")
+            raise DPGExplanationError.weights_do_not_sum_to_one()
         return {key: float(value) for key, value in weights.items()}
 
     @staticmethod
-    def _mean_records(records: List[Dict[str, Any]], key: str) -> float:
+    def _mean_records(records: list[dict[str, Any]], key: str) -> float:
         values = [
             float(record[key])
             for record in records
@@ -1104,7 +1102,7 @@ class DPGExplainer:
         return float(np.mean(values))
 
     @staticmethod
-    def _maybe_float(value: Any) -> Optional[float]:
+    def _maybe_float(value: Any) -> float | None:
         if value is None or pd.isna(value):
             return None
         return float(value)
@@ -1112,15 +1110,15 @@ class DPGExplainer:
     def plot(
         self,
         plot_name: str,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         save_dir: str = "results/",
-        attribute: Optional[str] = None,
+        attribute: str | None = None,
         class_flag: bool = False,
         layout_template: str = "default",
-        graph_style: Optional[Dict[str, Any]] = None,
-        node_style: Optional[Dict[str, Any]] = None,
-        edge_style: Optional[Dict[str, Any]] = None,
-        fig_size: Tuple[float, float] = (16, 8),
+        graph_style: dict[str, Any] | None = None,
+        node_style: dict[str, Any] | None = None,
+        edge_style: dict[str, Any] | None = None,
+        fig_size: tuple[float, float] = (16, 8),
         dpi: int = 300,
         pdf_dpi: int = 600,
         show: bool = True,
@@ -1129,7 +1127,7 @@ class DPGExplainer:
         palette: str = "default",
         label_mode: str = "full",
         readability: str = "normal",
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> None:
         """Render a standard DPG plot."""
         if explanation is None:
@@ -1161,14 +1159,14 @@ class DPGExplainer:
     def plot_communities(
         self,
         plot_name: str,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         save_dir: str = "results/",
         class_flag: bool = True,
         layout_template: str = "default",
-        graph_style: Optional[Dict[str, Any]] = None,
-        node_style: Optional[Dict[str, Any]] = None,
-        edge_style: Optional[Dict[str, Any]] = None,
-        fig_size: Tuple[float, float] = (16, 8),
+        graph_style: dict[str, Any] | None = None,
+        node_style: dict[str, Any] | None = None,
+        edge_style: dict[str, Any] | None = None,
+        fig_size: tuple[float, float] = (16, 8),
         dpi: int = 300,
         pdf_dpi: int = 600,
         show: bool = True,
@@ -1178,7 +1176,7 @@ class DPGExplainer:
         palette: str = "default",
         label_mode: str = "wrapped",
         readability: str = "presentation",
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> None:
         """Render a community-colored DPG plot."""
         if explanation is None or explanation.communities is None:
@@ -1212,10 +1210,10 @@ class DPGExplainer:
     def plot_lrc_importance(
         self,
         X_df: Any,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         top_k: int = 10,
         dataset_name: str = "Dataset",
-        save_path: Optional[str] = None,
+        save_path: str | None = None,
         show: bool = True,
         theme: str = "dpg",
         palette: str = "default",
@@ -1239,16 +1237,16 @@ class DPGExplainer:
         self,
         X_df: Any,
         y: Any,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         top_predicates: int = 5,
         top_features: int = 2,
         dataset_name: str = "Dataset",
-        class_names: Optional[Any] = None,
-        save_path: Optional[str] = None,
+        class_names: Any | None = None,
+        save_path: str | None = None,
         show: bool = True,
         theme: str = "dpg",
         palette: str = "default",
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Plot top-LRC split lines over the top-2 LRC feature space."""
         if explanation is None:
             explanation = self.explain_global()
@@ -1268,7 +1266,7 @@ class DPGExplainer:
 
     def class_feature_predicate_counts(
         self,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         community_threshold: float = 0.2,
     ) -> Any:
         """Return class-vs-feature predicate count matrix from communities."""
@@ -1278,15 +1276,15 @@ class DPGExplainer:
 
     def plot_class_feature_complexity(
         self,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         dataset_name: str = "Dataset",
         top_n_features: int = 10,
-        save_prefix: Optional[str] = None,
+        save_prefix: str | None = None,
         show: bool = True,
         community_threshold: float = 0.2,
         theme: str = "dpg",
         palette: str = "default",
-    ) -> Tuple[Any, Any]:
+    ) -> tuple[Any, Any]:
         """Plot community class-feature complexity using PCA-consistent class colors."""
         if explanation is None or explanation.communities is None:
             explanation = self.explain_global(communities=True, community_threshold=community_threshold)
@@ -1305,7 +1303,7 @@ class DPGExplainer:
     def sample_bc_weights(
         self,
         X_df: Any,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         top_k: int = 10,
     ) -> Any:
         """Return the per-sample BC-derived bottleneck exposure weights."""
@@ -1321,11 +1319,11 @@ class DPGExplainer:
         self,
         X_df: Any,
         y: Any,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         top_k: int = 10,
         dataset_name: str = "Dataset",
-        class_names: Optional[Any] = None,
-        save_path: Optional[str] = None,
+        class_names: Any | None = None,
+        save_path: str | None = None,
         show: bool = True,
         theme: str = "dpg",
         palette: str = "default",
@@ -1350,21 +1348,21 @@ class DPGExplainer:
         self,
         X_df: Any,
         y: Any,
-        explanation: Optional[DPGExplanation] = None,
+        explanation: DPGExplanation | None = None,
         dataset_name: str = "Dataset",
         top_features: int = 4,
         feature_cols_per_row: int = 4,
-        class_lookup: Optional[Dict[str, int]] = None,
-        class_filter: Optional[List[str]] = None,
+        class_lookup: dict[str, int] | None = None,
+        class_filter: list[str] | None = None,
         density_tol_ratio: float = 0.03,
         predicate_alpha: float = 0.55,
         dataset_range_lw: float = 10,
-        save_path: Optional[str] = None,
+        save_path: str | None = None,
         show: bool = True,
         community_threshold: float = 0.2,
         theme: str = "dpg",
         palette: str = "default",
-    ) -> Optional[Any]:
+    ) -> Any | None:
         """Plot DPG class bounds against empirical dataset feature ranges."""
         if explanation is None or explanation.communities is None:
             explanation = self.explain_global(communities=True, community_threshold=community_threshold)

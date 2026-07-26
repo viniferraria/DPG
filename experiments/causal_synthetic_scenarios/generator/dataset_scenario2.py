@@ -37,11 +37,11 @@ Dependencies:
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
 SEED      = 42
 N         = 1000
