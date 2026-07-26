@@ -2,14 +2,14 @@ import logging
 import time
 import warnings
 from functools import wraps
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import igraph as ig
 import networkx as nx
 import pandas as pd
 
 
-def get_logger(name, log_file=None):
+def get_logger(name: str, log_file: Optional[str] = None) -> logging.Logger:
     """
     Factory function to create and configure a logger.
 
@@ -48,7 +48,7 @@ def get_logger(name, log_file=None):
 logger = get_logger(__name__)
 
 
-def log_timer(func):
+def log_timer(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to log the execution time of a function.
 
@@ -58,15 +58,16 @@ def log_timer(func):
     Returns:
         Wrapped function that logs execution time.
     """
-    logger.info(f"Decorating function {func.__name__} with log_timer")
+    func_name = getattr(func, "__name__", type(func).__name__)
+    logger.info(f"Decorating function {func_name} with log_timer")
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         result = func(self, *args, **kwargs)
         end_time = time.time()
         logger.info(
-            f"Execution time for {func.__name__}: {end_time - start_time:.4f} seconds"
+            f"Execution time for {func_name}: {end_time - start_time:.4f} seconds"
         )
         return result
 
@@ -247,12 +248,13 @@ class NodeMetrics:
 
     @staticmethod
     @log_timer
-    def extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: List[Tuple]) -> Any:
+    def extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: List[List[str]]) -> Any:
         """Compute per-node graph metrics for a DPG model.
 
         Args:
             dpg_model: NetworkX DiGraph representing the DPG.
-            nodes_list: List of ``(node_id, label)`` tuples.
+            nodes_list: List of ``[node_id, label]`` pairs, as returned by
+                ``DecisionPredicateGraph.to_networkx``.
 
         Returns:
             DataFrame with columns ``['Node', 'Label', 'Degree', 'In degree nodes',

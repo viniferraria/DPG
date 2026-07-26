@@ -1,12 +1,13 @@
 import os
 import re
 import shutil
+from typing import Any, Dict, Optional
 
 
 import yaml
 from graphviz import Digraph
 
-def highlight_class_node(dot, dpg_config=None):
+def highlight_class_node(dot: Digraph, dpg_config: Optional[Dict[str, Any]] = None) -> Digraph:
     """
     Highlights nodes in the Graphviz Digraph that contain "Class" in their identifiers by changing their fill color
     and adding a rounded shape.
@@ -68,7 +69,7 @@ def highlight_class_node(dot, dpg_config=None):
     return dot
 
 
-def change_node_color(graph, node_id, new_color):
+def change_node_color(graph: Digraph, node_id: str, new_color: str) -> None:
     """
     Changes the fill color of a specified node in the Graphviz Digraph.
 
@@ -93,7 +94,7 @@ def change_node_color(graph, node_id, new_color):
     graph.body.append(f'{node_id} [fillcolor="{new_color}"]')
 
 
-def delete_folder_contents(folder_path):
+def delete_folder_contents(folder_path: str) -> None:
     """
     Deletes all contents of the specified folder.
 

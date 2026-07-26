@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 from joblib import Parallel, delayed
-from typing import Dict, List
+from typing import Any, DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, cast
 import re
 import math
 from collections import defaultdict
@@ -11,7 +11,7 @@ class GraphMetrics:
     """Handles graph-level metric calculations"""
     COMMUNITY_BOUNDARY_THRESHOLD = 0.2
     
-    def __init__(self, target_names=None):
+    def __init__(self, target_names: Optional[List[str]] = None) -> None:
         self.target_names = target_names
 
     @staticmethod
@@ -50,7 +50,7 @@ class GraphMetrics:
         return str(key), boundaries
 
     @classmethod
-    def calculate_boundaries(cls, class_dict: Dict, class_names: List[str]) -> Dict:
+    def calculate_boundaries(cls, class_dict: Dict, class_names: Sequence[str]) -> Dict:
         """Parallel boundary calculation"""
         results = Parallel(n_jobs=-1)(
             delayed(cls.calculate_class_boundaries)(key, nodes, class_names) 
@@ -59,7 +59,7 @@ class GraphMetrics:
         return dict(results)
 
     @staticmethod
-    def _parse_predicate(label: str):
+    def _parse_predicate(label: str) -> Optional[Tuple[str, str, float]]:
         """
         Parse labels like "feature <= 1.23" or "feature > 0.7".
         Returns (feature, operator, threshold) or None.
@@ -81,7 +81,7 @@ class GraphMetrics:
         return text
 
     @classmethod
-    def extract_class_boundaries(cls, dpg_model: nx.DiGraph, nodes_list: List[tuple], target_names: List[str]) -> Dict:
+    def extract_class_boundaries(cls, dpg_model: nx.DiGraph, nodes_list: List[List[str]], target_names: Sequence[str]) -> Dict:
         """
         Extract class boundaries from community assignments (cluster-based),
         not from the legacy LPA graph-metrics path.
@@ -107,7 +107,9 @@ class GraphMetrics:
         )
 
         # Per-class, per-feature threshold buckets (community-derived).
-        bucket = defaultdict(lambda: defaultdict(lambda: {"gt": [], "le": [], "all": []}))
+        bucket: DefaultDict[str, DefaultDict[str, Dict[str, List[float]]]] = defaultdict(
+            lambda: defaultdict(lambda: {"gt": [], "le": [], "all": []})
+        )
 
         for class_label, members in clusters.items():
             class_from_cluster = None
@@ -182,7 +184,7 @@ class GraphMetrics:
         }
 
     @classmethod
-    def extract_graph_metrics(cls, dpg_model: nx.DiGraph, nodes_list: List[tuple], target_names: List[str]) -> Dict:
+    def extract_graph_metrics(cls, dpg_model: nx.DiGraph, nodes_list: List[List[str]], target_names: Sequence[str]) -> Dict:
         """Backwards-compatible graph metrics interface.
 
         This delegates to the current LPA-based implementation to keep
@@ -191,7 +193,7 @@ class GraphMetrics:
         return cls.extract_graph_metrics_lpa(dpg_model, nodes_list, target_names)
 
     @classmethod
-    def extract_graph_metrics_lpa(cls, dpg_model: nx.DiGraph, nodes_list: List[tuple], target_names: List[str]) -> Dict:
+    def extract_graph_metrics_lpa(cls, dpg_model: nx.DiGraph, nodes_list: List[List[str]], target_names: Sequence[str]) -> Dict:
         """Main interface for graph metrics"""
         # Create node mappings
         node_label_to_id = {node[1]: node[0] for node in nodes_list if "->" not in node[0]}
@@ -232,7 +234,13 @@ class GraphMetrics:
         }
     
     @classmethod
-    def extract_communities(cls, dpg_model, df_node_metrics, nodes_list, threshold_clusters = 0.2) -> Dict:
+    def extract_communities(
+        cls,
+        dpg_model: nx.DiGraph,
+        df_node_metrics: pd.DataFrame,
+        nodes_list: List[List[str]],
+        threshold_clusters: float = 0.2,
+    ) -> Dict:
         node_to_label = df_node_metrics.set_index('Node')['Label'].to_dict()
 
         class_nodes = {i[0] : i[1] for i in nodes_list if 'Class' in i[1]}
@@ -253,7 +261,7 @@ class GraphMetrics:
         The CSV is written in a long format with columns:
         Section, Key, Value.
         """
-        def _to_builtin(obj):
+        def _to_builtin(obj: Any) -> Any:
             if isinstance(obj, np.generic):
                 return obj.item()
             if isinstance(obj, dict):
@@ -276,7 +284,12 @@ class GraphMetrics:
         df.to_csv(file_path, index=False)
     
     @classmethod
-    def clustering (cls, dpg_model, class_nodes, threshold = None):
+    def clustering(
+        cls,
+        dpg_model: nx.DiGraph,
+        class_nodes: Dict[str, str],
+        threshold: Optional[float] = None,
+    ) -> Tuple[Dict[str, List[str]], Dict[str, Any], Dict[str, Any]]:
     
         classes = sorted(set(class_nodes.values()))
         class_by_node = dict(class_nodes)
@@ -339,7 +352,7 @@ class GraphMetrics:
         # ----- #
         class_labels = [class_by_node[node] for node in absorbing]
 
-        class_to_cols = {}
+        class_to_cols: Dict[str, List[int]] = {}
         for class_index in range(len(absorbing)):
             label = class_labels[class_index]
             if label not in class_to_cols:
@@ -376,7 +389,7 @@ class GraphMetrics:
             node_probs[node] = probs
 
         # Clusters
-        clusters = {}
+        clusters: Dict[str, List[str]] = {}
         for label in classes:
             clusters[label] = []
         
@@ -388,7 +401,7 @@ class GraphMetrics:
         for node in nodes:
             probs = node_probs[node]
 
-            top_label = None
+            top_label: Optional[str] = None
             top_prob = -1.0
             second_top_prob = -1.0
 
@@ -409,13 +422,16 @@ class GraphMetrics:
 
             confidence[node] = np.round(margin,2)
 
-            
+            # `classes` is non-empty here, so the loops above always set
+            # top_label; cast is a runtime no-op that tells mypy the same.
+            assigned_label = cast(str, top_label)
+
             if threshold is None:
-                clusters[top_label].append(node)
+                clusters[assigned_label].append(node)
 
             else:
                 if top_prob > threshold:       
-                    clusters[top_label].append(node)     
+                    clusters[assigned_label].append(node)     
                 else:
                     clusters['Ambiguous'].append(node)
 
@@ -423,9 +439,11 @@ class GraphMetrics:
         return clusters, node_probs, confidence
     
     @classmethod
-    def extract_feature_intervals(cls, decisions):
-            feature_count = defaultdict(int)
-            feature_intervals = defaultdict(lambda: {"min": float('-inf'), "max": float('inf')})
+    def extract_feature_intervals(cls, decisions: Iterable[str]) -> Tuple[Dict[str, int], Dict[str, Dict[str, float]]]:
+            feature_count: DefaultDict[str, int] = defaultdict(int)
+            feature_intervals: DefaultDict[str, Dict[str, float]] = defaultdict(
+                lambda: {"min": float('-inf'), "max": float('inf')}
+            )
             
             regex = r'([a-zA-Z0-9_]+)\s*([<=|>]+)\s*([-+]?[\d.]+)'
             
@@ -444,10 +462,10 @@ class GraphMetrics:
             return feature_count, feature_intervals
 
     @classmethod
-    def create_dataframes(cls, data):
-        all_found_features = set()
-        temp_counts = {}
-        temp_intervals = {}
+    def create_dataframes(cls, data: Dict[str, Any]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        all_found_features: set = set()
+        temp_counts: Dict[str, Any] = {}
+        temp_intervals: Dict[str, Any] = {}
 
         for class_name, decisions in data.items():
             counts, intervals = cls.extract_feature_intervals(decisions)
@@ -457,12 +475,12 @@ class GraphMetrics:
 
         sorted_features = sorted(list(all_found_features))
         
-        feature_count_df = pd.DataFrame(index=sorted_features, columns=data.keys())
+        feature_count_df = pd.DataFrame(index=sorted_features, columns=list(data.keys()))
         
         interval_index = []
         for f in sorted_features:
             interval_index.extend([f"{f}_min", f"{f}_max"])
-        feature_intervals_df = pd.DataFrame(index=interval_index, columns=data.keys())
+        feature_intervals_df = pd.DataFrame(index=interval_index, columns=list(data.keys()))
 
         for class_name in data.keys():
             for feat in sorted_features:

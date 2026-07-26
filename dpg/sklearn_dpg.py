@@ -96,7 +96,7 @@ def test_dpg(datasets: str,
              clusters_flag: bool = False,
              threshold_clusters: Optional[float] = None,
              class_flag: bool = False,
-             seed:int = 160898) -> Optional[Tuple[Any, Any]]:
+             seed:int = 160898) -> Tuple[Any, ...]:
     
     """
     Unified function to train models and extract DPG for both standard and custom datasets.
@@ -187,6 +187,9 @@ def test_dpg(datasets: str,
     
     class_nodes = {i[0] : i[1] for i in nodes_list if 'Class' in i[1]}
     
+    clusters: Optional[Any]
+    node_prob: Optional[Any]
+    confidence: Optional[Any]
     if clusters_flag:
         clusters, node_prob, confidence = GraphMetrics.clustering(dpg_model, class_nodes, threshold_clusters)
     else:

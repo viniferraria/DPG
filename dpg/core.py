@@ -1,7 +1,7 @@
 import hashlib
 import os
 import re
-from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
 import graphviz
 import networkx as nx
@@ -29,7 +29,7 @@ except ImportError:
 pd.set_option("display.max_colwidth", 255)
 
 
-DEFAULT_DPG_CONFIG = {
+DEFAULT_DPG_CONFIG: Dict[str, Any] = {
     "dpg": {
         "default": {
             "perc_var": 0.000000001,
@@ -65,8 +65,8 @@ class DecisionPredicateGraph:
     def __init__(
         self,
         model: Any,
-        feature_names: Iterable[str],
-        target_names: Optional[Iterable[str]] = None,
+        feature_names: Sequence[str],
+        target_names: Optional[Sequence[str]] = None,
         config_file: str = "config.yaml",
         dpg_config: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -81,25 +81,25 @@ class DecisionPredicateGraph:
             dpg_config: Optional dict with DPG config parameters (overrides config_file)
         """
         # Load configuration from provided config, file, or defaults
+        config: Dict[str, Any]
         if dpg_config is not None:
             config = dpg_config
         else:
-            config = None
+            loaded_config: Optional[Dict[str, Any]] = None
             if config_file:
                 if os.path.exists(config_file):
                     with open(config_file) as f:
-                        config = yaml.safe_load(f)
+                        loaded_config = yaml.safe_load(f)
                 else:
                     print(f"Config file not found at '{config_file}'. Using built-in defaults.")
-            if config is None:
-                config = DEFAULT_DPG_CONFIG
-        
+            config = DEFAULT_DPG_CONFIG if loaded_config is None else loaded_config
+
         # Convert OmegaConf DictConfig to regular dict if needed
         if HAS_OMEGACONF and isinstance(config, DictConfig):
-            config = OmegaConf.to_container(config, resolve=True)
+            config = cast(Dict[str, Any], OmegaConf.to_container(config, resolve=True))
         # Handle dict-like objects that have to_dict() method (like custom DictConfig)
         elif hasattr(config, 'to_dict'):
-            config = config.to_dict()
+            config = cast(Any, config).to_dict()
         
         # Input validation
         if not hasattr(model, 'estimators_'):
@@ -208,6 +208,9 @@ class DecisionPredicateGraph:
 
     def _leaf_class_label(self, tree_index: int, tree_: Any, node_index: int) -> str:
         """Return the class label for a classifier leaf node."""
+        # Starts as a class index, then re-bound to the class name when
+        # target_names / classes_ are available.
+        pred_class: Any
         gb_class_index = SklearnEnsembleNormalizer.get_tree_class_index(self.model, tree_index)
         if gb_class_index is not None:
             pred_class = gb_class_index
@@ -360,7 +363,7 @@ class DecisionPredicateGraph:
 
         # Optimized: Group by case once, then process each group
         # This avoids repeated filtering of the dataframe for each case
-        dfg = {}
+        dfg: Dict[Tuple[Any, Any], int] = {}
         grouped = log.groupby("case:concept:name", sort=False)
         
         for case, trace_df in tqdm(grouped, desc="Processing cases", total=len(cases)):
