@@ -38,13 +38,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "$(gh pr list --base develop --head "$GITHUB_REF_NAME" --state open --json number --jq '.[0].number')" ]; then
-            echo "PR from $GITHUB_REF_NAME to develop already exists, skipping."
-          else
-            gh pr create \
+          existing=$(gh pr list --base develop --head "$GITHUB_REF_NAME" --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "PR #$existing from $GITHUB_REF_NAME to develop already exists, skipping."
+            exit 0
+          fi
+
+          # Having nothing to merge is a normal outcome and stays green. Every
+          # other failure fails the job: this used to be swallowed into a
+          # warning, so a green run could silently create nothing (e.g. the
+          # repo blocking Actions from creating PRs).
+          if ! output=$(gh pr create \
               --base develop \
               --head "$GITHUB_REF_NAME" \
               --title "$GITHUB_REF_NAME" \
-              --body "Automated PR: ruff, mypy, and pytest passed on \`$GITHUB_REF_NAME\`." \
-              || echo "::warning::Could not open PR (e.g. no diff against develop)."
+              --body "Automated PR: ruff, mypy, and pytest passed on \`$GITHUB_REF_NAME\`." 2>&1); then
+            echo "$output"
+            if echo "$output" | grep -qi "No commits between"; then
+              echo "::notice::No PR opened: $GITHUB_REF_NAME has no commits ahead of develop."
+              exit 0
+            fi
+            echo "::error::Failed to open pull request from $GITHUB_REF_NAME into develop."
+            exit 1
           fi
+
+          echo "$output"

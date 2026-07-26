@@ -85,6 +85,7 @@ METRICS = [
     "Closeness centrality",
     "Harmonic centrality",
 ]
+CONFIG_PATH = ((Path(__file__).parent).parent) / "../config.yaml"
 
 # Each entry maps a model name to a zero-arg factory producing a fresh estimator.
 ModelFactory = Callable[[], Any]
@@ -317,7 +318,7 @@ def iter_splits(
 ) -> Iterator[tuple[int, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]]:
     """Yield ``(split_idx, X_train, X_test, y_train, y_test)`` for each fold."""
     for split_idx, (train_idx, test_idx) in enumerate(
-        splitter.split(X.values, y.values)
+        splitter.split(X.to_numpy(), y.to_numpy())
     ):
         yield (
             split_idx,
@@ -339,8 +340,9 @@ def _build_explanation(
     """Fit a DPG explainer on one split, persist artifacts, return its explanation."""
     explainer = DPGExplainer(
         model=model,
-        feature_names=X_train.columns,
+        feature_names=X_train.columns.tolist(),
         target_names=np.unique(y).astype(str).tolist(),
+        config_file=str(CONFIG_PATH.resolve(strict=True)),
     )
     # Fit on training data only to avoid test-data leak.
     explainer.fit(X_train.values)
