@@ -281,7 +281,7 @@ def write_causal_accuracy_to_csv(
         })
 
 
-def extract_top_k_features_to_file(
+def save_feature_extraction_results(
     explanation: pd.DataFrame,
     gt_features: list[str],
     run_key: str,
@@ -289,6 +289,7 @@ def extract_top_k_features_to_file(
     metric_name: str,
     output_path: Path,
 ) -> None:
+    """Save the results of feature extraction to a CSV file."""
     explanation_top_features_lrc = extract_top_k_features(
         explanation=explanation,
         top_k=TOP_K,
@@ -502,7 +503,7 @@ def run_experiments_with_ground_truth(
                     )
 
                     for metric_name in METRICS:
-                        extract_top_k_features_to_file(
+                        save_feature_extraction_results(
                             explanation=explanation.node_metrics,
                             gt_features=gt_features,
                             run_key=run_key,

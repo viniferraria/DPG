@@ -46,9 +46,11 @@ repository = "https://github.com/Meta-Group/DPG"
 
 [dependency-groups]
 dev = [
+    "ipython>=8.39.0",
     # NOTE: do not add matplotlib-stubs here. matplotlib ships its own complete
     # inline types (py.typed); a stub-only package shadows them and regresses
     # Figure.patch, Colorbar.outline, Axes.set_yticks, to_rgba, ListedColormap.
+    "jupyterlab>=4.6.2",
     "mypy>=1.9",
     "pandas-stubs>=0.0.0",
     "pyrefly>=1.0.0",
