@@ -1,29 +1,32 @@
+import copy
 import os
 import re
 import textwrap
 import warnings
-import copy
+from collections.abc import Sequence
+from io import BytesIO
+from typing import Any, cast
+
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
-from io import BytesIO
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from graphviz import Source
 from graphviz.backend.execute import ExecutableNotFound
-import matplotlib.patches as mpatches
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
+from matplotlib import colormaps
+from matplotlib.artist import Artist
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 from PIL import Image
-from .utils import delete_folder_contents
+
+from .exceptions import DPGValidationError, DPGVisualizationError
 from .themes import (
-    DPG_COLORS,
     resolve_theme_context,
 )
-
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
+from .utils import delete_folder_contents
 
 Image.MAX_IMAGE_PIXELS = 500000000  # Adjust based on your needs
 
@@ -59,7 +62,7 @@ _LAYOUT_TEMPLATES = {
     },
 }
 
-_READABILITY_PRESETS = {
+_READABILITY_PRESETS: dict[str, dict[str, Any]] = {
     "compact": {
         "graph": {"nodesep": "0.32", "ranksep": "0.42", "pad": "0.14"},
         "node": {"fontsize": "10", "margin": "0.05,0.03"},
@@ -78,11 +81,11 @@ _READABILITY_PRESETS = {
 }
 
 
-def _apply_matplotlib_theme(theme_context: Dict[str, Any]) -> None:
+def _apply_matplotlib_theme(theme_context: dict[str, Any]) -> None:
     plt.rcParams.update(theme_context["mpl_style"])
 
 
-def _style_axes(ax, theme_context: Dict[str, Any], grid_axis: str = "y") -> None:
+def _style_axes(ax, theme_context: dict[str, Any], grid_axis: str = "y") -> None:
     colors = theme_context["colors"]
     ax.set_facecolor(colors["paper"])
     for side in ("top", "right"):
@@ -94,7 +97,7 @@ def _style_axes(ax, theme_context: Dict[str, Any], grid_axis: str = "y") -> None
         ax.grid(axis=grid_axis, linestyle="--", alpha=0.55, zorder=0)
 
 
-def _style_legend(legend, theme_context: Dict[str, Any]) -> None:
+def _style_legend(legend, theme_context: dict[str, Any]) -> None:
     if legend is None:
         return
     colors = theme_context["colors"]
@@ -104,7 +107,7 @@ def _style_legend(legend, theme_context: Dict[str, Any]) -> None:
     frame.set_alpha(0.98)
 
 
-def _style_figure(fig, theme_context: Dict[str, Any], title: Optional[str] = None, subtitle: Optional[str] = None) -> None:
+def _style_figure(fig, theme_context: dict[str, Any], title: str | None = None, subtitle: str | None = None) -> None:
     colors = theme_context["colors"]
     fig.patch.set_facecolor(colors["paper"])
     if title:
@@ -113,19 +116,19 @@ def _style_figure(fig, theme_context: Dict[str, Any], title: Optional[str] = Non
         fig.text(0.5, 0.015, subtitle, ha="center", color=colors["mid_gray"], fontsize=9, style="italic")
 
 
-def _class_fill_color(theme_context: Dict[str, Any]) -> str:
-    return theme_context["colors"].get("class_fill", theme_context["colors"]["success"])
+def _class_fill_color(theme_context: dict[str, Any]) -> str:
+    return cast(str, theme_context["colors"].get("class_fill", theme_context["colors"]["success"]))
 
 
-def _default_node_color(theme_context: Dict[str, Any]) -> str:
-    return theme_context["colors"]["node_fill"]
+def _default_node_color(theme_context: dict[str, Any]) -> str:
+    return cast(str, theme_context["colors"]["node_fill"])
 
 
-def _default_pred_node_color(theme_context: Dict[str, Any]) -> str:
-    return theme_context["colors"]["node_muted"]
+def _default_pred_node_color(theme_context: dict[str, Any]) -> str:
+    return cast(str, theme_context["colors"]["node_muted"])
 
 
-def _apply_dpg_graphviz_skin(dot, theme_context: Dict[str, Any]) -> None:
+def _apply_dpg_graphviz_skin(dot, theme_context: dict[str, Any]) -> None:
     colors = theme_context["colors"]
     dot.attr(
         "graph",
@@ -155,7 +158,7 @@ def _apply_dpg_graphviz_skin(dot, theme_context: Dict[str, Any]) -> None:
     )
 
 
-def _style_class_nodes(dot, df: Any, theme_context: Dict[str, Any]) -> None:
+def _style_class_nodes(dot, df: Any, theme_context: dict[str, Any]) -> None:
     colors = theme_context["colors"]
     class_rows = df[df["Label"].astype(str).str.contains("Class", regex=False, na=False)]
     for _, row in class_rows.iterrows():
@@ -169,7 +172,7 @@ def _style_class_nodes(dot, df: Any, theme_context: Dict[str, Any]) -> None:
         )
 
 
-def _apply_layout_template(dot, theme_context: Dict[str, Any], layout_template=None, graph_style=None, node_style=None, edge_style=None):
+def _apply_layout_template(dot, theme_context: dict[str, Any], layout_template=None, graph_style=None, node_style=None, edge_style=None):
     """Apply optional graph layout/style settings to Graphviz Digraph."""
     _apply_dpg_graphviz_skin(dot, theme_context)
     template_name = (layout_template or "default").lower()
@@ -187,27 +190,19 @@ def _apply_layout_template(dot, theme_context: Dict[str, Any], layout_template=N
         merged_edge.update(edge_style)
 
     if merged_graph:
-        dot.attr("graph", **{str(k): str(v) for k, v in merged_graph.items()})
+        dot.attr("graph", **{k: v for k, v in merged_graph.items()})
     if merged_node:
-        dot.attr("node", **{str(k): str(v) for k, v in merged_node.items()})
+        dot.attr("node", **{k: v for k, v in merged_node.items()})
     if merged_edge:
-        dot.attr("edge", **{str(k): str(v) for k, v in merged_edge.items()})
+        dot.attr("edge", **{k: v for k, v in merged_edge.items()})
 
 
-def _graphviz_not_found_error() -> RuntimeError:
-    message = (
-        "Graphviz executable 'dot' was not found in PATH.\n"
-        "Install Graphviz and ensure 'dot' is available from your terminal.\n"
-        "Install examples:\n"
-        "- macOS (Homebrew): brew install graphviz\n"
-        "- Ubuntu/Debian: sudo apt-get install graphviz\n"
-        "- Windows (winget): winget install Graphviz.Graphviz"
-    )
-    return RuntimeError(message)
+def _graphviz_not_found_error() -> DPGVisualizationError:
+    return DPGVisualizationError.graphviz_not_found()
 
 
 def _shorten_feature_name(feature: str) -> str:
-    shortened = str(feature)
+    shortened = feature
     replacements = {
         "sepal": "sep.",
         "petal": "pet.",
@@ -233,7 +228,7 @@ def _format_graph_label_for_readability(
 
     normalized_mode = str(label_mode or "full").lower()
     if normalized_mode not in {"full", "wrapped", "short"}:
-        raise ValueError("label_mode must be one of: full, wrapped, short.")
+        raise DPGValidationError.invalid_label_mode()
 
     parsed = _PREDICATE_PATTERN.fullmatch(text.strip())
     if parsed:
@@ -292,23 +287,23 @@ def _sanitize_dot_source(
 
 def _pipe_graph_png_with_fallback(dot_source: str, sanitizer) -> bytes:
     try:
-        return Source(dot_source).pipe(format="png")
+        return cast(bytes, Source(dot_source).pipe(format="png"))
     except ExecutableNotFound as exc:
         raise _graphviz_not_found_error() from exc
-    except Exception as first_exc:
+    except Exception as first_exc:  # noqa: BLE001 - retry all DOT rendering failures
         print(f"Plotting failed with {type(first_exc).__name__}; retrying with sanitized DOT source.")
         try:
-            return Source(sanitizer(dot_source)).pipe(format="png")
+            return cast(bytes, Source(sanitizer(dot_source)).pipe(format="png"))
         except ExecutableNotFound as exc:
             raise _graphviz_not_found_error() from exc
-        except Exception:
-            raise first_exc
+        except Exception:  # noqa: BLE001 - preserve the original rendering failure
+            raise first_exc from None
 
 
 def _apply_graph_readability_preset(dot, readability: str = "normal") -> int:
     preset_name = str(readability or "normal").lower()
     if preset_name not in _READABILITY_PRESETS:
-        raise ValueError("readability must be one of: compact, normal, presentation.")
+        raise DPGValidationError.invalid_readability()
 
     preset = _READABILITY_PRESETS[preset_name]
     dot.attr("graph", **preset["graph"])
@@ -338,7 +333,7 @@ def plot_dpg(
     palette: str = "default",
     label_mode: str = "full",
     readability: str = "normal",
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     """
     Plot a Decision Predicate Graph (DPG) with optional node/edge styling.
@@ -418,7 +413,7 @@ def plot_dpg(
         node_rgba = colormap(norm(df[attribute]))  # Assign colors based on normalized scores
         
         for index, row in df.iterrows():
-            color = "#{:02x}{:02x}{:02x}".format(int(node_rgba[index][0]*255), int(node_rgba[index][1]*255), int(node_rgba[index][2]*255))
+            color = f"#{int(node_rgba[index][0]*255):02x}{int(node_rgba[index][1]*255):02x}{int(node_rgba[index][2]*255):02x}"
             change_node_color(dot, row['Node'], color)
         
         plot_name = plot_name + f"_{attribute}".replace(" ","")
@@ -462,7 +457,7 @@ def plot_dpg(
 
 
     else:
-        raise AttributeError("The plot can show the basic plot, clusters or a specific node-metric")
+        raise DPGValidationError.invalid_plot_configuration()
 
 
     # Highlight edges
@@ -473,9 +468,7 @@ def plot_dpg(
     for index, row in df_edges.iterrows():
         edge_value = row['Weight']
         color = colormap_edge(norm_edge(edge_value))
-        color_hex = "#{:02x}{:02x}{:02x}".format(int(color[0]*255),
-                                                    int(color[1]*255),
-                                                    int(color[2]*255))
+        color_hex = f"#{int(color[0]*255):02x}{int(color[1]*255):02x}{int(color[2]*255):02x}"
         penwidth = 1 + 3 * norm_edge(edge_value)
 
         change_edge_color(dot, row['Source_id'], row['Target_id'], new_color=color_hex, new_width = penwidth)
@@ -519,9 +512,11 @@ def plot_dpg(
         cbar_height = 0.02
         cbar_pad = 0.02
         cbar_y = max(0.01, ax_pos.y0 - (cbar_height + cbar_pad))
-        cax = fig.add_axes([ax_pos.x0, cbar_y, ax_pos.width, cbar_height])
+        cax = fig.add_axes(  # type: ignore[call-overload]
+            [ax_pos.x0, cbar_y, ax_pos.width, cbar_height]
+        )
         cbar = fig.colorbar(
-            cm.ScalarMappable(norm=norm, cmap=colormap),
+            ScalarMappable(norm=norm, cmap=colormap),
             cax=cax,
             orientation='horizontal',
         )
@@ -570,7 +565,7 @@ def plot_dpg_communities(
     palette: str = "default",
     label_mode: str = "wrapped",
     readability: str = "presentation",
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     """
     Plot a DPG colored by community assignment.
@@ -624,7 +619,7 @@ def plot_dpg_communities(
     wrap_width = _apply_graph_readability_preset(dot, readability=readability)
 
     if dpg_metrics is None:
-        raise AttributeError("dpg_metrics is required to plot communities.")
+        raise DPGValidationError.missing_dpg_metrics()
 
     colormap = theme_context["community_cmap"]
 
@@ -642,7 +637,7 @@ def plot_dpg_communities(
         clusters = dpg_metrics.get("Clusters", {})
         communities = list(clusters.values())
     else:
-        raise AttributeError("dpg_metrics must include 'Communities' or 'Clusters' to plot communities.")
+        raise DPGValidationError.missing_communities()
 
     label_to_community = {}
     for idx, community in enumerate(communities):
@@ -651,7 +646,7 @@ def plot_dpg_communities(
     df['Community'] = df['Label'].map(label_to_community)
 
     if df['Community'].isna().all():
-        raise AttributeError("No nodes matched communities/clusters labels.")
+        raise DPGValidationError.no_matching_communities()
 
     max_score = df['Community'].max()
     if max_score <= 0:
@@ -665,11 +660,7 @@ def plot_dpg_communities(
         if pd.isna(row['Community']):
             color = colors["light_gray"]
         else:
-            color = "#{:02x}{:02x}{:02x}".format(
-                int(node_rgba[index][0] * 255),
-                int(node_rgba[index][1] * 255),
-                int(node_rgba[index][2] * 255),
-            )
+            color = f"#{int(node_rgba[index][0] * 255):02x}{int(node_rgba[index][1] * 255):02x}{int(node_rgba[index][2] * 255):02x}"
         change_node_color(dot, row['Node'], color)
 
     plot_name = plot_name + "_communities"
@@ -683,11 +674,7 @@ def plot_dpg_communities(
         for index, row in df_edges.iterrows():
             edge_value = row['Weight']
             color = colormap_edge(norm_edge(edge_value))
-            color_hex = "#{:02x}{:02x}{:02x}".format(
-                int(color[0] * 255),
-                int(color[1] * 255),
-                int(color[2] * 255),
-            )
+            color_hex = f"#{int(color[0] * 255):02x}{int(color[1] * 255):02x}{int(color[2] * 255):02x}"
             penwidth = 1 + 3 * norm_edge(edge_value)
 
             change_edge_color(dot, row['Source_id'], row['Target_id'], new_color=color_hex, new_width=penwidth)
@@ -763,7 +750,7 @@ def plot_dpg_local_paths_aggregate(
     palette: str = "default",
     label_mode: str = "wrapped",
     readability: str = "presentation",
-    title: Optional[str] = None,
+    title: str | None = None,
 ):
     """
     Plot a fitted DPG with one sample's local paths highlighted on top.
@@ -791,8 +778,8 @@ def plot_dpg_local_paths_aggregate(
     )
     wrap_width = _apply_graph_readability_preset(local_dot, readability=readability)
 
-    visited_node_weights: Dict[str, float] = {}
-    visited_edge_weights: Dict[Tuple[str, str], float] = {}
+    visited_node_weights: dict[str, float] = {}
+    visited_edge_weights: dict[tuple[str, str], float] = {}
     path_confidences = list(path_confidences or [])
 
     for path_index, path in enumerate(paths_node_ids):
@@ -875,11 +862,7 @@ def plot_dpg_local_paths_aggregate(
             target_id = str(row["Target_id"])
             edge_value = row["Weight"]
             color = colormap_edge(norm_edge(edge_value))
-            color_hex = "#{:02x}{:02x}{:02x}".format(
-                int(color[0] * 255),
-                int(color[1] * 255),
-                int(color[2] * 255),
-            )
+            color_hex = f"#{int(color[0] * 255):02x}{int(color[1] * 255):02x}{int(color[2] * 255):02x}"
             penwidth = 0.8 + 1.8 * norm_edge(edge_value)
             if (source_id, target_id) in visited_edges:
                 strength = visited_edge_weights[(source_id, target_id)]
@@ -982,7 +965,7 @@ def change_node_color(dot, node_id: str, fillcolor: str) -> None:
     # Modifica o nó no objeto Graphviz
     dot.node(node_id, style="filled", fillcolor=fillcolor, fontcolor=fontcolor)
 
-def normalize_data(df: Any, attribute: str, colormap) -> Dict[Any, str]:
+def normalize_data(df: Any, attribute: str, colormap) -> dict[Any, str]:
     """Map a numeric DataFrame column to hex color strings via a colormap.
 
     Args:
@@ -995,15 +978,15 @@ def normalize_data(df: Any, attribute: str, colormap) -> Dict[Any, str]:
     """
     norm = Normalize(vmin=df[attribute].min(), vmax=df[attribute].max())
     colors = [colormap(norm(value)) for value in df[attribute]]
-    return {node: "#{:02x}{:02x}{:02x}".format(int(color[0]*255), int(color[1]*255), int(color[2]*255)) for node, color in zip(df['Node'], colors)}
+    return {node: f"#{int(color[0]*255):02x}{int(color[1]*255):02x}{int(color[2]*255):02x}" for node, color in zip(df['Node'], colors)}
 
 def plot_dpg_reg(
     plot_name: str,
     dot,
     df: Any,
-    df_dpg: Dict[str, Any],
+    df_dpg: dict[str, Any],
     save_dir: str = "examples/",
-    attribute: Optional[str] = None,
+    attribute: str | None = None,
     communities: bool = False,
     leaf_flag: bool = False,
     theme: str = "dpg",
@@ -1063,7 +1046,7 @@ def plot_dpg_reg(
     ax.imshow(img)
 
     if attribute:
-        cax = fig.add_axes([0.11, 0.1, 0.8, 0.025])
+        cax = fig.add_axes([0.11, 0.1, 0.8, 0.025])  # type: ignore[call-overload]
         norm = Normalize(vmin=df[attribute].min(), vmax=df[attribute].max())
         cbar = fig.colorbar(ScalarMappable(norm=norm, cmap=theme_context["sequential_cmap"]), cax=cax, orientation='horizontal')
         cbar.set_label(attribute)
@@ -1080,14 +1063,14 @@ def plot_dpg_reg(
 
 
 def plot_dpg_constraints_overview(
-    normalized_constraints: Dict,
-    feature_names: List[str],
-    class_colors_list: List[str],
-    output_path: str = None,
+    normalized_constraints: dict,
+    feature_names: list[str],
+    class_colors_list: list[str],
+    output_path: str | None = None,
     title: str = "DPG Constraints Overview",
-    original_sample: Dict = None,
-    original_class: int = None,
-    target_class: int = None,
+    original_sample: dict | None = None,
+    original_class: int | None = None,
+    target_class: int | None = None,
     theme: str = "dpg",
     palette: str = "default",
 ) -> Any:
@@ -1240,14 +1223,21 @@ def plot_dpg_constraints_overview(
                     ax.add_patch(rect)
 
                     # Add min/max value labels
-                    ax.text(feat_min, y + y_offset, f'{feat_min:.2f}',
-                           ha='right', va='center', fontsize=7, color=color, weight='bold',
-                           bbox=dict(boxstyle='round,pad=0.2', facecolor='#FFFDF7',
-                                    edgecolor=color, alpha=0.8, linewidth=0.5))
+                    ax.text(
+                        feat_min, y + y_offset, f'{feat_min:.2f}',
+                        ha='right', va='center', fontsize=7, color=color, weight='bold',
+                        bbox={
+                            "boxstyle": "round,pad=0.2", "facecolor": "#FFFDF7",
+                            "edgecolor": color, "alpha": 0.8, "linewidth": 0.5
+                        }
+                    )
                     ax.text(feat_max, y + y_offset, f'{feat_max:.2f}',
-                           ha='left', va='center', fontsize=7, color=color, weight='bold',
-                           bbox=dict(boxstyle='round,pad=0.2', facecolor='#FFFDF7',
-                                    edgecolor=color, alpha=0.8, linewidth=0.5))
+                        ha='left', va='center', fontsize=7, color=color, weight='bold',
+                        bbox={
+                            "boxstyle": "round,pad=0.2", "facecolor": "#FFFDF7",
+                            "edgecolor": color, "alpha": 0.8, "linewidth": 0.5
+                        }
+                    )
 
                 elif feat_min is not None:
                     # Only min bound - draw line with arrow pointing right
@@ -1256,9 +1246,12 @@ def plot_dpg_constraints_overview(
                     ax.scatter([feat_min], [y + y_offset], color=color, s=100,
                               marker='|', zorder=3, linewidths=3)
                     ax.text(feat_min, y + y_offset + bar_height/2, f'min:{feat_min:.2f}',
-                           ha='center', va='bottom', fontsize=7, color=color, weight='bold',
-                           bbox=dict(boxstyle='round,pad=0.2', facecolor='#FFFDF7',
-                                    edgecolor=color, alpha=0.8, linewidth=0.5))
+                        ha='center', va='bottom', fontsize=7, color=color, weight='bold',
+                        bbox={
+                            "boxstyle": "round,pad=0.2", "facecolor": "#FFFDF7",
+                            "edgecolor": color, "alpha": 0.8, "linewidth": 0.5
+                        }
+                    )
 
                 elif feat_max is not None:
                     # Only max bound - draw line with arrow pointing left
@@ -1267,9 +1260,12 @@ def plot_dpg_constraints_overview(
                     ax.scatter([feat_max], [y + y_offset], color=color, s=100,
                               marker='|', zorder=3, linewidths=3)
                     ax.text(feat_max, y + y_offset + bar_height/2, f'max:{feat_max:.2f}',
-                           ha='center', va='bottom', fontsize=7, color=color, weight='bold',
-                           bbox=dict(boxstyle='round,pad=0.2', facecolor='#FFFDF7',
-                                    edgecolor=color, alpha=0.8, linewidth=0.5))
+                        ha='center', va='bottom', fontsize=7, color=color, weight='bold',
+                        bbox={
+                            "boxstyle": "round,pad=0.2", "facecolor": "#FFFDF7",
+                            "edgecolor": color, "alpha": 0.8, "linewidth": 0.5
+                        }
+                    )
 
         # Draw original sample value if provided
         if original_sample and feat in original_sample:
@@ -1280,9 +1276,12 @@ def plot_dpg_constraints_overview(
             ax.plot([sample_val, sample_val], [y - 0.4, y + 0.4],
                    color=colors["ink"], linewidth=2, linestyle='-', zorder=9, alpha=0.7)
             ax.text(sample_val, y + 0.42, f'{sample_val:.2f}',
-                   ha='center', va='bottom', fontsize=8, color=colors["ink"], weight='bold',
-                   bbox=dict(boxstyle='round,pad=0.2', facecolor=colors.get("gold", colors["success"]),
-                            edgecolor=colors["charcoal"], alpha=0.92, linewidth=1))
+                ha='center', va='bottom', fontsize=8, color=colors["ink"], weight='bold',
+                bbox={
+                    "boxstyle": "round,pad=0.2", "facecolor": colors.get("gold", colors["success"]),
+                    "edgecolor": colors["charcoal"], "alpha": 0.92, "linewidth": 1
+                }
+            )
 
     # Configure axes
     ax.set_yticks(y_positions)
@@ -1300,7 +1299,7 @@ def plot_dpg_constraints_overview(
     for tick_label, feat in zip(ax.get_yticklabels(), features_with_constraints):
         if feat in non_overlapping_features:
             tick_label.set_color(colors["success"])
-            tick_label.set_weight('bold')
+            tick_label.set_weight('bold')  # type: ignore[attr-defined]
     ax.tick_params(axis="y", length=0)
 
     ax.set_xlim(x_min, x_max)
@@ -1309,7 +1308,7 @@ def plot_dpg_constraints_overview(
     _style_axes(ax, theme_context, grid_axis="x")
 
     # Create legend
-    legend_elements = []
+    legend_elements: list[Artist] = []
     for class_idx, cname in enumerate(class_names):
         color = class_colors_list[class_idx % len(class_colors_list)]
         legend_elements.append(
@@ -1353,7 +1352,7 @@ def plot_dpg_constraints_overview(
     return fig
 
 
-def parse_predicate_parts(label: str) -> Optional[Tuple[str, str, float]]:
+def parse_predicate_parts(label: str) -> tuple[str, str, float] | None:
     """Parse predicate labels like 'feature <= 1.23' or 'feature > 0.7'."""
     match = _PREDICATE_PATTERN.search(str(label))
     if not match:
@@ -1374,8 +1373,12 @@ def parse_feature_from_predicate(label: str) -> str:
     return parsed[0] if parsed else str(label)
 
 
-def _feature_color_map(features: List[str]) -> Dict[str, Any]:
-    return feature_color_map(features)
+def _feature_color_map(features: list[str]) -> dict[str, Any]:
+    unique = list(dict.fromkeys(features))
+    cmap = colormaps.get_cmap("tab20")
+    if len(unique) <= 1:
+        return {unique[0]: cmap(0)} if unique else {}
+    return {f: cmap(i / (len(unique) - 1)) for i, f in enumerate(unique)}
 
 
 def lrc_predicate_scores(explanation, top_k: int = 10) -> Any:
@@ -1411,7 +1414,7 @@ def plot_lrc_vs_rf_importance(
     X_df: Any,
     top_k: int = 10,
     dataset_name: str = "Dataset",
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     show: bool = True,
     theme: str = "dpg",
     palette: str = "default",
@@ -1427,10 +1430,10 @@ def plot_lrc_vs_rf_importance(
     _apply_matplotlib_theme(theme_context)
     top_lrc = lrc_predicate_scores(explanation, top_k=top_k).copy()
     if top_lrc.empty:
-        raise ValueError("No predicate labels available to compute LRC scores.")
+        raise DPGValidationError.no_predicate_labels()
 
     if not hasattr(model, "feature_importances_"):
-        raise ValueError("Model must expose feature_importances_.")
+        raise DPGValidationError.feature_importances_required()
 
     top_rf = (
         pd.DataFrame(
@@ -1529,12 +1532,12 @@ def plot_top_lrc_predicate_splits(
     top_predicates: int = 5,
     top_features: int = 2,
     dataset_name: str = "Dataset",
-    class_names: Optional[Any] = None,
-    save_path: Optional[str] = None,
+    class_names: Any | None = None,
+    save_path: str | None = None,
     show: bool = True,
     theme: str = "dpg",
     palette: str = "default",
-) -> Optional[Any]:
+) -> Any | None:
     """
     Scatter the top-2 LRC features and overlay top-LRC predicate split lines.
 
@@ -1567,7 +1570,7 @@ def plot_top_lrc_predicate_splits(
     y_series = pd.Series(np.asarray(y))
     y_numeric = pd.to_numeric(y_series, errors="coerce")
     class_codes = None
-    class_labels: List[str] = []
+    class_labels: list[str] = []
 
     if y_numeric.notna().all():
         # Keep class colors discrete even when labels are numeric.
@@ -1711,7 +1714,7 @@ def sample_bc_weights(
         pandas Series indexed like ``X_df`` with one BC-derived weight per sample.
     """
     if not hasattr(X_df, "columns"):
-        raise ValueError("X_df must be a pandas DataFrame with named columns.")
+        raise DPGValidationError.dataframe_required()
 
     nm = explanation.node_metrics.copy()
     mask = (
@@ -1743,8 +1746,8 @@ def plot_sample_using_bc_weights(
     y,
     top_k: int = 10,
     dataset_name: str = "Dataset",
-    class_names: Optional[Any] = None,
-    save_path: Optional[str] = None,
+    class_names: Any | None = None,
+    save_path: str | None = None,
     show: bool = True,
     theme: str = "dpg",
     palette: str = "default",
@@ -1762,7 +1765,7 @@ def plot_sample_using_bc_weights(
     from sklearn.decomposition import PCA
 
     if not hasattr(X_df, "columns"):
-        raise ValueError("X_df must be a pandas DataFrame with named columns.")
+        raise DPGValidationError.dataframe_required()
 
     bc_w = sample_bc_weights(explanation=explanation, X_df=X_df, top_k=top_k)
     bc_w_norm = (bc_w - bc_w.min()) / (bc_w.max() - bc_w.min() + 1e-12)
@@ -1773,7 +1776,7 @@ def plot_sample_using_bc_weights(
     y_series = pd.Series(np.asarray(y), index=X_df.index if len(X_df) == len(y) else None)
     y_numeric = pd.to_numeric(y_series, errors="coerce")
     class_codes = None
-    class_labels: List[str] = []
+    class_labels: list[str] = []
 
     if y_numeric.notna().all():
         unique_classes = sorted(y_numeric.unique().tolist())
@@ -1870,13 +1873,13 @@ def plot_sample_using_bc_weights(
 
 
 def _resolve_named_class_palette(
-    observed_labels: List[str],
-    class_names: Optional[Any],
-    theme_context: Dict[str, Any],
-) -> Tuple[List[str], Dict[str, Any]]:
+    observed_labels: list[str],
+    class_names: Any | None,
+    theme_context: dict[str, Any],
+) -> tuple[list[str], dict[str, Any]]:
     """Resolve class order and colors using the same palette logic as PCA plots."""
     observed = [str(label) for label in observed_labels]
-    ordered_labels: List[str]
+    ordered_labels: list[str]
 
     if class_names is None:
         ordered_labels = list(dict.fromkeys(observed))
@@ -1915,7 +1918,7 @@ def _normalize_class_label(label: Any) -> str:
     return text
 
 
-def _community_specs(explanation, graph: nx.DiGraph, node_df: Any) -> List[Dict[str, Any]]:
+def _community_specs(explanation, graph: nx.DiGraph, node_df: Any) -> list[dict[str, Any]]:
     communities = getattr(explanation, "communities", None)
     if not communities:
         return []
@@ -1923,15 +1926,17 @@ def _community_specs(explanation, graph: nx.DiGraph, node_df: Any) -> List[Dict[
     raw_specs = []
     if isinstance(communities, dict) and "Clusters" in communities:
         for key, members in communities.get("Clusters", {}).items():
-            class_name = _normalize_class_label(key)
-            if class_name.lower() == "ambiguous":
-                class_name = None
+            normalized = _normalize_class_label(key)
+            # The ambiguous cluster carries no single class.
+            class_name: str | None = (
+                None if normalized.lower() == "ambiguous" else normalized
+            )
             raw_specs.append({"class_name": class_name, "members": members})
     elif isinstance(communities, dict) and "Communities" in communities:
         for members in communities.get("Communities", []):
             raw_specs.append({"class_name": None, "members": members})
 
-    label_to_nodes: Dict[str, List[Any]] = {}
+    label_to_nodes: dict[str, list[Any]] = {}
     for _, row in node_df.iterrows():
         label_to_nodes.setdefault(str(row["Label"]), []).append(row["Node"])
 
@@ -1958,11 +1963,11 @@ def _community_specs(explanation, graph: nx.DiGraph, node_df: Any) -> List[Dict[
     return output
 
 
-def _class_nodes_map(explanation) -> Dict[Any, str]:
+def _class_nodes_map(explanation) -> dict[Any, str]:
     node_df = explanation.node_metrics.copy()
     graph = getattr(explanation, "graph", None)
     if graph is None:
-        raise ValueError("explanation.graph is required")
+        raise DPGValidationError.explanation_graph_required()
 
     class_df = node_df[node_df["Label"].astype(str).str.startswith("Class ")].copy()
     class_nodes = {}
@@ -1973,17 +1978,17 @@ def _class_nodes_map(explanation) -> Dict[Any, str]:
     return class_nodes
 
 
-def _predicate_node_lookup(explanation) -> Dict[Any, Tuple[str, str, float]]:
+def _predicate_node_lookup(explanation) -> dict[Any, tuple[str, str, float]]:
     node_df = explanation.node_metrics.copy()
     graph = getattr(explanation, "graph", None)
     if graph is None:
-        raise ValueError("explanation.graph is required")
+        raise DPGValidationError.explanation_graph_required()
 
     pred_df = node_df.copy()
     pred_df["parsed"] = pred_df["Label"].apply(parse_predicate_parts)
     pred_df = pred_df[pred_df["parsed"].notna()].copy()
 
-    lookup: Dict[Any, Tuple[str, str, float]] = {}
+    lookup: dict[Any, tuple[str, str, float]] = {}
     for _, row in pred_df.iterrows():
         node = _resolve_graph_node(graph, row["Node"])
         if node is None:
@@ -2003,9 +2008,9 @@ def class_feature_predicate_counts(explanation) -> Any:
     node_df = explanation.node_metrics.copy()
     graph = getattr(explanation, "graph", None)
     if graph is None:
-        raise ValueError("explanation.graph is required for class-path analysis")
+        raise DPGValidationError.class_path_graph_required()
     if "Node" not in node_df.columns or "Label" not in node_df.columns:
-        raise ValueError("node_metrics must contain Node and Label columns")
+        raise DPGValidationError.node_metrics_columns_required()
 
     class_nodes = _class_nodes_map(explanation)
     pred_lookup = _predicate_node_lookup(explanation)
@@ -2014,7 +2019,7 @@ def class_feature_predicate_counts(explanation) -> Any:
     if not comm_specs:
         comm_specs = [{"community_id": 0, "class_name": None, "nodes": set(pred_lookup.keys())}]
 
-    class_feature_counts: Dict[str, List[str]] = {}
+    class_feature_counts: dict[str, list[str]] = {}
     for spec in comm_specs:
         class_from_cluster = spec["class_name"]
         for node in spec["nodes"]:
@@ -2044,13 +2049,13 @@ def class_feature_predicate_counts(explanation) -> Any:
 def plot_class_feature_complexity(
     heat_df: Any,
     dataset_name: str = "Dataset",
-    class_names: Optional[Any] = None,
+    class_names: Any | None = None,
     top_n_features: int = 10,
-    save_prefix: Optional[str] = None,
+    save_prefix: str | None = None,
     show: bool = True,
     theme: str = "dpg",
     palette: str = "default",
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """
     Plot class-feature predicate complexity with PCA-consistent class colors.
 
@@ -2059,7 +2064,7 @@ def plot_class_feature_complexity(
     - ``*_bars.png``: grouped bar chart with one color per class
     """
     if heat_df is None or getattr(heat_df, "empty", True):
-        raise ValueError("heat_df must be a non-empty class-feature count DataFrame.")
+        raise DPGValidationError.non_empty_heatmap_required()
 
     theme_context = resolve_theme_context(theme=theme, palette=palette)
     colors = theme_context["colors"]
@@ -2112,7 +2117,8 @@ def plot_class_feature_complexity(
     for row_idx in range(len(h.index)):
         for col_idx in range(len(h.columns)):
             value = int(h.iat[row_idx, col_idx])
-            text_color = colors["paper"] if im.norm(value) > 0.55 else colors["charcoal"]
+            normalized = cast(float, im.norm(value))  # type: ignore[arg-type]
+            text_color = colors["paper"] if normalized > 0.55 else colors["charcoal"]
             ax_heat.text(col_idx, row_idx, str(value), ha="center", va="center", fontsize=9, color=text_color)
     cbar = fig_heat.colorbar(im, ax=ax_heat, fraction=0.046, pad=0.04)
     cbar.set_label("Predicate count")
@@ -2177,7 +2183,7 @@ def classwise_feature_bounds_from_communities(explanation) -> Any:
     node_df = explanation.node_metrics.copy()
     graph = getattr(explanation, "graph", None)
     if graph is None:
-        raise ValueError("explanation.graph is required")
+        raise DPGValidationError.explanation_graph_required()
 
     class_nodes = _class_nodes_map(explanation)
     pred_lookup = _predicate_node_lookup(explanation)
@@ -2186,7 +2192,7 @@ def classwise_feature_bounds_from_communities(explanation) -> Any:
     if not comm_specs:
         comm_specs = [{"community_id": 0, "class_name": None, "nodes": set(pred_lookup.keys())}]
 
-    bucket: Dict[Tuple[str, int, str], Dict[str, List[float]]] = {}
+    bucket: dict[tuple[str, int, str], dict[str, list[float]]] = {}
     for spec in comm_specs:
         community_id = int(spec["community_id"])
         class_from_cluster = spec["class_name"]
@@ -2250,7 +2256,7 @@ def class_feature_predicate_positions(explanation) -> Any:
     node_df = explanation.node_metrics.copy()
     graph = getattr(explanation, "graph", None)
     if graph is None:
-        raise ValueError("explanation.graph is required")
+        raise DPGValidationError.explanation_graph_required()
 
     class_nodes = _class_nodes_map(explanation)
     pred_lookup = _predicate_node_lookup(explanation)
@@ -2300,7 +2306,7 @@ def _aggregate_close_positions(values, tol: float):
     return [(float(np.mean(group)), len(group)) for group in groups]
 
 
-def class_lookup_from_target_names(target_names: Optional[List[str]]) -> Dict[str, int]:
+def class_lookup_from_target_names(target_names: Sequence[str] | None) -> dict[str, int]:
     """Build a class-name to class-index mapping from a target names list.
 
     Args:
@@ -2316,7 +2322,7 @@ def class_lookup_from_target_names(target_names: Optional[List[str]]) -> Dict[st
     return {str(name): i for i, name in enumerate(list(target_names))}
 
 
-def _class_mask(class_name: str, y, class_lookup: Optional[Dict[str, int]] = None):
+def _class_mask(class_name: str, y, class_lookup: dict[str, int] | None = None):
     y_arr = np.asarray(y)
 
     # First try direct label matching; this supports string labels (e.g., "F1")
@@ -2332,17 +2338,18 @@ def _class_mask(class_name: str, y, class_lookup: Optional[Dict[str, int]] = Non
             return mapped_mask
     try:
         as_int = int(class_name)
+    except (TypeError, ValueError):
+        print(f"Unable to resolve class name '{class_name}' to any label in y or class_lookup.")
+    else:
         return y_arr == as_int
-    except Exception:
-        pass
     return direct_mask
 
 
 def dataset_feature_bounds_by_class(
     X_df: Any,
     y,
-    class_names: List[str],
-    class_lookup: Optional[Dict[str, int]] = None,
+    class_names: list[str],
+    class_lookup: dict[str, int] | None = None,
 ) -> Any:
     """Compute empirical per-class min/max ranges for every feature in ``X_df``.
 
@@ -2380,18 +2387,18 @@ def plot_dpg_class_bounds_vs_dataset_feature_ranges(
     dataset_name: str = "Dataset",
     top_features: int = 4,
     feature_cols_per_row: int = 4,
-    class_lookup: Optional[Dict[str, int]] = None,
-    predicate_positions: Optional[Any] = None,
-    class_bounds: Optional[Any] = None,
-    class_filter: Optional[List[str]] = None,
+    class_lookup: dict[str, int] | None = None,
+    predicate_positions: Any | None = None,
+    class_bounds: Any | None = None,
+    class_filter: list[str] | None = None,
     density_tol_ratio: float = 0.03,
     predicate_alpha: float = 0.55,
     dataset_range_lw: float = 10,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     show: bool = True,
     theme: str = "dpg",
     palette: str = "default",
-) -> Optional[Any]:
+) -> Any | None:
     """
     Plot DPG class bounds against empirical dataset ranges per feature.
 
@@ -2478,7 +2485,7 @@ def plot_dpg_class_bounds_vs_dataset_feature_ranges(
     )
     fig.patch.set_facecolor(colors["paper"])
 
-    feature_axis_limits: Dict[str, Tuple[float, float]] = {}
+    feature_axis_limits: dict[str, tuple[float, float]] = {}
     for feat in selected_features:
         ds_feat = ds_bounds[ds_bounds["feature"] == feat]
         dpg_feat = dpg_bounds[dpg_bounds["feature"] == feat]

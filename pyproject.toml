@@ -1,78 +1,93 @@
-[tool.poetry]
+[project]
 name = "dpg"
 version = "0.1.6"
 description = "A Python library for extracting Decision Predicate Graphs and global explanations from ensemble models."
-authors = ["Sylvio Barbon Junior <sylvio.barbonjunior@units.it>", "Leonardo Arrighi <leonardo.arrighi@phd.units.it>"]
+authors = [
+    { name = "Sylvio Barbon Junior", email = "sylvio.barbonjunior@units.it" },
+    { name = "Leonardo Arrighi", email = "leonardo.arrighi@phd.units.it" }
+]
 license = "MIT"
 readme = "README.md"
+keywords = ["decision graph", "ensemble learning", "explainable ai", "explainability", "global explanations"]
+scripts = { "dpg" = "scripts.run_dpg_standard:main" }
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "contourpy>=1.2",
+    "cycler>=0.12",
+    "fonttools>=4.53",
+    "graphviz>=0.20",
+    "joblib>=1.4",
+    "kiwisolver>=1.4",
+    "matplotlib>=3.9",
+    "networkx>=3.3",
+    "numpy>=2.0.0",
+    "packaging>=24.1",
+    "pandas>=2.2",
+    "pillow>=10.4",
+    "pyparsing>=3.1",
+    "python-dateutil>=2.9",
+    "pytz>=2024.1",
+    "scikit-learn>=1.5",
+    "scipy>=1.14",
+    "six>=1.16",
+    "threadpoolctl>=3.5",
+    "tqdm>=4.67",
+    "tzdata>=2024.1",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "igraph>=1.0.0",
+]
+
+[project.urls]
 homepage = "https://github.com/Meta-Group/DPG"
 repository = "https://github.com/Meta-Group/DPG"
-keywords = ["decision graph", "ensemble learning", "explainable ai", "explainability", "global explanations"]
+
+[dependency-groups]
+dev = [
+    "ipython>=8.39.0",
+    # NOTE: do not add matplotlib-stubs here. matplotlib ships its own complete
+    # inline types (py.typed); a stub-only package shadows them and regresses
+    # Figure.patch, Colorbar.outline, Axes.set_yticks, to_rgba, ListedColormap.
+    "jupyterlab>=4.6.2",
+    "mypy>=1.9",
+    "pandas-stubs>=0.0.0",
+    "pyrefly>=1.0.0",
+    "pytest>=7.0",
+    "ruff>=0.15.13",
+    "ty>=0.0.37",
+    "types-PyYAML>=6.0.0",
+    "types-seaborn>=0.0.0",
+]
+docs = [
+     "myst-nb>=1.1",
+     "myst-parser>=3.0",
+     "pydata-sphinx-theme>=0.15",
+     "sphinx>=7.3",
+     "sphinx-autoapi>=3.1",
+     "sphinx-copybutton>=0.5",
+     "sphinx-design>=0.6"
+]
+
+# -- optional docs dependencies (pip install ".[docs]") --
+[project.optional-dependencies]
+docs = [
+    "myst-nb>=1.1",
+    "myst-parser>=3.0",
+    "pydata-sphinx-theme>=0.15",
+    "sphinx>=7.3",
+    "sphinx-autoapi>=3.1",
+    "sphinx-design>=0.6",
+    "sphinx-copybutton>=0.5",
+]
+
+[tool.poetry]
 packages = [
     { include = "dpg" },
     { include = "metrics" },
     # { include = "counterfactual" }
 ]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
-]
-
-[tool.poetry.dependencies]
-python = ">=3.10"
-
-contourpy = ">=1.2"
-cycler = ">=0.12"
-fonttools = ">=4.53"
-graphviz = ">=0.20"
-joblib = ">=1.4"
-kiwisolver = ">=1.4"
-matplotlib = ">=3.9.1"
-networkx = ">=3.3"
-numpy = ">=2.0.0"
-packaging = ">=24.1"
-pandas = ">=2.2"
-pillow = ">=10.4"
-pyparsing = ">=3.1"
-python-dateutil = ">=2.9"
-pytz = ">=2024.1"
-scikit-learn = ">=1.5"
-scipy = ">=1.14"
-six = ">=1.16"
-threadpoolctl = ">=3.5"
-tqdm = ">=4.67"
-tzdata = ">=2024.1"
-pyyaml = ">=6.0.2"
-
-# -- optional docs dependencies (pip install ".[docs]") --
-sphinx = {version = ">=7.3", optional = true}
-pydata-sphinx-theme = {version = ">=0.15", optional = true}
-sphinx-autoapi = {version = ">=3.1", optional = true}
-myst-parser = {version = ">=3.0", optional = true}
-sphinx-copybutton = {version = ">=0.5", optional = true}
-myst-nb = {version = ">=1.1", optional = true}
-sphinx-design = {version = ">=0.6", optional = true}
-
-[tool.poetry.extras]
-dev = ["pytest"]
-docs = ["sphinx", "pydata-sphinx-theme", "sphinx-autoapi", "myst-parser", "sphinx-copybutton", "myst-nb", "sphinx-design"]
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=7.0"
-mypy = ">=1.9"
-types-PyYAML = ">=6.0"
-types-seaborn = "*"
-pandas-stubs = "*"
-matplotlib-stubs = "*"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.3"
-pydata-sphinx-theme = ">=0.15"
-sphinx-autoapi = ">=3.1"
-myst-parser = ">=3.0"
-sphinx-copybutton = ">=0.5"
-myst-nb = ">=1.1"
-sphinx-design = ">=0.6"
 
 [tool.mypy]
 python_version = "3.10"
@@ -83,6 +98,7 @@ no_implicit_optional = true
 pretty = true
 show_error_codes = true
 # Ignore third-party libraries that don't ship stubs
+
 [[tool.mypy.overrides]]
 module = [
     "graphviz.*",
@@ -93,12 +109,17 @@ module = [
     "scipy.*",
     "omegaconf.*",
     "PIL.*",
+    "igraph.*",
 ]
 ignore_missing_imports = true
+
+# TODO: annotate dpg/visualizer.py's plot functions and drop this override.
+# Every other check stays enabled for this module; only the missing-annotation
+# rule is relaxed.
+[[tool.mypy.overrides]]
+module = "dpg.visualizer"
+disallow_untyped_defs = false
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-dpg = "scripts.run_dpg_standard:main"

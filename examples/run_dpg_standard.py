@@ -1,19 +1,18 @@
-import sys
+import argparse
 import os
+import re
+import sys
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+import yaml
+
+import dpg.sklearn_dpg as test
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
-
-from collections import defaultdict
-import re
-import pandas as pd
-import yaml
-import argparse
-import random
-import dpg.sklearn_dpg as test
-import numpy as np
-from metrics.graph import GraphMetrics
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -41,7 +40,7 @@ if __name__ == "__main__":
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found at {config_path}")
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
+        raise yaml.YAMLError(f"Invalid YAML in config file: {e!s}")
     
     pv = config['dpg']['default']['perc_var']
     t = config['dpg']['default']['decimal_threshold']
@@ -75,8 +74,7 @@ if __name__ == "__main__":
                 encoding='utf-8')
 
     with open(os.path.join(args.dir, f'{args.ds}_l{args.l}_seed{args.seed}_dpg_metrics.txt'), 'w') as f:
-        for key, value in df_dpg_metrics.items():
-            f.write(f"{key}: {value}\n")
+        f.writelines(f"{key}: {value}\n" for key, value in df_dpg_metrics.items())
     
 
 
@@ -114,7 +112,7 @@ if __name__ == "__main__":
                 temp_intervals[class_name] = intervals
                 all_found_features.update(counts.keys())
 
-            sorted_features = sorted(list(all_found_features))
+            sorted_features = sorted(all_found_features)
             
             feature_count_df = pd.DataFrame(index=sorted_features, columns=data.keys())
             
@@ -123,7 +121,7 @@ if __name__ == "__main__":
                 interval_index.extend([f"{f}_min", f"{f}_max"])
             feature_intervals_df = pd.DataFrame(index=interval_index, columns=data.keys())
 
-            for class_name in data.keys():
+            for class_name in data:
                 for feat in sorted_features:
                     feature_count_df.loc[feat, class_name] = temp_counts[class_name].get(feat, 0)
                     
@@ -145,14 +143,11 @@ if __name__ == "__main__":
         
         with open(os.path.join(args.dir, f'{args.ds}_l{args.l}_seed{args.seed}_t{args.threshold_clusters}_dpg_clusters.txt'), 'w') as f:
             f.write("Clusters:\n")
-            for key, value in clusters_labels.items():
-                f.write(f"{key}: {value}\n")
+            f.writelines(f"{key}: {value}\n" for key, value in clusters_labels.items())
             f.write("\n\nProbability:\n")
-            for key, value in node_probs_labels.items():
-                f.write(f"{key}: {value}\n")
+            f.writelines(f"{key}: {value}\n" for key, value in node_probs_labels.items())
             f.write("\n\nConfidence Interval:\n")
-            for key, value in confidence_labels.items():
-                f.write(f"{key}: {np.round(value, 2)}\n")
+            f.writelines(f"{key}: {np.round(value, 2)}\n" for key, value in confidence_labels.items())
 
 
 # python run_dpg_standard.py --ds datasets\tpot_clustered_files\thy.csv --l 5 --dir examples\tpot --plot --save_plot_dir examples\tpot --clusters --threshold_clusters 0.2 --seed 160898S

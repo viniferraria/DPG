@@ -12,7 +12,7 @@ ENV/
 
 # Data files (keep specific patterns if needed)
 *.jpg
-*.csv
+# *.csv
 *.txt
 !docs/requirements.txt
 
@@ -59,3 +59,6 @@ experiments/results/
 experiments/local_explanation/results/
 wandb/
 .codex/
+
+**/**/*.pkl
+**/*.log

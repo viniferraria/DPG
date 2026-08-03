@@ -132,7 +132,7 @@ def test_additional_visualization_apis(tmp_path):
 
 def test_plot_local_on_dpg_writes_png_and_returns_figure(tmp_path):
     _require_graphviz_dot()
-    explainer, explanation, X, y = _build_explanation()
+    explainer, _explanation, X, y = _build_explanation()
     local_explanation = explainer.explain_local(sample=X.iloc[0].values, sample_id=5)
 
     fig = explainer.plot_local_on_dpg(
@@ -149,7 +149,7 @@ def test_plot_local_on_dpg_writes_png_and_returns_figure(tmp_path):
 
 def test_plot_local_on_dpg_with_path_indices(tmp_path):
     _require_graphviz_dot()
-    explainer, explanation, X, _ = _build_explanation()
+    explainer, _explanation, X, _ = _build_explanation()
     local_explanation = explainer.explain_local(sample=X.iloc[0].values, sample_id=6)
 
     fig = explainer.plot_local_on_dpg(
@@ -166,7 +166,7 @@ def test_plot_local_on_dpg_with_path_indices(tmp_path):
 
 def test_plot_local_on_dpg_invalid_path_indices_raise(tmp_path):
     _require_graphviz_dot()
-    explainer, explanation, X, _ = _build_explanation()
+    explainer, _explanation, X, _ = _build_explanation()
     local_explanation = explainer.explain_local(sample=X.iloc[0].values)
 
     with pytest.raises(ValueError, match="path_indices"):
@@ -181,7 +181,7 @@ def test_plot_local_on_dpg_invalid_path_indices_raise(tmp_path):
 
 def test_plot_local_on_dpg_with_local_explanation_avoids_recompute(tmp_path, monkeypatch):
     _require_graphviz_dot()
-    explainer, explanation, X, _ = _build_explanation()
+    explainer, _explanation, X, _ = _build_explanation()
     local_explanation = explainer.explain_local(sample=X.iloc[0].values, sample_id=7)
 
     def fail_explain_local(*args, **kwargs):
@@ -200,7 +200,7 @@ def test_plot_local_on_dpg_with_local_explanation_avoids_recompute(tmp_path, mon
 
 def test_plot_local_on_dpg_does_not_mutate_base_dot(tmp_path):
     _require_graphviz_dot()
-    explainer, explanation, X, _ = _build_explanation()
+    explainer, _explanation, X, _ = _build_explanation()
     local_explanation = explainer.explain_local(sample=X.iloc[0].values, sample_id=8)
     original_source = explainer._dot.source
 

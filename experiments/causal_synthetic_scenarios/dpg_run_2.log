@@ -1,0 +1,421 @@
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function _nx_to_igraph with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function calc_node_metrics with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function calc_betweenness_centrality with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function calc_local_reaching_centrality with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function calc_closeness_centrality with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function calc_harmonic_centrality with log_timer
+2026-06-25 00:44:05,422 - metrics.nodes - INFO - Decorating function extract_node_metrics with log_timer
+2026-06-25 00:44:05,425 - __main__ - INFO - Starting DPG explainer experiments...
+2026-06-25 00:44:05,425 - __main__ - INFO - Processing test_datasets/scenario_1.csv...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 583961.57it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/79133 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1884/79133 [00:00<00:04, 18836.25it/s]Processing cases:   5%|▍         | 3768/79133 [00:00<00:04, 17782.64it/s]Processing cases:   8%|▊         | 6032/79133 [00:00<00:03, 19925.88it/s]Processing cases:  11%|█         | 8458/79133 [00:00<00:03, 21600.01it/s]Processing cases:  13%|█▎        | 10627/79133 [00:00<00:03, 18627.24it/s]Processing cases:  16%|█▌        | 12552/79133 [00:00<00:03, 17602.70it/s]Processing cases:  19%|█▊        | 14807/79133 [00:00<00:03, 19031.99it/s]Processing cases:  21%|██        | 16759/79133 [00:00<00:03, 17454.39it/s]Processing cases:  24%|██▍       | 19092/79133 [00:01<00:03, 19071.51it/s]Processing cases:  27%|██▋       | 21478/79133 [00:01<00:02, 20422.15it/s]Processing cases:  30%|██▉       | 23572/79133 [00:01<00:02, 20376.97it/s]Processing cases:  33%|███▎      | 25747/79133 [00:01<00:02, 20772.12it/s]Processing cases:  36%|███▌      | 28296/79133 [00:01<00:02, 22150.63it/s]Processing cases:  39%|███▉      | 30742/79133 [00:01<00:02, 22829.28it/s]Processing cases:  42%|████▏     | 33044/79133 [00:01<00:02, 22182.10it/s]Processing cases:  45%|████▍     | 35498/79133 [00:01<00:01, 22867.43it/s]Processing cases:  48%|████▊     | 37799/79133 [00:01<00:01, 22857.30it/s]Processing cases:  51%|█████     | 40137/79133 [00:01<00:01, 23009.76it/s]Processing cases:  54%|█████▍    | 42660/79133 [00:02<00:01, 23665.88it/s]Processing cases:  57%|█████▋    | 45198/79133 [00:02<00:01, 24175.36it/s]Processing cases:  60%|██████    | 47835/79133 [00:02<00:01, 24828.38it/s]Processing cases:  64%|██████▍   | 50488/79133 [00:02<00:01, 25336.36it/s]Processing cases:  67%|██████▋   | 53049/79133 [00:02<00:01, 25417.29it/s]Processing cases:  70%|███████   | 55593/79133 [00:02<00:00, 24411.68it/s]Processing cases:  73%|███████▎  | 58044/79133 [00:02<00:00, 24259.66it/s]Processing cases:  76%|███████▋  | 60477/79133 [00:02<00:00, 23999.04it/s]Processing cases:  80%|███████▉  | 63099/79133 [00:02<00:00, 24646.35it/s]Processing cases:  83%|████████▎ | 65719/79133 [00:02<00:00, 25102.40it/s]Processing cases:  86%|████████▋ | 68352/79133 [00:03<00:00, 25465.38it/s]Processing cases:  90%|████████▉ | 70987/79133 [00:03<00:00, 25727.45it/s]Processing cases:  93%|█████████▎| 73637/79133 [00:03<00:00, 25956.31it/s]Processing cases:  96%|█████████▋| 76235/79133 [00:03<00:00, 25892.40it/s]Processing cases: 100%|█████████▉| 78872/79133 [00:03<00:00, 26033.00it/s]Processing cases: 100%|██████████| 79133/79133 [00:03<00:00, 22877.76it/s]
+2026-06-25 00:44:11,253 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split0_dpg_explainer_2026-06-25T00-44-11.pkl
+2026-06-25 00:44:11,258 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=0...
+2026-06-25 00:44:11,260 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0021 seconds
+2026-06-25 00:44:11,260 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0003 seconds
+2026-06-25 00:44:11,263 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0026 seconds
+2026-06-25 00:44:11,331 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 0.0683 seconds
+2026-06-25 00:44:11,357 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 0.0263 seconds
+2026-06-25 00:44:11,384 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 0.0264 seconds
+2026-06-25 00:44:11,388 - metrics.nodes - INFO - Execution time for extract_node_metrics: 0.1304 seconds
+2026-06-25 00:44:11,417 - __main__ - INFO - Global explanation generated in 0.16s
+2026-06-25 00:44:11,417 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split0_explanation_2026-06-25T00-44-11.pkl
+2026-06-25 00:44:11,421 - __main__ - INFO - Collected 476 node records for scenario_1_RandomForest split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 658963.71it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/79336 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1484/79336 [00:00<00:05, 14838.95it/s]Processing cases:   5%|▍         | 3862/79336 [00:00<00:03, 20097.07it/s]Processing cases:   8%|▊         | 6247/79336 [00:00<00:03, 21809.17it/s]Processing cases:  11%|█         | 8607/79336 [00:00<00:03, 22513.35it/s]Processing cases:  14%|█▍        | 11076/79336 [00:00<00:02, 23297.08it/s]Processing cases:  17%|█▋        | 13601/79336 [00:00<00:02, 23959.12it/s]Processing cases:  20%|██        | 16143/79336 [00:00<00:02, 24436.02it/s]Processing cases:  23%|██▎       | 18587/79336 [00:00<00:02, 24263.28it/s]Processing cases:  27%|██▋       | 21064/79336 [00:00<00:02, 24419.06it/s]Processing cases:  30%|██▉       | 23507/79336 [00:01<00:02, 22815.39it/s]Processing cases:  33%|███▎      | 25809/79336 [00:01<00:02, 18642.74it/s]Processing cases:  35%|███▌      | 27803/79336 [00:01<00:03, 16027.74it/s]Processing cases:  37%|███▋      | 29542/79336 [00:01<00:03, 14477.45it/s]Processing cases:  40%|███▉      | 31610/79336 [00:01<00:03, 15894.23it/s]Processing cases:  42%|████▏     | 33609/79336 [00:01<00:02, 16900.87it/s]Processing cases:  45%|████▍     | 35405/79336 [00:01<00:02, 17080.80it/s]Processing cases:  47%|████▋     | 37189/79336 [00:01<00:02, 16258.71it/s]Processing cases:  50%|████▉     | 39349/79336 [00:02<00:02, 17678.14it/s]Processing cases:  52%|█████▏    | 41226/79336 [00:02<00:02, 17978.07it/s]Processing cases:  54%|█████▍    | 43067/79336 [00:02<00:02, 17135.72it/s]Processing cases:  57%|█████▋    | 45112/79336 [00:02<00:01, 18050.80it/s]Processing cases:  59%|█████▉    | 47110/79336 [00:02<00:01, 18596.00it/s]Processing cases:  62%|██████▏   | 49073/79336 [00:02<00:01, 18890.63it/s]Processing cases:  64%|██████▍   | 51001/79336 [00:02<00:01, 19003.04it/s]Processing cases:  67%|██████▋   | 52916/79336 [00:02<00:01, 17524.96it/s]Processing cases:  69%|██████▉   | 54873/79336 [00:02<00:01, 18093.90it/s]Processing cases:  72%|███████▏  | 56977/79336 [00:03<00:01, 18931.79it/s]Processing cases:  74%|███████▍  | 58893/79336 [00:03<00:01, 16832.52it/s]Processing cases:  76%|███████▋  | 60632/79336 [00:03<00:01, 16670.22it/s]Processing cases:  79%|███████▉  | 62551/79336 [00:03<00:00, 17320.64it/s]Processing cases:  81%|████████  | 64316/79336 [00:03<00:00, 16746.26it/s]Processing cases:  83%|████████▎ | 66015/79336 [00:03<00:00, 14841.92it/s]Processing cases:  85%|████████▌ | 67617/79336 [00:03<00:00, 15146.28it/s]Processing cases:  87%|████████▋ | 69172/79336 [00:03<00:00, 13679.99it/s]Processing cases:  89%|████████▉ | 70913/79336 [00:03<00:00, 14638.57it/s]Processing cases:  91%|█████████▏| 72426/79336 [00:04<00:00, 14277.39it/s]Processing cases:  93%|█████████▎| 74083/79336 [00:04<00:00, 14896.91it/s]Processing cases:  96%|█████████▌| 76000/79336 [00:04<00:00, 16088.31it/s]Processing cases:  99%|█████████▊| 78157/79336 [00:04<00:00, 17648.96it/s]Processing cases: 100%|██████████| 79336/79336 [00:04<00:00, 17922.86it/s]
+2026-06-25 00:44:18,517 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split1_dpg_explainer_2026-06-25T00-44-18.pkl
+2026-06-25 00:44:18,522 - __main__ - INFO - Generating global explanation for scenario_1_RandomForest split=1...
+2026-06-25 00:44:18,525 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0024 seconds
+2026-06-25 00:44:18,525 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0003 seconds
+2026-06-25 00:44:18,528 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0031 seconds
+2026-06-25 00:44:18,600 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 0.0715 seconds
+2026-06-25 00:44:18,627 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 0.0270 seconds
+2026-06-25 00:44:18,654 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 0.0268 seconds
+2026-06-25 00:44:18,659 - metrics.nodes - INFO - Execution time for extract_node_metrics: 0.1363 seconds
+2026-06-25 00:44:18,688 - __main__ - INFO - Global explanation generated in 0.17s
+2026-06-25 00:44:18,688 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_RandomForest_split1_explanation_2026-06-25T00-44-18.pkl
+2026-06-25 00:44:18,691 - __main__ - INFO - Collected 448 node records for scenario_1_RandomForest split=1
+2026-06-25 00:44:18,713 - __main__ - INFO - [scenario_1_RandomForest] mean accuracy over 2 splits: 1.0000
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 655104.10it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/57879 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1269/57879 [00:00<00:04, 12689.65it/s]Processing cases:   6%|▋         | 3683/57879 [00:00<00:02, 19420.59it/s]Processing cases:  11%|█         | 6134/57879 [00:00<00:02, 21741.81it/s]Processing cases:  15%|█▍        | 8542/57879 [00:00<00:02, 22662.43it/s]Processing cases:  19%|█▉        | 10971/57879 [00:00<00:02, 23245.90it/s]Processing cases:  23%|██▎       | 13344/57879 [00:00<00:01, 23407.36it/s]Processing cases:  27%|██▋       | 15766/57879 [00:00<00:01, 23671.89it/s]Processing cases:  31%|███▏      | 18134/57879 [00:00<00:01, 22915.19it/s]Processing cases:  35%|███▌      | 20431/57879 [00:00<00:01, 22597.74it/s]Processing cases:  39%|███▉      | 22695/57879 [00:01<00:01, 22305.10it/s]Processing cases:  43%|████▎     | 24929/57879 [00:01<00:01, 21464.12it/s]Processing cases:  47%|████▋     | 27126/57879 [00:01<00:01, 21608.91it/s]Processing cases:  51%|█████     | 29316/57879 [00:01<00:01, 21692.40it/s]Processing cases:  54%|█████▍    | 31490/57879 [00:01<00:01, 20648.72it/s]Processing cases:  58%|█████▊    | 33567/57879 [00:01<00:01, 20262.24it/s]Processing cases:  62%|██████▏   | 35801/57879 [00:01<00:01, 20855.44it/s]Processing cases:  66%|██████▌   | 38120/57879 [00:01<00:00, 21531.27it/s]Processing cases:  70%|██████▉   | 40501/57879 [00:01<00:00, 22196.35it/s]Processing cases:  74%|███████▍  | 42789/57879 [00:01<00:00, 22395.68it/s]Processing cases:  78%|███████▊  | 45083/57879 [00:02<00:00, 22555.25it/s]Processing cases:  82%|████████▏ | 47343/57879 [00:02<00:00, 22376.83it/s]Processing cases:  86%|████████▌ | 49791/57879 [00:02<00:00, 22999.21it/s]Processing cases:  90%|█████████ | 52259/57879 [00:02<00:00, 23497.16it/s]Processing cases:  94%|█████████▍| 54629/57879 [00:02<00:00, 23557.03it/s]Processing cases:  98%|█████████▊| 56987/57879 [00:02<00:00, 21433.13it/s]Processing cases: 100%|██████████| 57879/57879 [00:02<00:00, 21746.31it/s]
+2026-06-25 00:44:26,698 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split0_dpg_explainer_2026-06-25T00-44-26.pkl
+2026-06-25 00:44:26,715 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=0...
+2026-06-25 00:44:26,723 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0079 seconds
+2026-06-25 00:44:26,726 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0031 seconds
+2026-06-25 00:44:27,375 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.6489 seconds
+2026-06-25 00:45:16,639 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 49.2626 seconds
+2026-06-25 00:45:21,115 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 4.4728 seconds
+2026-06-25 00:45:25,377 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 4.2624 seconds
+2026-06-25 00:45:25,422 - metrics.nodes - INFO - Execution time for extract_node_metrics: 58.7065 seconds
+2026-06-25 00:45:36,634 - __main__ - INFO - Global explanation generated in 69.92s
+2026-06-25 00:45:36,635 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split0_explanation_2026-06-25T00-44-26.pkl
+2026-06-25 00:45:36,678 - __main__ - INFO - Collected 4942 node records for scenario_1_ExtraTrees split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 525272.89it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/57299 [00:00<?, ?it/s]Processing cases:   3%|▎         | 1531/57299 [00:00<00:03, 15309.69it/s]Processing cases:   7%|▋         | 3881/57299 [00:00<00:02, 20126.27it/s]Processing cases:  11%|█         | 6293/57299 [00:00<00:02, 21949.55it/s]Processing cases:  15%|█▌        | 8698/57299 [00:00<00:02, 22775.98it/s]Processing cases:  19%|█▉        | 11118/57299 [00:00<00:01, 23286.89it/s]Processing cases:  24%|██▎       | 13558/57299 [00:00<00:01, 23663.56it/s]Processing cases:  28%|██▊       | 15987/57299 [00:00<00:01, 23867.31it/s]Processing cases:  32%|███▏      | 18426/57299 [00:00<00:01, 24031.24it/s]Processing cases:  36%|███▋      | 20848/57299 [00:00<00:01, 24087.98it/s]Processing cases:  41%|████      | 23311/57299 [00:01<00:01, 24255.13it/s]Processing cases:  45%|████▍     | 25743/57299 [00:01<00:01, 24274.40it/s]Processing cases:  49%|████▉     | 28208/57299 [00:01<00:01, 24388.04it/s]Processing cases:  54%|█████▎    | 30655/57299 [00:01<00:01, 24412.57it/s]Processing cases:  58%|█████▊    | 33097/57299 [00:01<00:00, 24402.66it/s]Processing cases:  62%|██████▏   | 35538/57299 [00:01<00:00, 24404.22it/s]Processing cases:  66%|██████▋   | 37979/57299 [00:01<00:00, 24364.54it/s]Processing cases:  71%|███████   | 40428/57299 [00:01<00:00, 24398.99it/s]Processing cases:  75%|███████▍  | 42881/57299 [00:01<00:00, 24436.48it/s]Processing cases:  79%|███████▉  | 45325/57299 [00:01<00:00, 24379.67it/s]Processing cases:  83%|████████▎ | 47777/57299 [00:02<00:00, 24421.21it/s]Processing cases:  88%|████████▊ | 50242/57299 [00:02<00:00, 24487.19it/s]Processing cases:  92%|█████████▏| 52691/57299 [00:02<00:00, 24121.94it/s]Processing cases:  96%|█████████▋| 55152/57299 [00:02<00:00, 24264.86it/s]Processing cases: 100%|██████████| 57299/57299 [00:02<00:00, 23928.53it/s]
+2026-06-25 00:45:44,136 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split1_dpg_explainer_2026-06-25T00-45-44.pkl
+2026-06-25 00:45:44,152 - __main__ - INFO - Generating global explanation for scenario_1_ExtraTrees split=1...
+2026-06-25 00:45:44,158 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0060 seconds
+2026-06-25 00:45:44,161 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0031 seconds
+2026-06-25 00:45:44,929 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.7677 seconds
+2026-06-25 00:46:38,281 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 53.3514 seconds
+2026-06-25 00:46:42,267 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 3.9835 seconds
+2026-06-25 00:46:46,546 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 4.2786 seconds
+2026-06-25 00:46:46,559 - metrics.nodes - INFO - Execution time for extract_node_metrics: 62.4076 seconds
+2026-06-25 00:46:56,271 - __main__ - INFO - Global explanation generated in 72.12s
+2026-06-25 00:46:56,271 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_1_ExtraTrees_split1_explanation_2026-06-25T00-45-44.pkl
+2026-06-25 00:46:56,310 - __main__ - INFO - Collected 4979 node records for scenario_1_ExtraTrees split=1
+2026-06-25 00:46:56,483 - __main__ - INFO - [scenario_1_ExtraTrees] mean accuracy over 2 splits: 0.9925
+2026-06-25 00:46:56,483 - __main__ - INFO - Processing test_datasets/scenario_2_updated.csv...
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 571431.06it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/74788 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1608/74788 [00:00<00:04, 16073.88it/s]Processing cases:   6%|▌         | 4144/74788 [00:00<00:03, 21531.26it/s]Processing cases:   9%|▉         | 6666/74788 [00:00<00:02, 23213.61it/s]Processing cases:  12%|█▏        | 9190/74788 [00:00<00:02, 24010.64it/s]Processing cases:  16%|█▌        | 11708/74788 [00:00<00:02, 24431.71it/s]Processing cases:  19%|█▉        | 14203/74788 [00:00<00:02, 24605.92it/s]Processing cases:  22%|██▏       | 16727/74788 [00:00<00:02, 24811.88it/s]Processing cases:  26%|██▌       | 19258/74788 [00:00<00:02, 24969.65it/s]Processing cases:  29%|██▉       | 21763/74788 [00:00<00:02, 24993.45it/s]Processing cases:  32%|███▏      | 24284/74788 [00:01<00:02, 25058.59it/s]Processing cases:  36%|███▌      | 26794/74788 [00:01<00:01, 25068.27it/s]Processing cases:  39%|███▉      | 29301/74788 [00:01<00:01, 25055.37it/s]Processing cases:  43%|████▎     | 31824/74788 [00:01<00:01, 25107.11it/s]Processing cases:  46%|████▌     | 34353/74788 [00:01<00:01, 25161.34it/s]Processing cases:  49%|████▉     | 36874/74788 [00:01<00:01, 25174.49it/s]Processing cases:  53%|█████▎    | 39392/74788 [00:01<00:01, 25172.49it/s]Processing cases:  56%|█████▌    | 41910/74788 [00:01<00:01, 25031.11it/s]Processing cases:  59%|█████▉    | 44435/74788 [00:01<00:01, 25093.75it/s]Processing cases:  63%|██████▎   | 46965/74788 [00:01<00:01, 25154.01it/s]Processing cases:  66%|██████▌   | 49484/74788 [00:02<00:01, 25162.84it/s]Processing cases:  70%|██████▉   | 52001/74788 [00:02<00:00, 25148.03it/s]Processing cases:  73%|███████▎  | 54516/74788 [00:02<00:00, 25118.66it/s]Processing cases:  76%|███████▋  | 57028/74788 [00:02<00:00, 25115.82it/s]Processing cases:  80%|███████▉  | 59547/74788 [00:02<00:00, 25137.44it/s]Processing cases:  83%|████████▎ | 62061/74788 [00:02<00:00, 25101.95it/s]Processing cases:  86%|████████▋ | 64574/74788 [00:02<00:00, 25108.19it/s]Processing cases:  90%|████████▉ | 67089/74788 [00:02<00:00, 25120.04it/s]Processing cases:  93%|█████████▎| 69602/74788 [00:02<00:00, 25119.57it/s]Processing cases:  96%|█████████▋| 72114/74788 [00:02<00:00, 24911.49it/s]Processing cases: 100%|█████████▉| 74618/74788 [00:03<00:00, 24949.20it/s]Processing cases: 100%|██████████| 74788/74788 [00:03<00:00, 24815.71it/s]
+2026-06-25 00:47:02,550 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split0_dpg_explainer_2026-06-25T00-47-02.pkl
+2026-06-25 00:47:02,556 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=0...
+2026-06-25 00:47:02,560 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0033 seconds
+2026-06-25 00:47:02,561 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0011 seconds
+2026-06-25 00:47:02,624 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0634 seconds
+2026-06-25 00:47:04,922 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 2.2979 seconds
+2026-06-25 00:47:05,344 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 0.4221 seconds
+2026-06-25 00:47:05,779 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 0.4342 seconds
+2026-06-25 00:47:05,782 - metrics.nodes - INFO - Execution time for extract_node_metrics: 3.2256 seconds
+2026-06-25 00:47:06,168 - __main__ - INFO - Global explanation generated in 3.61s
+2026-06-25 00:47:06,168 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split0_explanation_2026-06-25T00-47-02.pkl
+2026-06-25 00:47:06,179 - __main__ - INFO - Collected 1721 node records for scenario_2_updated_RandomForest split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 669081.40it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/74290 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1623/74290 [00:00<00:04, 16228.82it/s]Processing cases:   6%|▌         | 4140/74290 [00:00<00:03, 21484.15it/s]Processing cases:   9%|▉         | 6678/74290 [00:00<00:02, 23259.26it/s]Processing cases:  12%|█▏        | 9202/74290 [00:00<00:02, 24040.25it/s]Processing cases:  16%|█▌        | 11725/74290 [00:00<00:02, 24467.70it/s]Processing cases:  19%|█▉        | 14242/74290 [00:00<00:02, 24705.22it/s]Processing cases:  23%|██▎       | 16755/74290 [00:00<00:02, 24840.97it/s]Processing cases:  26%|██▌       | 19254/74290 [00:00<00:02, 24885.79it/s]Processing cases:  29%|██▉       | 21765/74290 [00:00<00:02, 24955.24it/s]Processing cases:  33%|███▎      | 24267/74290 [00:01<00:02, 24974.30it/s]Processing cases:  36%|███▌      | 26773/74290 [00:01<00:01, 24998.00it/s]Processing cases:  39%|███▉      | 29273/74290 [00:01<00:01, 24987.69it/s]Processing cases:  43%|████▎     | 31775/74290 [00:01<00:01, 24997.23it/s]Processing cases:  46%|████▌     | 34282/74290 [00:01<00:01, 25017.93it/s]Processing cases:  50%|████▉     | 36796/74290 [00:01<00:01, 25054.47it/s]Processing cases:  53%|█████▎    | 39304/74290 [00:01<00:01, 25060.65it/s]Processing cases:  56%|█████▋    | 41811/74290 [00:01<00:01, 25062.34it/s]Processing cases:  60%|█████▉    | 44324/74290 [00:01<00:01, 25079.75it/s]Processing cases:  63%|██████▎   | 46832/74290 [00:01<00:01, 25069.44it/s]Processing cases:  66%|██████▋   | 49339/74290 [00:02<00:00, 25068.18it/s]Processing cases:  70%|██████▉   | 51852/74290 [00:02<00:00, 25085.59it/s]Processing cases:  73%|███████▎  | 54363/74290 [00:02<00:00, 25092.17it/s]Processing cases:  77%|███████▋  | 56877/74290 [00:02<00:00, 25103.88it/s]Processing cases:  80%|███████▉  | 59388/74290 [00:02<00:00, 25101.79it/s]Processing cases:  83%|████████▎ | 61899/74290 [00:02<00:00, 25086.29it/s]Processing cases:  87%|████████▋ | 64419/74290 [00:02<00:00, 25118.12it/s]Processing cases:  90%|█████████ | 66950/74290 [00:02<00:00, 25175.20it/s]Processing cases:  94%|█████████▎| 69468/74290 [00:02<00:00, 25170.92it/s]Processing cases:  97%|█████████▋| 71986/74290 [00:02<00:00, 25128.29it/s]Processing cases: 100%|██████████| 74290/74290 [00:02<00:00, 24807.19it/s]
+2026-06-25 00:47:12,407 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split1_dpg_explainer_2026-06-25T00-47-12.pkl
+2026-06-25 00:47:12,415 - __main__ - INFO - Generating global explanation for scenario_2_updated_RandomForest split=1...
+2026-06-25 00:47:12,417 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0017 seconds
+2026-06-25 00:47:12,418 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0011 seconds
+2026-06-25 00:47:12,500 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0823 seconds
+2026-06-25 00:47:15,133 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 2.6326 seconds
+2026-06-25 00:47:15,634 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 0.5014 seconds
+2026-06-25 00:47:16,154 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 0.5190 seconds
+2026-06-25 00:47:16,158 - metrics.nodes - INFO - Execution time for extract_node_metrics: 3.7431 seconds
+2026-06-25 00:47:16,644 - __main__ - INFO - Global explanation generated in 4.23s
+2026-06-25 00:47:16,644 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_RandomForest_split1_explanation_2026-06-25T00-47-12.pkl
+2026-06-25 00:47:16,657 - __main__ - INFO - Collected 1812 node records for scenario_2_updated_RandomForest split=1
+2026-06-25 00:47:16,719 - __main__ - INFO - [scenario_2_updated_RandomForest] mean accuracy over 2 splits: 0.9900
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 660520.31it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/40495 [00:00<?, ?it/s]Processing cases:   4%|▍         | 1762/40495 [00:00<00:02, 17619.26it/s]Processing cases:  10%|█         | 4156/40495 [00:00<00:01, 21334.78it/s]Processing cases:  16%|█▌        | 6561/40495 [00:00<00:01, 22573.05it/s]Processing cases:  22%|██▏       | 8916/40495 [00:00<00:01, 22956.06it/s]Processing cases:  28%|██▊       | 11321/40495 [00:00<00:01, 23350.34it/s]Processing cases:  34%|███▍      | 13700/40495 [00:00<00:01, 23499.65it/s]Processing cases:  40%|███▉      | 16098/40495 [00:00<00:01, 23656.28it/s]Processing cases:  46%|████▌     | 18518/40495 [00:00<00:00, 23827.83it/s]Processing cases:  52%|█████▏    | 20912/40495 [00:00<00:00, 23860.59it/s]Processing cases:  58%|█████▊    | 23328/40495 [00:01<00:00, 23950.20it/s]Processing cases:  64%|██████▎   | 25732/40495 [00:01<00:00, 23975.41it/s]Processing cases:  69%|██████▉   | 28138/40495 [00:01<00:00, 23999.89it/s]Processing cases:  75%|███████▌  | 30538/40495 [00:01<00:00, 23996.16it/s]Processing cases:  81%|████████▏ | 32938/40495 [00:01<00:00, 23956.00it/s]Processing cases:  87%|████████▋ | 35346/40495 [00:01<00:00, 23990.71it/s]Processing cases:  93%|█████████▎| 37752/40495 [00:01<00:00, 24009.39it/s]Processing cases:  99%|█████████▉| 40162/40495 [00:01<00:00, 24035.81it/s]Processing cases: 100%|██████████| 40495/40495 [00:01<00:00, 23610.22it/s]
+2026-06-25 00:47:23,637 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split0_dpg_explainer_2026-06-25T00-47-23.pkl
+2026-06-25 00:47:23,657 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=0...
+2026-06-25 00:47:23,662 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0052 seconds
+2026-06-25 00:47:23,666 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0037 seconds
+2026-06-25 00:47:24,452 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.7858 seconds
+2026-06-25 00:48:44,378 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 79.9255 seconds
+2026-06-25 00:48:49,410 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 5.0318 seconds
+2026-06-25 00:48:54,598 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 5.1881 seconds
+2026-06-25 00:48:54,610 - metrics.nodes - INFO - Execution time for extract_node_metrics: 90.9529 seconds
+2026-06-25 00:49:09,768 - __main__ - INFO - Global explanation generated in 106.11s
+2026-06-25 00:49:09,770 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split0_explanation_2026-06-25T00-47-23.pkl
+2026-06-25 00:49:09,827 - __main__ - INFO - Collected 5778 node records for scenario_2_updated_ExtraTrees split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 529082.81it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/40036 [00:00<?, ?it/s]Processing cases:   4%|▍         | 1540/40036 [00:00<00:02, 15399.10it/s]Processing cases:  10%|▉         | 3944/40036 [00:00<00:01, 20481.24it/s]Processing cases:  16%|█▌        | 6355/40036 [00:00<00:01, 22135.54it/s]Processing cases:  22%|██▏       | 8746/40036 [00:00<00:01, 22834.48it/s]Processing cases:  28%|██▊       | 11055/40036 [00:00<00:01, 22926.28it/s]Processing cases:  33%|███▎      | 13348/40036 [00:00<00:01, 19936.74it/s]Processing cases:  38%|███▊      | 15403/40036 [00:00<00:01, 20103.03it/s]Processing cases:  44%|████▎     | 17456/40036 [00:00<00:01, 19474.53it/s]Processing cases:  49%|████▊     | 19434/40036 [00:01<00:01, 14824.05it/s]Processing cases:  53%|█████▎    | 21107/40036 [00:01<00:01, 15278.29it/s]Processing cases:  57%|█████▋    | 22767/40036 [00:01<00:01, 15278.06it/s]Processing cases:  61%|██████▏   | 24554/40036 [00:01<00:00, 15956.74it/s]Processing cases:  67%|██████▋   | 26724/40036 [00:01<00:00, 17522.04it/s]Processing cases:  73%|███████▎  | 29058/40036 [00:01<00:00, 19151.88it/s]Processing cases:  78%|███████▊  | 31067/40036 [00:01<00:00, 19419.14it/s]Processing cases:  83%|████████▎ | 33053/40036 [00:01<00:00, 18808.73it/s]Processing cases:  88%|████████▊ | 35331/40036 [00:01<00:00, 19937.95it/s]Processing cases:  94%|█████████▍| 37629/40036 [00:01<00:00, 20816.74it/s]Processing cases: 100%|█████████▉| 39976/40036 [00:02<00:00, 21590.38it/s]Processing cases: 100%|██████████| 40036/40036 [00:02<00:00, 19129.14it/s]
+2026-06-25 00:49:18,683 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split1_dpg_explainer_2026-06-25T00-49-18.pkl
+2026-06-25 00:49:18,710 - __main__ - INFO - Generating global explanation for scenario_2_updated_ExtraTrees split=1...
+2026-06-25 00:49:18,718 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0084 seconds
+2026-06-25 00:49:18,722 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0034 seconds
+2026-06-25 00:49:19,244 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.5222 seconds
+2026-06-25 00:50:18,742 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 59.4960 seconds
+2026-06-25 00:50:22,703 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 3.9594 seconds
+2026-06-25 00:50:26,864 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 4.1605 seconds
+2026-06-25 00:50:26,892 - metrics.nodes - INFO - Execution time for extract_node_metrics: 68.1816 seconds
+2026-06-25 00:50:41,269 - __main__ - INFO - Global explanation generated in 82.56s
+2026-06-25 00:50:41,270 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_2_updated_ExtraTrees_split1_explanation_2026-06-25T00-49-18.pkl
+2026-06-25 00:50:41,322 - __main__ - INFO - Collected 5670 node records for scenario_2_updated_ExtraTrees split=1
+2026-06-25 00:50:41,613 - __main__ - INFO - [scenario_2_updated_ExtraTrees] mean accuracy over 2 splits: 0.9775
+2026-06-25 00:50:41,613 - __main__ - INFO - Processing test_datasets/scenario_3.csv...
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 604693.31it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/66189 [00:00<?, ?it/s]Processing cases:   2%|▏         | 1563/66189 [00:00<00:04, 15627.63it/s]Processing cases:   6%|▌         | 4056/66189 [00:00<00:02, 21094.70it/s]Processing cases:  10%|▉         | 6554/66189 [00:00<00:02, 22865.41it/s]Processing cases:  14%|█▎        | 9027/66189 [00:00<00:02, 23598.32it/s]Processing cases:  17%|█▋        | 11523/66189 [00:00<00:02, 24087.42it/s]Processing cases:  21%|██        | 13932/66189 [00:00<00:02, 22636.69it/s]Processing cases:  24%|██▍       | 16211/66189 [00:00<00:02, 22038.61it/s]Processing cases:  28%|██▊       | 18427/66189 [00:00<00:02, 22048.47it/s]Processing cases:  31%|███       | 20640/66189 [00:00<00:02, 21950.74it/s]Processing cases:  35%|███▍      | 22892/66189 [00:01<00:01, 22120.68it/s]Processing cases:  38%|███▊      | 25168/66189 [00:01<00:01, 22312.02it/s]Processing cases:  42%|████▏     | 27654/66189 [00:01<00:01, 23075.96it/s]Processing cases:  45%|████▌     | 30105/66189 [00:01<00:01, 23504.96it/s]Processing cases:  49%|████▉     | 32459/66189 [00:01<00:01, 23072.11it/s]Processing cases:  53%|█████▎    | 34770/66189 [00:01<00:01, 22627.06it/s]Processing cases:  56%|█████▌    | 37229/66189 [00:01<00:01, 23202.04it/s]Processing cases:  60%|█████▉    | 39710/66189 [00:01<00:01, 23676.26it/s]Processing cases:  64%|██████▎   | 42168/66189 [00:01<00:01, 23942.48it/s]Processing cases:  67%|██████▋   | 44644/66189 [00:01<00:00, 24183.14it/s]Processing cases:  71%|███████   | 47137/66189 [00:02<00:00, 24405.12it/s]Processing cases:  75%|███████▍  | 49636/66189 [00:02<00:00, 24579.73it/s]Processing cases:  79%|███████▉  | 52136/66189 [00:02<00:00, 24703.36it/s]Processing cases:  83%|████████▎ | 54615/66189 [00:02<00:00, 24727.15it/s]Processing cases:  86%|████████▋ | 57089/66189 [00:02<00:00, 23618.94it/s]Processing cases:  90%|████████▉ | 59512/66189 [00:02<00:00, 23793.89it/s]Processing cases:  94%|█████████▎| 61900/66189 [00:02<00:00, 23282.46it/s]Processing cases:  97%|█████████▋| 64236/66189 [00:02<00:00, 22494.54it/s]Processing cases: 100%|██████████| 66189/66189 [00:02<00:00, 23014.33it/s]
+2026-06-25 00:50:48,866 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split0_dpg_explainer_2026-06-25T00-50-48.pkl
+2026-06-25 00:50:48,878 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=0...
+2026-06-25 00:50:48,884 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0060 seconds
+2026-06-25 00:50:48,887 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0024 seconds
+2026-06-25 00:50:49,486 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.5993 seconds
+2026-06-25 00:51:08,209 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 18.7227 seconds
+2026-06-25 00:51:10,606 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 2.3965 seconds
+2026-06-25 00:51:13,116 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 2.5102 seconds
+2026-06-25 00:51:13,135 - metrics.nodes - INFO - Execution time for extract_node_metrics: 24.2567 seconds
+2026-06-25 00:51:17,752 - __main__ - INFO - Global explanation generated in 28.87s
+2026-06-25 00:51:17,753 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split0_explanation_2026-06-25T00-50-48.pkl
+2026-06-25 00:51:17,785 - __main__ - INFO - Collected 3824 node records for scenario_3_RandomForest split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 674596.54it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/66797 [00:00<?, ?it/s]Processing cases:   1%|▏         | 912/66797 [00:00<00:07, 9118.90it/s]Processing cases:   5%|▍         | 3052/66797 [00:00<00:03, 16342.06it/s]Processing cases:   7%|▋         | 4687/66797 [00:00<00:04, 13811.87it/s]Processing cases:  10%|▉         | 6593/66797 [00:00<00:03, 15673.22it/s]Processing cases:  13%|█▎        | 8401/66797 [00:00<00:03, 16481.85it/s]Processing cases:  16%|█▌        | 10626/66797 [00:00<00:03, 18354.07it/s]Processing cases:  19%|█▉        | 12992/66797 [00:00<00:02, 20033.65it/s]Processing cases:  23%|██▎       | 15292/66797 [00:00<00:02, 20955.54it/s]Processing cases:  26%|██▋       | 17554/66797 [00:00<00:02, 21467.61it/s]Processing cases:  30%|██▉       | 19798/66797 [00:01<00:02, 21763.86it/s]Processing cases:  33%|███▎      | 22098/66797 [00:01<00:02, 22136.80it/s]Processing cases:  37%|███▋      | 24471/66797 [00:01<00:01, 22617.96it/s]Processing cases:  40%|████      | 26782/66797 [00:01<00:01, 22765.98it/s]Processing cases:  44%|████▍     | 29230/66797 [00:01<00:01, 23279.74it/s]Processing cases:  47%|████▋     | 31572/66797 [00:01<00:01, 23319.56it/s]Processing cases:  51%|█████     | 33994/66797 [00:01<00:01, 23589.10it/s]Processing cases:  54%|█████▍    | 36355/66797 [00:01<00:01, 23485.02it/s]Processing cases:  58%|█████▊    | 38705/66797 [00:01<00:01, 23304.47it/s]Processing cases:  61%|██████▏   | 41037/66797 [00:01<00:01, 22689.78it/s]Processing cases:  65%|██████▌   | 43475/66797 [00:02<00:01, 23182.45it/s]Processing cases:  69%|██████▉   | 45929/66797 [00:02<00:00, 23579.93it/s]Processing cases:  72%|███████▏  | 48422/66797 [00:02<00:00, 23979.49it/s]Processing cases:  76%|███████▌  | 50888/66797 [00:02<00:00, 24181.36it/s]Processing cases:  80%|███████▉  | 53331/66797 [00:02<00:00, 24253.57it/s]Processing cases:  84%|████████▎ | 55808/66797 [00:02<00:00, 24405.58it/s]Processing cases:  87%|████████▋ | 58250/66797 [00:02<00:00, 24281.20it/s]Processing cases:  91%|█████████ | 60735/66797 [00:02<00:00, 24450.06it/s]Processing cases:  95%|█████████▍| 63208/66797 [00:02<00:00, 24530.77it/s]Processing cases:  98%|█████████▊| 65688/66797 [00:02<00:00, 24608.73it/s]Processing cases: 100%|██████████| 66797/66797 [00:03<00:00, 22260.50it/s]
+2026-06-25 00:51:25,055 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split1_dpg_explainer_2026-06-25T00-51-25.pkl
+2026-06-25 00:51:25,068 - __main__ - INFO - Generating global explanation for scenario_3_RandomForest split=1...
+2026-06-25 00:51:25,073 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0048 seconds
+2026-06-25 00:51:25,075 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0024 seconds
+2026-06-25 00:51:25,641 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.5658 seconds
+2026-06-25 00:51:44,171 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 18.5294 seconds
+2026-06-25 00:51:46,935 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 2.7641 seconds
+2026-06-25 00:51:49,730 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 2.7950 seconds
+2026-06-25 00:51:49,744 - metrics.nodes - INFO - Execution time for extract_node_metrics: 24.6762 seconds
+2026-06-25 00:51:54,949 - __main__ - INFO - Global explanation generated in 29.88s
+2026-06-25 00:51:54,950 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_RandomForest_split1_explanation_2026-06-25T00-51-25.pkl
+2026-06-25 00:51:54,988 - __main__ - INFO - Collected 3984 node records for scenario_3_RandomForest split=1
+2026-06-25 00:51:55,133 - __main__ - INFO - [scenario_3_RandomForest] mean accuracy over 2 splits: 0.9575
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 570944.90it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/29030 [00:00<?, ?it/s]Processing cases:   5%|▍         | 1382/29030 [00:00<00:02, 13814.87it/s]Processing cases:  12%|█▏        | 3373/29030 [00:00<00:01, 17399.36it/s]Processing cases:  19%|█▊        | 5438/29030 [00:00<00:01, 18879.66it/s]Processing cases:  26%|██▌       | 7437/29030 [00:00<00:01, 19315.10it/s]Processing cases:  33%|███▎      | 9441/29030 [00:00<00:01, 19575.90it/s]Processing cases:  40%|███▉      | 11576/29030 [00:00<00:00, 20176.88it/s]Processing cases:  47%|████▋     | 13634/29030 [00:00<00:00, 20307.39it/s]Processing cases:  54%|█████▍    | 15665/29030 [00:00<00:00, 19749.14it/s]Processing cases:  61%|██████    | 17644/29030 [00:00<00:00, 18188.54it/s]Processing cases:  67%|██████▋   | 19487/29030 [00:01<00:00, 17885.52it/s]Processing cases:  74%|███████▍  | 21578/29030 [00:01<00:00, 18751.04it/s]Processing cases:  81%|████████  | 23470/29030 [00:01<00:00, 18511.11it/s]Processing cases:  88%|████████▊ | 25652/29030 [00:01<00:00, 19468.72it/s]Processing cases:  95%|█████████▌| 27664/29030 [00:01<00:00, 19657.32it/s]Processing cases: 100%|██████████| 29030/29030 [00:01<00:00, 19065.59it/s]
+2026-06-25 00:52:03,011 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split0_dpg_explainer_2026-06-25T00-52-03.pkl
+2026-06-25 00:52:03,048 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=0...
+2026-06-25 00:52:03,059 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0099 seconds
+2026-06-25 00:52:03,065 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0061 seconds
+2026-06-25 00:52:04,328 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 1.2629 seconds
+2026-06-25 00:53:49,907 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 105.5774 seconds
+2026-06-25 00:53:56,078 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 6.1688 seconds
+2026-06-25 00:54:02,595 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 6.5168 seconds
+2026-06-25 00:54:02,630 - metrics.nodes - INFO - Execution time for extract_node_metrics: 119.5806 seconds
+2026-06-25 00:54:27,715 - __main__ - INFO - Global explanation generated in 144.67s
+2026-06-25 00:54:27,716 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split0_explanation_2026-06-25T00-52-03.pkl
+2026-06-25 00:54:27,783 - __main__ - INFO - Collected 6795 node records for scenario_3_ExtraTrees split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 545689.25it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/29616 [00:00<?, ?it/s]Processing cases:   6%|▌         | 1669/29616 [00:00<00:01, 16683.29it/s]Processing cases:  13%|█▎        | 3940/29616 [00:00<00:01, 20225.57it/s]Processing cases:  21%|██        | 6241/29616 [00:00<00:01, 21492.70it/s]Processing cases:  29%|██▉       | 8530/29616 [00:00<00:00, 22043.36it/s]Processing cases:  36%|███▌      | 10735/29616 [00:00<00:00, 21978.79it/s]Processing cases:  44%|████▍     | 13049/29616 [00:00<00:00, 22370.80it/s]Processing cases:  52%|█████▏    | 15341/29616 [00:00<00:00, 22548.61it/s]Processing cases:  60%|█████▉    | 17630/29616 [00:00<00:00, 22656.74it/s]Processing cases:  67%|██████▋   | 19913/29616 [00:00<00:00, 22708.52it/s]Processing cases:  75%|███████▍  | 22208/29616 [00:01<00:00, 22782.46it/s]Processing cases:  83%|████████▎ | 24498/29616 [00:01<00:00, 22817.73it/s]Processing cases:  90%|█████████ | 26780/29616 [00:01<00:00, 21932.05it/s]Processing cases:  98%|█████████▊| 28981/29616 [00:01<00:00, 21756.10it/s]Processing cases: 100%|██████████| 29616/29616 [00:01<00:00, 22019.17it/s]
+2026-06-25 00:54:35,402 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split1_dpg_explainer_2026-06-25T00-54-35.pkl
+2026-06-25 00:54:35,434 - __main__ - INFO - Generating global explanation for scenario_3_ExtraTrees split=1...
+2026-06-25 00:54:35,441 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0074 seconds
+2026-06-25 00:54:35,446 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0044 seconds
+2026-06-25 00:54:37,089 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 1.6433 seconds
+2026-06-25 00:56:31,931 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 114.8402 seconds
+2026-06-25 00:56:38,683 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 6.7496 seconds
+2026-06-25 00:56:45,902 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 7.2198 seconds
+2026-06-25 00:56:45,935 - metrics.nodes - INFO - Execution time for extract_node_metrics: 130.5010 seconds
+2026-06-25 00:57:12,366 - __main__ - INFO - Global explanation generated in 156.93s
+2026-06-25 00:57:12,368 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_3_ExtraTrees_split1_explanation_2026-06-25T00-54-35.pkl
+2026-06-25 00:57:12,423 - __main__ - INFO - Collected 6992 node records for scenario_3_ExtraTrees split=1
+2026-06-25 00:57:12,666 - __main__ - INFO - [scenario_3_ExtraTrees] mean accuracy over 2 splits: 0.9675
+2026-06-25 00:57:12,666 - __main__ - INFO - Processing test_datasets/scenario_5.csv...
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 430516.19it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/55021 [00:00<?, ?it/s]Processing cases:   3%|▎         | 1610/55021 [00:00<00:03, 16095.95it/s]Processing cases:   7%|▋         | 4021/55021 [00:00<00:02, 20808.51it/s]Processing cases:  12%|█▏        | 6342/55021 [00:00<00:02, 21900.78it/s]Processing cases:  16%|█▌        | 8611/55021 [00:00<00:02, 22208.99it/s]Processing cases:  20%|█▉        | 10889/55021 [00:00<00:01, 22412.34it/s]Processing cases:  24%|██▍       | 13149/55021 [00:00<00:01, 22474.14it/s]Processing cases:  28%|██▊       | 15412/55021 [00:00<00:01, 22521.91it/s]Processing cases:  32%|███▏      | 17665/55021 [00:00<00:01, 22523.35it/s]Processing cases:  36%|███▌      | 19936/55021 [00:00<00:01, 22579.84it/s]Processing cases:  40%|████      | 22231/55021 [00:01<00:01, 22691.58it/s]Processing cases:  45%|████▍     | 24578/55021 [00:01<00:01, 22927.52it/s]Processing cases:  49%|████▉     | 27018/55021 [00:01<00:01, 23373.73it/s]Processing cases:  54%|█████▎    | 29467/55021 [00:01<00:01, 23710.88it/s]Processing cases:  58%|█████▊    | 31852/55021 [00:01<00:00, 23750.90it/s]Processing cases:  62%|██████▏   | 34311/55021 [00:01<00:00, 24001.90it/s]Processing cases:  67%|██████▋   | 36741/55021 [00:01<00:00, 24090.96it/s]Processing cases:  71%|███████   | 39179/55021 [00:01<00:00, 24175.91it/s]Processing cases:  76%|███████▌  | 41616/55021 [00:01<00:00, 24232.17it/s]Processing cases:  80%|████████  | 44051/55021 [00:01<00:00, 24265.94it/s]Processing cases:  84%|████████▍ | 46486/55021 [00:02<00:00, 24290.73it/s]Processing cases:  89%|████████▉ | 48925/55021 [00:02<00:00, 24317.54it/s]Processing cases:  93%|█████████▎| 51384/55021 [00:02<00:00, 24399.02it/s]Processing cases:  98%|█████████▊| 53824/55021 [00:02<00:00, 24350.65it/s]Processing cases: 100%|██████████| 55021/55021 [00:02<00:00, 23406.16it/s]
+2026-06-25 00:57:19,624 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split0_dpg_explainer_2026-06-25T00-57-19.pkl
+2026-06-25 00:57:19,648 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=0...
+2026-06-25 00:57:19,655 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0077 seconds
+2026-06-25 00:57:19,659 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0038 seconds
+2026-06-25 00:57:21,155 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 1.4953 seconds
+2026-06-25 00:58:12,615 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 51.4602 seconds
+2026-06-25 00:58:19,033 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 6.4182 seconds
+2026-06-25 00:58:25,854 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 6.8199 seconds
+2026-06-25 00:58:25,897 - metrics.nodes - INFO - Execution time for extract_node_metrics: 66.2496 seconds
+2026-06-25 00:58:43,264 - __main__ - INFO - Global explanation generated in 83.62s
+2026-06-25 00:58:43,266 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split0_explanation_2026-06-25T00-57-19.pkl
+2026-06-25 00:58:43,404 - __main__ - INFO - Collected 6113 node records for scenario_5_RandomForest split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: RandomForestClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 549172.37it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/54943 [00:00<?, ?it/s]Processing cases:   3%|▎         | 1555/54943 [00:00<00:03, 15543.64it/s]Processing cases:   7%|▋         | 3879/54943 [00:00<00:02, 20066.84it/s]Processing cases:  11%|█         | 6152/54943 [00:00<00:02, 21279.76it/s]Processing cases:  15%|█▌        | 8428/54943 [00:00<00:02, 21862.31it/s]Processing cases:  20%|█▉        | 10716/54943 [00:00<00:01, 22226.26it/s]Processing cases:  24%|██▎       | 12990/54943 [00:00<00:01, 22399.51it/s]Processing cases:  28%|██▊       | 15284/54943 [00:00<00:01, 22575.51it/s]Processing cases:  32%|███▏      | 17564/54943 [00:00<00:01, 22645.53it/s]Processing cases:  36%|███▌      | 19855/54943 [00:00<00:01, 22727.85it/s]Processing cases:  40%|████      | 22128/54943 [00:01<00:01, 21621.68it/s]Processing cases:  45%|████▍     | 24452/54943 [00:01<00:01, 22097.60it/s]Processing cases:  49%|████▊     | 26770/54943 [00:01<00:01, 22417.43it/s]Processing cases:  53%|█████▎    | 29117/54943 [00:01<00:01, 22730.70it/s]Processing cases:  57%|█████▋    | 31494/54943 [00:01<00:01, 23040.59it/s]Processing cases:  62%|██████▏   | 33803/54943 [00:01<00:00, 23014.54it/s]Processing cases:  66%|██████▌   | 36117/54943 [00:01<00:00, 23051.63it/s]Processing cases:  70%|███████   | 38475/54943 [00:01<00:00, 23207.57it/s]Processing cases:  74%|███████▍  | 40843/54943 [00:01<00:00, 23347.33it/s]Processing cases:  79%|███████▊  | 43233/54943 [00:01<00:00, 23512.48it/s]Processing cases:  83%|████████▎ | 45617/54943 [00:02<00:00, 23609.57it/s]Processing cases:  87%|████████▋ | 48002/54943 [00:02<00:00, 23680.58it/s]Processing cases:  92%|█████████▏| 50372/54943 [00:02<00:00, 23686.04it/s]Processing cases:  96%|█████████▌| 52741/54943 [00:02<00:00, 23686.10it/s]Processing cases: 100%|██████████| 54943/54943 [00:02<00:00, 22796.97it/s]
+2026-06-25 00:58:50,702 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split1_dpg_explainer_2026-06-25T00-58-50.pkl
+2026-06-25 00:58:50,728 - __main__ - INFO - Generating global explanation for scenario_5_RandomForest split=1...
+2026-06-25 00:58:50,735 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0069 seconds
+2026-06-25 00:58:50,739 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0037 seconds
+2026-06-25 00:58:52,165 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 1.4265 seconds
+2026-06-25 00:59:41,831 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 49.6661 seconds
+2026-06-25 00:59:48,031 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 6.1994 seconds
+2026-06-25 00:59:54,786 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 6.7553 seconds
+2026-06-25 00:59:54,798 - metrics.nodes - INFO - Execution time for extract_node_metrics: 64.0700 seconds
+2026-06-25 01:00:11,083 - __main__ - INFO - Global explanation generated in 80.36s
+2026-06-25 01:00:11,084 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_RandomForest_split1_explanation_2026-06-25T00-58-50.pkl
+2026-06-25 01:00:11,213 - __main__ - INFO - Collected 5901 node records for scenario_5_RandomForest split=1
+2026-06-25 01:00:11,413 - __main__ - INFO - [scenario_5_RandomForest] mean accuracy over 2 splits: 0.8750
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 654592.90it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/16885 [00:00<?, ?it/s]Processing cases:  13%|█▎        | 2160/16885 [00:00<00:00, 21594.36it/s]Processing cases:  27%|██▋       | 4567/16885 [00:00<00:00, 23045.46it/s]Processing cases:  41%|████▏     | 7007/16885 [00:00<00:00, 23663.41it/s]Processing cases:  56%|█████▌    | 9412/16885 [00:00<00:00, 23812.84it/s]Processing cases:  70%|███████   | 11852/16885 [00:00<00:00, 24023.33it/s]Processing cases:  85%|████████▍ | 14300/16885 [00:00<00:00, 24176.27it/s]Processing cases:  99%|█████████▉| 16744/16885 [00:00<00:00, 24259.78it/s]Processing cases: 100%|██████████| 16885/16885 [00:00<00:00, 23910.78it/s]
+2026-06-25 01:00:17,629 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split0_dpg_explainer_2026-06-25T01-00-17.pkl
+2026-06-25 01:00:17,651 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=0...
+2026-06-25 01:00:17,655 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0035 seconds
+2026-06-25 01:00:17,658 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0033 seconds
+2026-06-25 01:00:17,667 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0090 seconds
+2026-06-25 01:00:36,046 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 18.3787 seconds
+2026-06-25 01:00:38,176 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 2.1297 seconds
+2026-06-25 01:00:40,342 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 2.1660 seconds
+2026-06-25 01:00:40,351 - metrics.nodes - INFO - Execution time for extract_node_metrics: 22.6997 seconds
+2026-06-25 01:00:52,909 - __main__ - INFO - Global explanation generated in 35.26s
+2026-06-25 01:00:52,910 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split0_explanation_2026-06-25T01-00-17.pkl
+2026-06-25 01:00:52,956 - __main__ - INFO - Collected 5379 node records for scenario_5_ExtraTrees split=0
+Extracting graph...
+DPG initialized with perc_var=0.0001, decimal_threshold=3, n_jobs=1, graph_construction_mode=aggregated_transitions
+
+Starting DPG extraction *****************************************
+Model Class: ExtraTreesClassifier
+Model Class Module: sklearn.ensemble._forest
+Model Estimators:  100
+Model Params:  {'bootstrap': False, 'ccp_alpha': 0.0, 'class_weight': None, 'criterion': 'gini', 'max_depth': None, 'max_features': 'sqrt', 'max_leaf_nodes': None, 'max_samples': None, 'min_impurity_decrease': 0.0, 'min_samples_leaf': 1, 'min_samples_split': 2, 'min_weight_fraction_leaf': 0.0, 'monotonic_cst': None, 'n_estimators': 100, 'n_jobs': None, 'oob_score': False, 'random_state': 42, 'verbose': 0, 'warm_start': False}
+*****************************************************************
+  0%|          | 0/800 [00:00<?, ?it/s]100%|██████████| 800/800 [00:00<00:00, 626483.05it/s]
+Total of paths: 80000
+Building DPG...
+Processing cases:   0%|          | 0/15118 [00:00<?, ?it/s]Processing cases:  14%|█▍        | 2111/15118 [00:00<00:00, 21101.37it/s]Processing cases:  30%|██▉       | 4529/15118 [00:00<00:00, 22906.93it/s]Processing cases:  45%|████▌     | 6820/15118 [00:00<00:00, 22842.21it/s]Processing cases:  60%|██████    | 9105/15118 [00:00<00:00, 20694.15it/s]Processing cases:  74%|███████▍  | 11202/15118 [00:00<00:00, 20524.33it/s]Processing cases:  89%|████████▊ | 13397/15118 [00:00<00:00, 20982.63it/s]Processing cases: 100%|██████████| 15118/15118 [00:00<00:00, 21295.55it/s]
+2026-06-25 01:00:59,821 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split1_dpg_explainer_2026-06-25T01-00-59.pkl
+2026-06-25 01:00:59,845 - __main__ - INFO - Generating global explanation for scenario_5_ExtraTrees split=1...
+2026-06-25 01:00:59,850 - metrics.nodes - INFO - Execution time for _nx_to_igraph: 0.0045 seconds
+2026-06-25 01:00:59,854 - metrics.nodes - INFO - Execution time for calc_node_metrics: 0.0039 seconds
+2026-06-25 01:00:59,864 - metrics.nodes - INFO - Execution time for calc_betweenness_centrality: 0.0101 seconds
+2026-06-25 01:01:20,037 - metrics.nodes - INFO - Execution time for calc_local_reaching_centrality: 20.1722 seconds
+2026-06-25 01:01:22,117 - metrics.nodes - INFO - Execution time for calc_closeness_centrality: 2.0793 seconds
+2026-06-25 01:01:24,321 - metrics.nodes - INFO - Execution time for calc_harmonic_centrality: 2.2039 seconds
+2026-06-25 01:01:24,354 - metrics.nodes - INFO - Execution time for extract_node_metrics: 24.5086 seconds
+2026-06-25 01:01:37,477 - __main__ - INFO - Global explanation generated in 37.63s
+2026-06-25 01:01:37,479 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/states/scenario_5_ExtraTrees_split1_explanation_2026-06-25T01-00-59.pkl
+2026-06-25 01:01:37,521 - __main__ - INFO - Collected 5441 node records for scenario_5_ExtraTrees split=1
+2026-06-25 01:01:37,718 - __main__ - INFO - [scenario_5_ExtraTrees] mean accuracy over 2 splits: 0.8525
+2026-06-25 01:01:37,723 - __main__ - INFO - All experiments completed.
+Extracting graph...

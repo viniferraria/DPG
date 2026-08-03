@@ -2,6 +2,8 @@
 Smoke tests: verify all public packages and key symbols are importable.
 """
 
+import importlib
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,15 +12,18 @@ from sklearn.ensemble import RandomForestClassifier
 
 
 def test_import_dpg():
-    import dpg
+    assert importlib.import_module("dpg") is not None
 
 
 def test_import_metrics():
-    import metrics
+    assert importlib.import_module("metrics") is not None
 
 
 def test_import_core_classes():
     from dpg.core import DecisionPredicateGraph, DPGError
+
+    assert DecisionPredicateGraph is not None
+    assert DPGError is not None
 
 
 def test_import_explainer():
@@ -29,25 +34,42 @@ def test_import_explainer():
         DPGTreePathExplanation,
     )
 
+    assert DPGExplainer is not None
+    assert DPGExplanation is not None
+    assert DPGLocalExplanation is not None
+    assert DPGTreePathExplanation is not None
+
 
 def test_import_node_metrics():
     from metrics.nodes import NodeMetrics
+
+    assert NodeMetrics is not None
 
 
 def test_import_edge_metrics():
     from metrics.edges import EdgeMetrics
 
+    assert EdgeMetrics is not None
+
 
 def test_import_graph_metrics():
     from metrics.graph import GraphMetrics
 
+    assert GraphMetrics is not None
+
 
 def test_import_sklearn_dpg():
-    from dpg.sklearn_dpg import test_dpg, select_dataset
+    from dpg.sklearn_dpg import select_dataset, test_dpg
+
+    assert select_dataset is not None
+    assert test_dpg is not None
 
 
 def test_import_visualizer():
     from dpg.visualizer import plot_dpg, plot_dpg_communities
+
+    assert plot_dpg is not None
+    assert plot_dpg_communities is not None
 
 
 def test_local_explanation_public_workflow_smoke():
