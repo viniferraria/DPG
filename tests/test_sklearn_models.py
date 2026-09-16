@@ -1,15 +1,15 @@
 """Test DPGExplainer with various sklearn ensemble models, especially GradientBoosting."""
 
-import pytest
 import numpy as np
-from sklearn.datasets import load_breast_cancer, load_iris, load_wine, load_diabetes
+import pytest
+from sklearn.datasets import load_breast_cancer, load_diabetes, load_iris, load_wine
 from sklearn.ensemble import (
-    RandomForestClassifier,
-    RandomForestRegressor,
-    GradientBoostingClassifier,
-    GradientBoostingRegressor,
     AdaBoostClassifier,
     AdaBoostRegressor,
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
 )
 
 from dpg import DPGExplainer

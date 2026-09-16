@@ -5,7 +5,6 @@ All tests use Iris with a fixed seed (160898) so that the expected metric
 values are deterministic and reproducible.
 """
 
-import math
 import re
 
 import numpy as np
@@ -69,7 +68,7 @@ class TestNodeMetrics:
         assert isinstance(node_metrics, pd.DataFrame)
 
     def test_expected_shape(self, node_metrics):
-        assert node_metrics.shape == (31, 7)
+        assert node_metrics.shape == (31, 9)
 
     def test_expected_columns(self, node_metrics):
         expected = {
@@ -79,6 +78,8 @@ class TestNodeMetrics:
             "Out degree nodes",
             "Betweenness centrality",
             "Local reaching centrality",
+            "Closeness centrality",
+            "Harmonic centrality",
             "Label",
         }
         assert set(node_metrics.columns) == expected
@@ -121,6 +122,93 @@ class TestNodeMetrics:
     def test_all_nodes_have_labels(self, node_metrics):
         assert node_metrics["Label"].notna().all()
         assert (node_metrics["Label"].str.len() > 0).all()
+
+
+# ---------------------------------------------------------------------------
+# NetworkX parity for weighted closeness / harmonic centrality
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def small_digraph():
+    """A directed weighted graph that is NOT strongly connected.
+
+    Mirrors a DPG's root->leaves flow so several nodes cannot reach all
+    others - this is the case the inf-in-denominator bug used to break.
+    """
+    import networkx as nx
+
+    g = nx.DiGraph()
+    for u, v, w in [
+        ("r", "a", 2.0),
+        ("r", "b", 1.0),
+        ("a", "c", 3.0),
+        ("b", "c", 1.0),
+        ("a", "b", 5.0),
+        ("c", "d", 2.0),
+    ]:
+        g.add_edge(u, v, weight=w)
+    return g
+
+
+def _nx_distance_graph(g):
+    """Replicate the module's edge distance: distance = total_weight / weight."""
+    import networkx as nx
+
+    total_weight = sum(d["weight"] for *_, d in g.edges(data=True))
+    h = nx.DiGraph()
+    for u, v, d in g.edges(data=True):
+        h.add_edge(u, v, dist=total_weight / d["weight"])
+    return h
+
+
+class TestCentralityNetworkXParity:
+    """calc_harmonic/closeness must match NetworkX on the same distance metric."""
+
+    def test_harmonic_matches_networkx(self, small_digraph):
+        import networkx as nx
+
+        from metrics.nodes import _nx_to_igraph, calc_harmonic_centrality
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_harmonic_centrality(ig_graph, node_ids)
+
+        # Reference: outgoing harmonic via Dijkstra on the same distance attr.
+        h = _nx_distance_graph(small_digraph)
+        for src in small_digraph.nodes():
+            dlen = nx.single_source_dijkstra_path_length(h, src, weight="dist")
+            expected = sum(1 / d for t, d in dlen.items() if t != src and d > 0)
+            assert got[src] == pytest.approx(expected, abs=1e-9)
+
+    def test_closeness_matches_networkx(self, small_digraph):
+        import networkx as nx
+
+        from metrics.nodes import _nx_to_igraph, calc_closeness_centrality
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_closeness_centrality(ig_graph, node_ids)
+
+        # NetworkX closeness measures incoming distance; reverse for outgoing.
+        h = _nx_distance_graph(small_digraph)
+        expected = nx.closeness_centrality(
+            h.reverse(copy=True), distance="dist", wf_improved=True
+        )
+        for node in small_digraph.nodes():
+            assert got[node] == pytest.approx(expected[node], abs=1e-9)
+
+    def test_closeness_nonzero_for_partially_reaching_node(self, small_digraph):
+        """Regression: a node that can't reach all others must not collapse to 0.
+
+        The old implementation summed inf into the denominator, forcing
+        closeness to 0 for almost every node in a DAG-like graph.
+        """
+        from metrics.nodes import _nx_to_igraph, calc_closeness_centrality
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_closeness_centrality(ig_graph, node_ids)
+
+        # 'a' reaches b, c, d but not r -> partial reach, must be > 0.
+        assert got["a"] > 0.0
 
 
 # ---------------------------------------------------------------------------

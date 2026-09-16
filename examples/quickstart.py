@@ -6,20 +6,21 @@ This script demonstrates a complete workflow for:
 2. Generating Decision Predicate Graphs (DPG)
 3. Extracting and visualizing interpretability metrics
 """
-import sys
 import os
+import sys
+
+import numpy as np
+import pandas as pd
+import yaml
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import KFold
+
+from dpg import DPGExplainer
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
-
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.model_selection import KFold
-from dpg import DPGExplainer
-import yaml
 
 def load_config(config_path):
     # Read YAML configuration used by the DPG library (percentile, thresholds, etc.)
@@ -29,7 +30,7 @@ def load_config(config_path):
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found at {config_path}")
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in config file: {str(e)}")
+        raise yaml.YAMLError(f"Invalid YAML in config file: {e!s}")
 
 
 def load_dataset(dataset_name, base_dir):
@@ -108,7 +109,7 @@ def main():
     metric_suffix, last_train = train_model_cv(
         model, features_matrix, labels, random_state=42
     )
-    X_train, y_train = last_train
+    X_train, _y_train = last_train
 
     # Compose a shared run id for all outputs
     run_id = (
@@ -136,8 +137,7 @@ def main():
         config["results_dir"], f"{run_id}_dpg_class_boundaries.txt"
     )
     with open(class_boundaries_path, "w") as f:
-        for key, value in explanation.class_boundaries.items():
-            f.write(f"{key}: {value}\n")
+        f.writelines(f"{key}: {value}\n" for key, value in explanation.class_boundaries.items())
 
     # Save node and edge metrics
     node_metrics_path = os.path.join(
