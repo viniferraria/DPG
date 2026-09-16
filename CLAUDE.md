@@ -206,7 +206,7 @@ calling:
 
 | Method | Signature |
 | --- | --- |
-| `NodeMetrics.extract_node_metrics` | `(dpg_model, nodes_list)` |
+| `NodeMetrics.extract_node_metrics` | `(dpg_model, nodes_list, trace_lrc_by_label=None)` |
 | `EdgeMetrics.extract_edge_metrics` | `(dpg_model, nodes_list)` |
 | `GraphMetrics.extract_graph_metrics` / `_lpa` / `extract_class_boundaries` | `(dpg_model, nodes_list, target_names)` |
 | `GraphMetrics.extract_communities` | `(dpg_model, df_node_metrics, nodes_list, threshold_clusters=0.2)` |

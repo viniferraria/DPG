@@ -246,7 +246,11 @@ class NodeMetrics:
 
     @staticmethod
     @log_timer
-    def extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any:
+    def extract_node_metrics(
+        dpg_model: nx.DiGraph,
+        nodes_list: list[list[str]],
+        trace_lrc_by_label: dict[str, float] | None = None,
+    ) -> Any:
         """Compute per-node graph metrics for a DPG model.
 
         Args:
@@ -257,9 +261,9 @@ class NodeMetrics:
                 trace-consistent local-reaching-centrality score (see
                 ``DecisionPredicateGraph.get_trace_consistent_lrc``). When a
                 label is present, its trace-consistent value is used in place
-                of the pooled-graph NetworkX local reaching centrality.
-                Labels absent from the mapping (including ``None``) keep the
-                legacy NetworkX computation.
+                of the igraph-computed local reaching centrality. Labels
+                absent from the mapping (including when the mapping is
+                ``None``) keep the igraph-computed value.
 
         Returns:
             DataFrame with columns ``['Node', 'Label', 'Degree', 'In degree nodes',
@@ -274,6 +278,12 @@ class NodeMetrics:
         local_reaching_centrality = calc_local_reaching_centrality(ig_graph, node_ids)
         closeness_centrality = calc_closeness_centrality(ig_graph, node_ids)
         harmonic_centrality = calc_harmonic_centrality(ig_graph, node_ids)
+        if trace_lrc_by_label is not None:
+            node_label_by_id = {node_id: label for node_id, label in nodes_list}
+            for node in dpg_model.nodes():
+                label = node_label_by_id.get(node)
+                if label in trace_lrc_by_label:
+                    local_reaching_centrality[node] = trace_lrc_by_label[label]
         data_node = {
             "Node": list(dpg_model.nodes()),
             "Degree": list(degree.values()),

@@ -5,7 +5,7 @@ from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 
 from dpg.context_order import resolve_context_order
-from dpg.core import DPGError, DecisionPredicateGraph
+from dpg.core import DecisionPredicateGraph, DPGError
 
 
 def _forest():

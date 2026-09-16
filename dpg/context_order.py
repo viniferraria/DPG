@@ -1,8 +1,8 @@
 """Fast resolution of the smallest context order without path enumeration."""
 
-from collections import defaultdict
 import math
-from typing import Iterable, Sequence
+from collections import defaultdict
+from collections.abc import Iterable, Sequence
 
 
 def _node_windows(sequence: Sequence[str], k: int | float) -> list[object]:
