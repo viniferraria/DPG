@@ -265,7 +265,7 @@ class DPGExplainer:
                 sample_array.shape[0], expected_features
             )
 
-        node_lookup = {label: node_id for node_id, label in self._require_nodes()}
+        # node_lookup = {label: node_id for node_id, label in self._require_nodes()}
         node_metrics_lookup = self._get_node_metrics_lookup()
 
         tree_paths = []
@@ -1030,9 +1030,11 @@ class DPGExplainer:
         tree_ = tree.tree_
         sample_array = np.asarray(sample).reshape(1, -1)
         indicator = tree.decision_path(sample_array)
-        path = indicator.indices[indicator.indptr[0] : indicator.indptr[1]]
-        leaf_id = int(tree.apply(sample_array)[0])
+        __path = indicator.indices[indicator.indptr[0] : indicator.indptr[1]]
+        __leaf_id = int(tree.apply(sample_array)[0])
         labels: list[str] = []
+
+        node_index = __path[0] if len(__path) > 0 else None
 
         while True:
             left = tree_.children_left[node_index]
