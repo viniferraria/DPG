@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 from collections.abc import Sequence
+from pathlib import Path
 
 from .sklearn_dpg import test_dpg
 

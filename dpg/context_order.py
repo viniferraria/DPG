@@ -5,7 +5,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 
 
-def _node_windows(sequence: Sequence[str], k: int | float) -> list[object]:
+def _node_windows(sequence: Sequence[str], k: float) -> list[object]:
     """Represent a trace as contextual predicate nodes and class sinks."""
     nodes: list[object] = []
     for index, label in enumerate(sequence):
@@ -20,7 +20,7 @@ def _node_windows(sequence: Sequence[str], k: int | float) -> list[object]:
     return nodes
 
 
-def path_violations(traces: Iterable[Sequence[str]], k: int | float) -> int:
+def path_violations(traces: Iterable[Sequence[str]], k: float) -> int:
     """Count pooled-graph paths that are not observed trace prefixes.
 
     A pooled DFG can be locally consistent while still recombining after

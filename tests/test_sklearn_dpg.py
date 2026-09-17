@@ -4,9 +4,9 @@ Tests for the sklearn_dpg.test_dpg convenience function.
 Validates end-to-end pipeline: dataset loading, model training, DPG extraction,
 and metric computation through the same entry point used by run_dpg_standard.py.
 """
-
 import pandas as pd
 import pytest
+from sklearn.ensemble import RandomForestClassifier
 
 from dpg import sklearn_dpg
 from dpg.sklearn_dpg import select_dataset
@@ -291,11 +291,7 @@ class TestDpgConfigPropagation:
         bypassed ``test_dpg`` entirely -- a regression in the latter would
         not have been caught.
         """
-        from sklearn.datasets import load_iris
-
         from dpg.core import DecisionPredicateGraph
-
-        iris = load_iris()
 
         captured_kwargs = {}
         original_init = DecisionPredicateGraph.__init__

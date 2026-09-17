@@ -804,9 +804,9 @@ class TestIrisLRCRankingComparison:
             .head(top_k)["Label"]
         )
         assert pooled_top != traced_top, (
-            "Top-{} predicates are identical across modes; the trace-"
+            f"Top-{top_k} predicates are identical across modes; the trace-"
             "consistent ranking does not surface any predicates the "
-            "pooled ranking missed.".format(top_k)
+            "pooled ranking missed."
         )
 
 
@@ -817,8 +817,6 @@ class TestIrisLRCRankingComparison:
 
 import hashlib
 import warnings
-
-from dpg import DPGExplainer
 
 
 def _config(mode="execution_trace", context_order=1, decimal_threshold=6, perc_var=1e-9, n_jobs=1):

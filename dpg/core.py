@@ -4,7 +4,8 @@ import re
 import warnings
 from collections import defaultdict
 from collections.abc import Generator, Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from itertools import pairwise
 from typing import Any, cast
 
 import graphviz
@@ -15,11 +16,7 @@ import yaml
 from joblib import Parallel, delayed
 from sklearn.base import is_regressor
 from sklearn.ensemble import (
-    AdaBoostRegressor,
-    ExtraTreesRegressor,
     GradientBoostingClassifier,
-    GradientBoostingRegressor,
-    RandomForestRegressor,
 )
 from tqdm import tqdm
 
@@ -636,7 +633,7 @@ class DecisionPredicateGraph:
         for _, trace_df in log.groupby("case:concept:name", sort=False):
             labels = tuple(trace_df["concept:name"].tolist())
             nodes = [self._context_node(labels, i, context_order) for i in range(len(labels))]
-            for source, target in zip(nodes, nodes[1:]):
+            for source, target in pairwise(nodes, nodes[1:]):
                 edge = (source, target)
                 dfg[edge] = dfg.get(edge, 0) + 1
 
