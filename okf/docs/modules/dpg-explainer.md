@@ -28,7 +28,7 @@ All four public names (`DPGExplainer`, `DPGExplanation`, `DPGLocalExplanation`,
 
 | Member | Signature / default | Meaning |
 |---|---|---|
-| `__init__` | `(model, feature_names, target_names=None, config_file="config.yaml", dpg_config=None)` | Forwards everything to `DecisionPredicateGraph`; `feature_names`/`target_names` are copied to `list`. |
+| `__init__` | `(model, feature_names, target_names=None, config_file="config.yaml", dpg_config=None)` | Keeps `self._original_model = model` **before** forwarding to `DecisionPredicateGraph` (which normalizes its own copy). Forwards everything else; `feature_names`/`target_names` are copied to `list`. |
 | `builder` | property → `DecisionPredicateGraph` | The wrapped builder (holds `model`, `feature_names`, `target_names`, `decimal_threshold`, `perc_var`). |
 | `fit(X)` | → `DPGExplainer` | Calls `builder.fit(X)` to get the `dot`, then `builder.to_networkx(dot)` for `(graph, nodes)`. Clears cached node/edge metrics and sets `_is_fitted`. |
 
@@ -74,37 +74,89 @@ Shared styling defaults across the graph plotters: `save_dir="results/"`, `fig_s
 
 # Behavior
 
+## `_original_model` — why `predict()` needs the un-normalized copy
+
+`__init__` keeps `self._original_model = model` *before* constructing `self._builder =
+DecisionPredicateGraph(model=model, ...)`, which passes its own copy through
+`SklearnEnsembleNormalizer.normalize(...)` and stores that normalized copy as `builder.model`.
+For `GradientBoostingClassifier`, normalization flattens `estimators_` from sklearn's native 2D
+`(n_stages, n_classes)` ndarray into a 1D list (see
+[/modules/dpg-sklearn-normalizer.md](/modules/dpg-sklearn-normalizer.md)); calling `.predict()` on
+that flattened copy would break `GradientBoostingClassifier`'s own internal `self.estimators_[0, 0]`
+-style indexing. `evaluate_faithfulness` therefore always calls
+`self._original_model.predict(...)` for the "what would the real model say" comparison, never
+`builder.model.predict(...)`. See
+[/side-effects/gb-predict-original-model.md](/side-effects/gb-predict-original-model.md).
+
 ## `explain_local`
 
 1. Optionally `fit(X)`; raises `DPGValidationError.sample_feature_count` if the flattened sample
    length does not match `len(builder.feature_names)`.
-2. Builds `node_lookup = {label: node_id}` from the fitted node list.
+2. **At HEAD (`276a503`), this always raises `TypeError` before doing anything else.** The
+   `node_lookup = {label: node_id for node_id, label in self._require_nodes()}` line that used to
+   build the lookup `_trace_tree_path` needs is commented out (`explainer.py:268`), but
+   `_trace_tree_path`'s signature still requires `node_lookup` as a positional parameter
+   (`explainer.py:651`), and the call site at `explainer.py:274-281` does not pass it. Reproduced
+   directly: fitting a 3-tree `RandomForestClassifier` on iris and calling `explain_local` raises
+   `TypeError: DPGExplainer._trace_tree_path() missing 1 required positional argument:
+   'node_lookup'` — for every model, not a specific ensemble type. See
+   [/side-effects/explain-local-node-lookup-crash.md](/side-effects/explain-local-node-lookup-crash.md).
+   The rest of this section describes `_trace_tree_path`'s logic as written, i.e. what it would do if
+   called with `node_lookup` supplied.
 3. For every `tree` in `builder.model.estimators_` (already flattened by
-   `SklearnEnsembleNormalizer` inside the builder), `_trace_tree_path` walks the raw `tree_` arrays
-   following the sample, appending predicate labels and finishing with a leaf label.
+   `SklearnEnsembleNormalizer` inside the builder), `_trace_tree_path` walks the tree following the
+   sample and appends predicate labels, finishing with a leaf label.
 4. Leaf labels starting with `"Class "` are stripped of that prefix and counted into `class_votes`;
    `majority_vote` is `class_votes.most_common(1)[0][0]`.
 5. `_compute_sample_confidence` produces the `sample_confidence` dict.
 6. `path_mode` on the result is always the literal `"execution_trace"`.
 
-`_trace_tree_path` details:
+`_trace_tree_path` details — **new in 0.3.0**, the traversal itself changed from walking raw
+`tree_.children_left`/`children_right` arrays to sklearn's own routing, matching `dpg/core.py`'s
+`_trace_tree_labels` (see [/modules/dpg-core.md](/modules/dpg-core.md)):
 
-- Regressor leaves (`RandomForestRegressor`, `ExtraTreesRegressor`, `AdaBoostRegressor`) produce
-  `f"Pred {round(value, 2)}"`; classifier leaves go through `_leaf_class_label`, which honors the
-  GradientBoosting per-class column layout (`SklearnEnsembleNormalizer.get_tree_class_index`) and
-  the binary sign-of-leaf-score case, then maps the index through `target_names` or `model.classes_`.
-- Thresholds are rounded with `builder.decimal_threshold`, matching the graph's label contract.
-- `node_ids` on the returned path are the *graph* ids looked up by label when
-  `validate_graph=True`, and the locally recomputed sha1 ids otherwise. Validity checks
-  (`edge_exists`, `graph_path_valid`) always use the natively recomputed ids.
+- It calls `tree.decision_path(sample_array)` and `tree.apply(sample_array)` to get the executed node
+  sequence and leaf id directly from sklearn, rather than re-deriving the branch from a rounded
+  threshold comparison. Rounding (`builder.get_decimal_threshold()`) is applied only when formatting
+  each predicate label, so it can never change which branch the trace reports.
+- Regressor leaves (`RandomForestRegressor`, `ExtraTreesRegressor`, `AdaBoostRegressor` — still not
+  `GradientBoostingRegressor`, see CLAUDE.md's Known breakage) produce `f"Pred {round(value, 2)}"`;
+  classifier leaves go through `_leaf_class_label`, which honors the GradientBoosting per-class
+  column layout (`SklearnEnsembleNormalizer.get_tree_class_index`) and the binary sign-of-leaf-score
+  case, then maps the index through `target_names` or `model.classes_`.
+- `native_node_ids = self._builder.get_node_ids_for_trace(labels)` maps the executed label sequence
+  onto fitted graph node ids honoring the resolved context order (`k=1`: labels are used as node keys
+  directly; `k>1`: each label is rewound through `DecisionPredicateGraph._context_node` first) — see
+  [/modules/dpg-core.md](/modules/dpg-core.md). `node_ids` on the returned path are those native ids
+  when `validate_graph=False` or when the id is present in the fitted graph, else `None`; validity
+  checks (`edge_exists`, `graph_path_valid`) always use `native_node_ids` regardless of
+  `validate_graph`.
 - `path_confidence = (node_coverage + edge_coverage) / 2`, where `node_coverage` is the fraction of
   path labels present in the node-metrics lookup and `edge_coverage` is the fraction of consecutive
   pairs present as graph edges (`1.0` when the path has no edges).
 - `predicate_truths` collects one `True` per internal split taken — by construction the traced
   branch is the true one, so this list contains only `True` values.
 
+## LRC source by construction mode and context order
+
+`_get_node_metrics` (backing `explain_global`, `local_path_dataframe`'s `mean_lrc` column, and the
+`node_lookup`-dependent parts of `explain_local` once the crash above is fixed) picks the
+trace-aware LRC source before calling `NodeMetrics.extract_node_metrics`:
+
+| `graph_construction_mode` | `get_context_order()` | `trace_lrc_by_label` source |
+|---|---|---|
+| `"aggregated_transitions"` | (forced to `1`) | `None` — no trace-consistent LRC available |
+| `"execution_trace"` | `1` | `builder.get_trace_consistent_lrc()` (0.2.0; see [/modules/dpg-core.md](/modules/dpg-core.md)) |
+| `"execution_trace"` | `> 1` | `builder.get_predicate_lrc(self._graph)` (0.3.0, aggregates per-context node LRC back to the predicate) |
+
 # Gotchas
 
+- **`explain_local` is unusable at HEAD for every model** — see the node-lookup `TypeError` under
+  Behavior above. `plot_local_on_dpg(sample=..., local_explanation=None)` calls it with no
+  `try`/`except`, so the `TypeError` propagates straight out. `evaluate_faithfulness`'s per-sample
+  loop *does* wrap its `explain_local` call in `except Exception`, so it doesn't crash — every sample
+  instead lands in `n_local_failures` with `record["error"]` set, which is how the crash surfaces
+  there.
 - **Label formats are load-bearing.** `_label_to_node_id` is
   `str(int(hashlib.sha1(label.encode()).hexdigest(), 16))`, so a traced label only maps onto a graph
   node when the string is byte-identical to the one `generate_dot` emitted. See

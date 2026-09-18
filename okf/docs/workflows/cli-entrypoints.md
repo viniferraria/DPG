@@ -15,6 +15,12 @@ node/graph metric files, and optionally render the DPG. Both are thin argparse w
 `test_dpg` — see [/modules/dpg-sklearn-dpg.md](/modules/dpg-sklearn-dpg.md). For programmatic or
 notebook use go through `DPGExplainer` instead (`examples/quickstart.py`).
 
+**New in 0.3.0:** `dpg/cli.py` is a third, packaged entrypoint with its own real `main()` — see
+[/modules/dpg-cli.md](/modules/dpg-cli.md). It does not replace either script below: it has different
+flag defaults (a fixed `--seed 160898`, `--t 3`, `--pv 1e-9` rather than falling through to
+`config.yaml`) and a different output file-naming scheme. Run it with
+`uv run python -m dpg.cli`, not through the installed `dpg` command — see Gotchas.
+
 Both scripts load `config.yaml` from the **repo root** (resolved from `__file__`, not the CWD) and
 read `dpg.default.perc_var`, `dpg.default.decimal_threshold`, `dpg.default.n_jobs`. A missing file
 raises `FileNotFoundError`, invalid YAML raises `yaml.YAMLError`.
@@ -118,12 +124,20 @@ uv run python examples/local_explanation_iris.py
 
 # Gotchas
 
-- **The declared console script is broken — verified.** `pyproject.toml` contains
-  `scripts = { "dpg" = "scripts.run_dpg_standard:main" }`, but `ls scripts` returns
-  *No such file or directory*: there is no `scripts/` package (`[tool.poetry].packages` only includes
-  `dpg` and `metrics`). Even if the path resolved, `examples/run_dpg_standard.py` defines **no
+- **The declared console script is broken — verified, and there are now two competing declarations.**
+  `pyproject.toml` is PEP 621-shaped as of 0.3.0: `[project] scripts = { "dpg" =
+  "scripts.run_dpg_standard:main" }` (`pyproject.toml:12`) still points at a `scripts/` package that
+  does not exist (`ls scripts` → *No such file or directory*; `[tool.poetry].packages` only includes
+  `dpg` and `metrics`, `pyproject.toml:85-90`). A second table, `[tool.poetry.scripts] dpg =
+  "dpg.cli:main"` (`pyproject.toml:127-128`), now points at the real `main()` in `dpg/cli.py`
+  ([/modules/dpg-cli.md](/modules/dpg-cli.md)) — but it's dead: PEP 621's `[project.scripts]` wins
+  whenever both tables are present, so the installed `dpg` command still resolves to the broken path.
+  Verified: `uv run dpg --help` raises `ModuleNotFoundError: No module named 'scripts'`. Separately,
+  `examples/run_dpg_standard.py` (the script the broken declaration points at) defines **no
   `main()`** — all of its logic lives inline under `if __name__ == "__main__":`. Always invoke the
-  scripts by path with `uv run python examples/...`; never rely on a `dpg` executable.
+  example scripts by path with `uv run python examples/...`, and `dpg/cli.py` as
+  `uv run python -m dpg.cli`; never rely on a `dpg` executable. See
+  [/side-effects/console-script-entrypoint.md](/side-effects/console-script-entrypoint.md).
 - **`run_dpg_custom.py` currently crashes.** It does `df, df_dpg_metrics = test.test_dpg(...)` while
   `test_dpg` returns a 6-tuple. Reproduced end-to-end: the run trains, builds the graph, writes
   `*_stats.txt`, then dies with `ValueError: too many values to unpack (expected 2)` at line 47 —

@@ -22,7 +22,12 @@ See [/modules/dpg-core.md](/modules/dpg-core.md).
 | Mode | Filter unit | Code path in `fit` |
 |---|---|---|
 | `"aggregated_transitions"` (default) | Path **variant** (a whole case) | `filter_log(log_df)` if `perc_var > 0`, then `discover_dfg(log_df)` |
-| `"execution_trace"` | Individual **edge** | `discover_dfg_execution_trace(log_df)` on the unfiltered log |
+| `"execution_trace"` | Individual **edge**, or a context-aware edge at `context_order > 1` | `discover_dfg_execution_trace(log_df)` (order `1`) or `discover_dfg_context(log_df, order)` (order `> 1`) |
+
+**New in 0.3.0 — `graph_construction.context_order`** is only meaningful under `"execution_trace"`.
+An explicit `int > 1` or `"auto"` under `"aggregated_transitions"` raises `DPGError` at construction,
+same timing as the mode check below. Full detail in
+[/modules/dpg-core.md](/modules/dpg-core.md) and [/modules/dpg-context-order.md](/modules/dpg-context-order.md).
 
 Anything else raises at construction time:
 
@@ -55,6 +60,10 @@ edge it shared with common paths, unless another kept case reproduces that edge.
 Note `fit` calls `filter_log` **only when `perc_var > 0`**; with `perc_var == 0` the raw log goes
 straight into `discover_dfg`.
 
+Tree traversal for this mode always uses `_trace_tree_labels_legacy`, which rounds each
+`tree_.threshold` **before** comparing it to the sample and choosing a child — kept specifically to
+preserve pre-0.3.0 graph weights.
+
 ## `execution_trace`
 
 `discover_dfg_execution_trace` builds the full DFG first, then prunes edges:
@@ -71,8 +80,20 @@ The threshold formula is the same `total_cases * perc_var`, and `total_cases` is
 unique case ids in the **raw** trace log (one case per sample-tree pair). The difference is the unit
 being compared against it: variant occurrence count vs. edge frequency.
 
+Tree traversal for this mode uses `_trace_tree_labels`, which takes the branch from sklearn's own
+`tree.decision_path`/`tree.apply` and rounds only when formatting the predicate label afterward —
+rounding can never change the recorded branch here, unlike the legacy traversal above. Because the
+two modes round at different points, the same model and sample can therefore report a different
+predicate label for a threshold-adjacent value depending on which mode built the graph — see
+[/side-effects/exact-routing-label-shift.md](/side-effects/exact-routing-label-shift.md).
+
 Both modes can produce an empty graph; `discover_dfg` raises
 `DPGGraphError.no_paths(perc_var, decimal_threshold)` when the log contains zero unique cases.
+
+**`context_order > 1` under this mode currently crashes** — `discover_dfg_context` passes two
+arguments to `itertools.pairwise`, which accepts only one. See
+[/modules/dpg-core.md](/modules/dpg-core.md) and
+[/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md).
 
 # Gotchas
 

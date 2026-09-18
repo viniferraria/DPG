@@ -136,7 +136,10 @@ uv run python examples/run_dpg_standard.py --ds iris --l 3 --seed 42
 
 Run pytest from the repo root: `tests/conftest.py` prepends the repo root to `sys.path` (no install
 needed), and `tests/test_integration_dpg.py` resolves `datasets/custom.csv` through `os.getcwd()`. There
-is no ruff or pytest configuration anywhere — both run on defaults.
+is no ruff configuration anywhere — it runs on defaults. `pyproject.toml` has a `[tool.pytest.ini_options]`
+`filterwarnings` list that silences known third-party deprecation noise (matplotlib, sklearn, numpy,
+pyparsing) and pytest's own class-scoped-fixture deprecation; it doesn't otherwise configure test
+discovery.
 
 CI (`.github/workflows/`):
 
@@ -175,7 +178,10 @@ sklearn model + X
 Consequences:
 
 - **Node identity is the predicate text.** IDs are `sha1` of the label, so two predicates merge iff their
-  labels are byte-identical. `decimal_threshold` therefore controls how much the graph merges.
+  labels are byte-identical. `decimal_threshold` therefore controls how much the graph merges. At
+  `context_order > 1` identity is the last `context_order` executed predicates, not just the label — see
+  Graph construction modes below. `Class`/`Pred` sinks are never contextualized and stay one shared node
+  per outcome regardless of `context_order`.
 - **Label formats are a contract** across `core.py`, `metrics/graph.py`, `explainer.py`, and
   `visualizer.py`: `"<feature> <= <threshold>"`, `"<feature> > <threshold>"`, `"Class <name>"`,
   `"Pred <value>"`. Parsing helpers depend on these exact shapes — see
@@ -192,8 +198,10 @@ Per-module API detail lives in `okf/docs/modules/`.
 | Module | Owns |
 | --- | --- |
 | `core.py` | `DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`. Graph construction and config resolution. |
+| `context_order.py` | `path_violations`, `resolve_context_order` — trie-based resolution of the smallest DPG-k context order with no pooled-graph path recombination, without enumerating simple paths. |
+| `cli.py` | `build_parser`, `main` for the packaged `dpg` command. Not actually reachable as the installed console script — see Known breakage. |
 | `sklearn_normalizer.py` | `SklearnEnsembleNormalizer`. **Only GradientBoosting is normalized** (`GB_MODELS`), flattening the per-class-column layout and handling the binary sign-of-leaf-score case. Every other ensemble is an identity pass-through. |
-| `explainer.py` | `DPGExplainer` plus the `DPGExplanation` / `DPGLocalExplanation` / `DPGTreePathExplanation` dataclasses, local tracing, sample confidence, and `evaluate_faithfulness`. |
+| `explainer.py` | `DPGExplainer` plus the `DPGExplanation` / `DPGLocalExplanation` / `DPGTreePathExplanation` dataclasses, local tracing, sample confidence, and `evaluate_faithfulness`. Keeps `_original_model` so `predict()` still goes through sklearn's own path — the builder's normalized copy flattens `GradientBoostingClassifier.estimators_` and would break its internal indexing. |
 | `visualizer.py` | Every plot function; `DPGExplainer.plot*` are thin wrappers. Largest module. |
 | `sklearn_dpg.py` | Dataset selection + train/evaluate/report glue for the `examples/` CLIs. |
 | `themes.py`, `utils.py` | Palette/theme resolution and shared helpers. |
@@ -214,6 +222,10 @@ calling:
 `nodes_list` is the `[node_id, label]` list from `to_networkx`. `metrics/nodes.py` converts to `igraph`
 (`_nx_to_igraph`) for betweenness and reaching centrality — that conversion is the hot path.
 
+`GraphMetrics.extract_communities` raises `ValueError` on a regression DPG: its absorbing-chain clustering
+anchors on `Class ` sinks, and a graph with only `Pred ` leaves makes every node transient — out of scope
+for 0.3.0 by design, not a bug.
+
 ## Config
 
 Resolution order in `DecisionPredicateGraph.__init__`: explicit `dpg_config` (dict or OmegaConf
@@ -224,22 +236,44 @@ Resolution order in `DecisionPredicateGraph.__init__`: explicit `dpg_config` (di
 | --- | --- | --- |
 | `perc_var` | 0.0001 | 1e-9 |
 | `decimal_threshold` | 3 | 6 |
+| `graph_construction.mode` | `"aggregated_transitions"` | `"aggregated_transitions"` |
+| `graph_construction.context_order` | 1 | 1 |
 
-Both set `n_jobs: -1`. `config.yaml` has no `graph_construction` section, so the mode always falls back to
-the default. Because `decimal_threshold` controls label rounding and node identity, running from a
-different directory changes node counts, not just filtering — pass `dpg_config` explicitly in tests and
-experiments.
+Both set `n_jobs: -1`. `config.yaml` now mirrors `DEFAULT_DPG_CONFIG`'s `graph_construction` section
+(same mode and `context_order`), so that part of resolution can't disagree — only `perc_var` and
+`decimal_threshold` still differ. Because `decimal_threshold` controls label rounding and node identity,
+running from a different directory changes node counts, not just filtering — pass `dpg_config` explicitly
+in tests and experiments.
 
 ### Graph construction modes
 
 `dpg_config["dpg"]["graph_construction"]["mode"]`:
 
 - `"aggregated_transitions"` (default) — `filter_log` drops whole path *variants* below
-  `n_cases * perc_var`, then builds the DFG.
+  `n_cases * perc_var`, then builds the DFG. Tree traversal still rounds each threshold *before* choosing
+  a branch (`_trace_tree_labels_legacy`), kept for backward-compatible graph weights.
 - `"execution_trace"` — builds the DFG from the raw log, then drops individual *edges* below the same
-  threshold.
+  threshold. Tree traversal follows sklearn's own `decision_path`/`apply` exactly
+  (`_trace_tree_labels`); rounding only formats the predicate label afterward and can never change the
+  branch taken.
 
 Unsupported mode strings raise `DPGError` at construction time.
+
+`decimal_threshold` also accepts `"auto"`: resolved once, in `fit()`, as one more decimal place than the
+training data's own precision. If any tree threshold doesn't sit on that data-derived grid, `fit()` emits
+a `RuntimeWarning` naming the offending feature(s) — routing is still exact (see above), only the label
+rounding is approximate for those features.
+
+`graph_construction.context_order` (default `1`, the pre-0.3.0 graph) controls **DPG-k**: non-terminal
+node identity becomes the last `context_order` executed predicates instead of just the predicate label,
+while `Class `/`Pred ` sinks stay one shared node per outcome. An explicit order `> 1`, or `"auto"`
+(resolved per fit via `resolve_context_order` in `dpg/context_order.py`, the smallest order with no
+pooled-graph path recombination), requires `graph_construction.mode == "execution_trace"`; using either
+under `"aggregated_transitions"` raises `DPGError` at construction time. `DecisionPredicateGraph` exposes
+the resolved value and its trial history through `get_context_order` / `get_context_order_history`, plus
+`get_node_context`, `get_node_ids_for_trace`, `get_predicate_lrc`, and `get_decimal_threshold`. Node
+metadata carries `predicate`/`context`/`context_order`, and the DOT source carries a matching
+`dpg_context_order` attribute that `to_networkx` parses back.
 
 `explain_local` always re-traces the sample through the raw trees (reported as
 `path_mode="execution_trace"`), then checks each traced node/edge against the built graph. An aggressive
@@ -254,7 +288,7 @@ intended, not a tracing bug.
     `datasets/`, `results/`, `states/`. Covered by `tests/test_run_dpg_causal_synthetic.py`.
   - `local_explanation/` — the only suite that is a package (exports `run_local_explanation_experiments`).
     Imported by `tests/test_smoke.py`.
-  - `monks/` — `run_monk.py` over the UCI MONK's problems. No test coverage, and **untracked in git**.
+  - `monks/` — `run_monk.py` over the UCI MONK's problems. No test coverage, but tracked in git.
   - Runners write timestamped `.log` files and outputs next to themselves. Treat `results/`, `states/`,
     and `*.log` as artifacts, not source.
 - `tutorials/` — notebooks, including the `perc_var` / `decimal_threshold` sensitivity benchmark.
@@ -266,14 +300,35 @@ intended, not a tracing bug.
 Verified against the source. Mention these rather than tripping over them.
 
 - `examples/run_dpg_custom.py` crashes — it unpacks 2 values from `test_dpg`'s 6-tuple.
-- `pyproject.toml` declares the console script as `scripts.run_dpg_standard:main`, but no `scripts/`
-  package exists and `examples/run_dpg_standard.py` has no `main()`. The CLI only runs as a script.
+- `pyproject.toml` still declares the installed `dpg` console script via `[project.scripts]` as
+  `scripts.run_dpg_standard:main`, and no `scripts/` package exists — `uv run dpg` fails with
+  `ModuleNotFoundError: No module named 'scripts'`. `dpg/cli.py` now has a real `main()` and is wired up
+  under `[tool.poetry.scripts]`, but that table is dead: PEP 621 `[project.scripts]` wins whenever both
+  are present. Run it directly with `uv run python -m dpg.cli`. `examples/run_dpg_standard.py` still has
+  no `main()` either.
 - `.readthedocs.yaml` installs `docs/requirements.txt`, which does not exist — RTD builds fail at install.
 - `test_datasets/` does not exist, but all four `scenario_*_generator.py` scripts write there while
   `run_dpg_causal_synthetic.py` reads from `datasets/`. Regenerating a scenario has no effect on the runner.
 - `experiments/causal_synthetic_scenarios/run_dpg_synthetic.py` cannot run: no `main()` guard, and its only
   uncommented input path is missing.
-- `dpg/explainer.py` omits `GradientBoostingRegressor` from its regressor tuples while `dpg/core.py`
-  includes it, so local explanations of a GB regressor emit `Class …` labels the graph cannot match.
+- `dpg/explainer.py` omits `GradientBoostingRegressor` from the regressor tuples it checks with
+  `isinstance` (`_trace_tree_path`, `_trace_execution_labels_for_tree`), while `dpg/core.py` detects
+  regressors generically via sklearn's `is_regressor()`, which does include it. Local explanations of a GB
+  regressor therefore emit `Class …` labels the graph cannot match.
 - `evaluate_faithfulness` reports `mean_path_purity`, `mean_competitor_exposure`, and
   `mean_explanation_confidence` as permanently `0.0` — `_compute_sample_confidence` never writes those keys.
+- `DPGExplainer.explain_local` raises `TypeError: DPGExplainer._trace_tree_path() missing 1 required
+  positional argument: 'node_lookup'` for every model. The `node_lookup` construction that
+  `_trace_tree_path` needs is commented out at `dpg/explainer.py:268`, but `_trace_tree_path` still
+  declares `node_lookup` as a required positional parameter (`dpg/explainer.py:651`) and the call site
+  (`dpg/explainer.py:274-281`) doesn't pass it. Reproduced with a 3-tree `RandomForestClassifier` on
+  iris. `evaluate_faithfulness` catches this per sample (`n_local_failures`), but
+  `plot_local_on_dpg(sample=...)` propagates it uncaught.
+- `DecisionPredicateGraph.discover_dfg_context` crashes whenever `graph_construction.context_order`
+  resolves above `1` under `mode="execution_trace"` (an explicit order `> 1`, or `"auto"` resolving
+  that way): `dpg/core.py:636` calls `pairwise(nodes, nodes[1:])`, but `itertools.pairwise` (imported
+  `dpg/core.py:8`) takes exactly one argument, raising `TypeError: pairwise expected 1 argument, got
+  2`. Introduced by `6df6e20` ("chore: ruff fixes"), which replaced a working `zip(nodes,
+  nodes[1:])`; the fix is `pairwise(nodes)`. Reproduced directly; `tests/test_dpg_k.py`'s own
+  `context_order` cases don't hit this exact path (they either assert the mode-validation error or
+  resolve to `k=1` on their fixture data).

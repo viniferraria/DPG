@@ -91,8 +91,9 @@ uv run python examples/run_dpg_custom.py --ds datasets/custom.csv --target_colum
 
 `requires-python = ">=3.10"` with **no upper bound**, and `uv.lock` carries the same floor. The only
 classifier declared is `"Programming Language :: Python :: 3"` — there are no per-minor classifiers, so
-do not read a supported-version matrix out of them. `[tool.mypy] python_version = "3.10"` sets the
-lowest syntax/typing target. Every workflow that pins an interpreter pins **3.11**
+do not read a supported-version matrix out of them. `[tool.mypy]` sets no `python_version`, so mypy
+targets whichever interpreter runs it. A `"3.10"` pin was removed because numpy ≥ 2.5's stubs use the
+3.12+ `type` statement, and mypy aborted on `.venv/.../numpy/__init__.pyi` under a 3.14 venv. Every workflow that pins an interpreter pins **3.11**
 (`.github/workflows/docs.yml`, `.github/workflows/feature-pr.yaml`, and `.readthedocs.yaml`), so 3.11
 is the only version actually exercised by automation.
 

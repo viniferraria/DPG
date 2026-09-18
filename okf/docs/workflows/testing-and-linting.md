@@ -53,7 +53,6 @@ The real flags in `[tool.mypy]`:
 
 | Setting | Value |
 |---|---|
-| `python_version` | `"3.10"` |
 | `disallow_untyped_defs` | `true` |
 | `warn_return_any` | `true` |
 | `warn_unused_ignores` | `true` |
