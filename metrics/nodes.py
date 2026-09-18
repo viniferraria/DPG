@@ -60,8 +60,6 @@ def log_timer(func: Callable[..., Any]) -> Callable[..., Any]:
         Wrapped function that logs execution time.
     """
     func_name = getattr(func, "__name__", type(func).__name__)
-    logger.info(f"Decorating function {func_name} with log_timer")
-
     @wraps(func)
     def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
