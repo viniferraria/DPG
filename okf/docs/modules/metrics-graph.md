@@ -45,7 +45,7 @@ are made on the class. It also carries one class constant,
 | `extract_graph_metrics` | `(cls, dpg_model, nodes_list, target_names: Sequence[str]) -> dict` | `{"Communities", "Class Bounds"}` | Backwards-compatible alias; delegates verbatim to `extract_graph_metrics_lpa` |
 | `extract_graph_metrics_lpa` | `(cls, dpg_model, nodes_list, target_names: Sequence[str]) -> dict` | Same dict | `nx.community.asyn_lpa_communities(weight='weight')` for communities; per-terminal-node reverse `nx.descendants` for bounds, then `calculate_boundaries` |
 | `extract_class_boundaries` | `(cls, dpg_model, nodes_list, target_names: Sequence[str]) -> dict` | `{"Class Bounds": {...}}` only | Community/cluster-based bounds via `clustering(...)` at `COMMUNITY_BOUNDARY_THRESHOLD`; returns `{"Class Bounds": {}}` when no `Class ` node exists |
-| `extract_communities` | `(cls, dpg_model, df_node_metrics: pd.DataFrame, nodes_list, threshold_clusters: float = 0.2) -> dict` | `{"Clusters", "Probability", "Confidence Interval"}` | Runs `clustering` then relabels ids through `df_node_metrics`'s `Node`→`Label` map. **Takes a node-metrics frame, not `target_names`** |
+| `extract_communities` | `(cls, dpg_model, df_node_metrics: pd.DataFrame, nodes_list, threshold_clusters: float = 0.2) -> dict` | `{"Clusters", "Probability", "Confidence Interval"}` | Runs `clustering` then relabels ids through `df_node_metrics`'s `Node`→`Label` map. **Takes a node-metrics frame, not `target_names`.** Raises `ValueError` (not a `DPGError`) when `nodes_list` has no `"Class "` node — see Gotchas |
 | `clustering` | `(cls, dpg_model, class_nodes: dict[str,str], threshold: float \| None = None) -> tuple[dict[str,list[str]], dict[str,Any], dict[str,Any]]` | `(clusters, node_probs, confidence)` | Absorbing Markov chain — see Behavior |
 | `calculate_boundaries` | `(cls, class_dict: dict, class_names: Sequence[str]) -> dict` | `{class_key: [boundary strings]}` | Fans `calculate_class_boundaries` out over `joblib.Parallel(n_jobs=-1)` |
 | `calculate_class_boundaries` | `(key: str, nodes: list[str], class_names: list[str]) -> tuple` (`@staticmethod`) | `(str(key), boundaries)` | Per feature, tracks `min` of `>` thresholds and `max` of `<=` thresholds, emitting `f <= u`, `f > l`, or `l < f <= u` |
@@ -114,6 +114,16 @@ it, with any leftovers appended in sorted order.
   misclassified as terminal. The clustering path requires `str(label).startswith("Class ")`, so
   **regressor DPGs (`"Pred <value>"` leaves) produce no class nodes and `extract_class_boundaries`
   returns `{"Class Bounds": {}}`**.
+- **`extract_communities` raises `ValueError` outright on a regression DPG, new in 0.3.0**
+  (`metrics/graph.py:250-263`): it builds `class_nodes = {i[0]: i[1] for i in nodes_list if 'Class'
+  in i[1]}`, and if that's empty it raises
+  `ValueError("extract_communities requires a classifier DPG with at least one 'Class ' sink node; "
+  "regression DPGs ('Pred ' leaves) are not supported by this community extraction in 0.3.0.")`
+  rather than letting `clustering`'s absorbing-chain math fail — with no absorbing state every node is
+  transient, making `I - Q` singular and (pre-0.3.0) raising an opaque `numpy.linalg.LinAlgError`
+  instead. This is deliberate scope-narrowing for 0.3.0, not a bug, and `DPGExplainer.explain_global`
+  passes this exception straight through when called with `communities=True` on a regressor. See
+  [/side-effects/communities-regressor-valueerror.md](/side-effects/communities-regressor-valueerror.md).
 - **`calculate_boundaries` forces `n_jobs=-1`,** ignoring the DPG config's `n_jobs`. It spawns
   joblib workers regardless of caller intent, which is wasteful for small graphs and can nest
   badly inside an already-parallel run.

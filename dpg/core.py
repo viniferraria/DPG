@@ -633,7 +633,7 @@ class DecisionPredicateGraph:
         for _, trace_df in log.groupby("case:concept:name", sort=False):
             labels = tuple(trace_df["concept:name"].tolist())
             nodes = [self._context_node(labels, i, context_order) for i in range(len(labels))]
-            for source, target in pairwise(nodes, nodes[1:]):
+            for source, target in pairwise(nodes):
                 edge = (source, target)
                 dfg[edge] = dfg.get(edge, 0) + 1
 
@@ -884,6 +884,8 @@ class DecisionPredicateGraph:
                 node_id = self._node_id_for_key(node_key)
                 if node_id in added_nodes:
                     continue
+                label: str
+                context: tuple[str, ...]
                 if isinstance(node_key, str):
                     label, context = node_key, ()
                 else:

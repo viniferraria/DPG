@@ -17,3 +17,59 @@
 * **Update**: Corrected the `n_jobs` row of the config-disagreement table. `config.yaml` sets `-1`, the
   same as `DEFAULT_DPG_CONFIG`; only `perc_var`, `decimal_threshold`, and the `visualization` block
   actually differ between the two sources.
+
+## 2026-09-18
+
+* **Update**: Removed `python_version = "3.10"` from `[tool.mypy]` — numpy 2.5.1 stubs (locked for
+  Python ≥ 3.12) use the `type` statement, so mypy failed on `.venv` under a 3.14 interpreter. mypy now
+  targets the running interpreter. Updated [development setup](/workflows/development-setup.md) and
+  [testing and linting](/workflows/testing-and-linting.md).
+* **Creation**: [side-effects/](/side-effects/index.md) — eleven pages documenting side effects,
+  regressions, and limitations introduced by, or still present after, DPG 0.3.0 (release merge
+  `f16a977`), each verified against branch `feature/first_runs` HEAD `276a503` with a runnable example
+  that was actually executed:
+  [explain-local-node-lookup-crash](/side-effects/explain-local-node-lookup-crash.md) (`explain_local`
+  raises `TypeError` for every model — a ruff cleanup, commit `6df6e20`, commented out `node_lookup`
+  but left `_trace_tree_path` requiring it; also added to CLAUDE.md's Known breakage),
+  [context-order-pairwise-crash](/side-effects/context-order-pairwise-crash.md) (`discover_dfg_context`
+  raises `TypeError` for every `context_order > 1` fit — the same `6df6e20` commit replaced
+  `zip(nodes, nodes[1:])` with a two-argument `itertools.pairwise` call; confirmed via
+  `uv run pytest tests/test_dpg_k.py` → 2 failed),
+  [console-script-entrypoint](/side-effects/console-script-entrypoint.md) (the installed `dpg` console
+  script points at a nonexistent `scripts.run_dpg_standard:main`; `[project.scripts]` wins over
+  `[tool.poetry.scripts] dpg = "dpg.cli:main"`; `uv run python -m dpg.cli` works),
+  [exact-routing-label-shift](/side-effects/exact-routing-label-shift.md) (`execution_trace` and local
+  explanations route on the exact sklearn `decision_path`; `aggregated_transitions` still rounds the
+  threshold before comparing, so the two can disagree at threshold boundaries — demonstrated with a
+  constructed threshold at `2.4999`),
+  [trace-consistent-lrc-deprecation](/side-effects/trace-consistent-lrc-deprecation.md)
+  (`get_trace_consistent_lrc()` deprecated for `context_order > 1` in favor of `get_predicate_lrc`;
+  demonstrated in a temporary worktree at `f16a977` because of the pairwise crash above),
+  [communities-regressor-valueerror](/side-effects/communities-regressor-valueerror.md)
+  (`extract_communities` on a regression DPG now raises a clear `ValueError` instead of an opaque
+  `numpy.linalg.LinAlgError`),
+  [gb-predict-original-model](/side-effects/gb-predict-original-model.md) (`evaluate_faithfulness` on a
+  `GradientBoostingClassifier` crashed with `TypeError: list indices must be integers or slices, not
+  tuple` at the 0.2.0 baseline `11decd3`; fixed pre-release by commit `be5389a`'s `_original_model`),
+  [decimal-threshold-auto-warning](/side-effects/decimal-threshold-auto-warning.md)
+  (`decimal_threshold="auto"` derives precision from the data and warns when a threshold lands off that
+  grid; `get_decimal_threshold()` raises `DPGError` before `fit()`),
+  [context-order-validation-errors](/side-effects/context-order-validation-errors.md) (`DPGError` for
+  invalid or incompatible `context_order`/`decimal_threshold`; `resolve_context_order` raises
+  `ValueError` for a bad or insufficient `max_k`), and
+  [regression-sink-collisions](/side-effects/regression-sink-collisions.md) (a regression sink is only
+  as unique as its 2-decimal rounded leaf value — demonstrated with two distinct leaves, `3.001` and
+  `3.004`, colliding into one `"Pred 3.0"` sink).
+* **Update**: [dpg.core](/modules/dpg-core.md), [dpg.explainer](/modules/dpg-explainer.md),
+  [metrics.graph](/modules/metrics-graph.md), [config resolution](/conventions/config-resolution.md),
+  and [graph construction modes](/conventions/graph-construction-modes.md) updated for 0.3.0's
+  context-aware (`context_order`/DPG-k) construction, `decimal_threshold="auto"`, exact
+  `decision_path` routing, and the classifier-only `extract_communities` guard.
+* **Creation**: [dpg.context_order](/modules/dpg-context-order.md) and [dpg.cli](/modules/dpg-cli.md) —
+  module pages for two files new in 0.3.0 (`resolve_context_order`'s trie-based DPG-k resolution, and
+  the packaged `build_parser`/`main` the installed console script fails to reach — see
+  [console-script-entrypoint](/side-effects/console-script-entrypoint.md)).
+* **Update**: [Running the DPG CLI entrypoints](/workflows/cli-entrypoints.md) updated for `dpg/cli.py`
+  and the console-script entry-point mismatch.
+* **Update**: CLAUDE.md's Known breakage list gained the `explain_local`/`node_lookup` crash (see
+  [explain-local-node-lookup-crash](/side-effects/explain-local-node-lookup-crash.md)).

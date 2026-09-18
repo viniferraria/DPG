@@ -5,6 +5,8 @@ Source-level concepts for the two packages. `metrics/` is imported by `dpg/`, ne
 ## dpg — core library
 
 * [dpg.core — DecisionPredicateGraph](dpg-core.md) - Core module that replays samples through a tree ensemble, mines a directly-follows graph from the resulting event log, and emits a Graphviz/NetworkX Decision Predicate Graph.
+* [dpg.context_order](dpg-context-order.md) - Trie-based resolution of the smallest context order (DPG-k) with no pooled-graph path recombination, without enumerating simple paths. New in 0.3.0.
+* [dpg.cli](dpg-cli.md) - `build_parser`/`main` for the packaged `dpg` command — and why the installed console script does not reach it. New in 0.3.0.
 * [dpg.sklearn_normalizer](dpg-sklearn-normalizer.md) - Normalizes heterogeneous scikit-learn ensembles to a uniform 1D `.estimators_` list of objects exposing `.tree_`, preserving the GradientBoosting class-slot index.
 * [dpg.explainer](dpg-explainer.md) - High-level DPGExplainer API that builds a DPG, produces global and local explanations, evaluates faithfulness, and wraps the visualizer plot functions.
 * [dpg.visualizer](dpg-visualizer.md) - Every rendering function in DPG — Graphviz graph plots and Matplotlib analytics plots — plus the shared theme, save/show and label-formatting conventions.

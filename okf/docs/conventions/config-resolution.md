@@ -10,10 +10,10 @@ status: stable
 
 # Responsibility
 
-`DecisionPredicateGraph.__init__` resolves four behavioral settings (`perc_var`,
-`decimal_threshold`, `n_jobs`, `graph_construction.mode`) plus a `visualization` block. The source it
-reads from depends on arguments *and* on the process working directory. See
-[/modules/dpg-core.md](/modules/dpg-core.md).
+`DecisionPredicateGraph.__init__` resolves five behavioral settings (`perc_var`,
+`decimal_threshold`, `n_jobs`, `graph_construction.mode`, and — new in 0.3.0 —
+`graph_construction.context_order`) plus a `visualization` block. The source it reads from depends
+on arguments *and* on the process working directory. See [/modules/dpg-core.md](/modules/dpg-core.md).
 
 # Behavior
 
@@ -39,12 +39,17 @@ reads from depends on arguments *and* on the process working directory. See
 ## Per-key fallback
 
 Resolution is **per key**, not whole-object: each value is read with
-`config["dpg"]["default"].get(key, DEFAULT_DPG_CONFIG["dpg"]["default"][key])`, and the mode with
-`config["dpg"]["graph_construction"].get("mode", "aggregated_transitions")`. A partial config
-therefore inherits the missing keys from `DEFAULT_DPG_CONFIG` — but a key present with an explicit
-`null` resolves to `None` and raises `DPGConfigurationError.missing_perc_var()`,
-`.missing_decimal_threshold()`, or `.missing_n_jobs()`. `visualization` falls back to
-`DEFAULT_DPG_CONFIG["dpg"]["visualization"]`, which is `{}`.
+`config["dpg"]["default"].get(key, DEFAULT_DPG_CONFIG["dpg"]["default"][key])`, and the mode/order
+with `config["dpg"]["graph_construction"].get("mode", "aggregated_transitions")` /
+`.get("context_order", 1)`. A partial config therefore inherits the missing keys from
+`DEFAULT_DPG_CONFIG` — but a key present with an explicit `null` resolves to `None` and raises
+`DPGConfigurationError.missing_perc_var()`, `.missing_decimal_threshold()`, or `.missing_n_jobs()`.
+`visualization` falls back to `DEFAULT_DPG_CONFIG["dpg"]["visualization"]`, which is `{}`.
+
+`decimal_threshold` now also accepts the literal string `"auto"` (any other non-`int`, `bool`, or
+negative value raises a plain `DPGError`), and `context_order` accepts a positive `int` or `"auto"`
+(same validation shape) — see [/modules/dpg-core.md](/modules/dpg-core.md) for the resolution
+behavior of both.
 
 # Gotchas
 
@@ -57,8 +62,12 @@ Read from `config.yaml` at the repo root and `DEFAULT_DPG_CONFIG` in `dpg/core.p
 | `dpg.default.perc_var` | `0.0001` | `0.000000001` (1e-9) | Repo file filters far more aggressively |
 | `dpg.default.decimal_threshold` | `3` | `6` | Repo file rounds thresholds harder, merging more nodes |
 | `dpg.default.n_jobs` | `-1` | `-1` | No difference (both fan out across all cores) |
-| `dpg.graph_construction.mode` | *absent* | `"aggregated_transitions"` | Falls back to the default mode |
+| `dpg.graph_construction.mode` | `"aggregated_transitions"` | `"aggregated_transitions"` | No difference — **as of 0.3.0** `config.yaml` carries an explicit `graph_construction` section that matches the default; previously (0.1.x/0.2.x) it was absent |
+| `dpg.graph_construction.context_order` | `1` | `1` | No difference — new key, added to `config.yaml` alongside `mode` |
 | `dpg.visualization` | `graph_attrs` (`bgcolor: white`, `rankdir: R`), `node_attrs` (`shape: box`, `fillcolor: #ffc3c3`), `class_node` block | `{}` | With defaults, `generate_dot` drops `bgcolor`/`rankdir`/`shape` and passes `fillcolor=None` |
+
+Only `perc_var` and `decimal_threshold` still disagree between the two sources — the
+`graph_construction` section can no longer produce a CWD-dependent surprise.
 
 `n_jobs` also selects the tracing entry point in `_extract_trace_log`: `n_jobs == 1` dispatches
 `tracing_ensemble` (generator), anything else dispatches `tracing_ensemble_parallel`.

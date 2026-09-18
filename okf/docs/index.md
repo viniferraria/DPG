@@ -25,11 +25,15 @@ Cross-module contracts. Read these before changing anything in `dpg/core.py`.
 
 ## Modules
 
-* [modules/](modules/) - Source-level reference for the six `dpg/` modules and the three `metrics/` modules.
+* [modules/](modules/) - Source-level reference for the eight `dpg/` modules and the three `metrics/` modules.
 
 ## Concepts
 
 * [concepts/](concepts/) - Explanation dataclasses and the faithfulness evaluation metric.
+
+## Side effects and limitations
+
+* [side-effects/](side-effects/) - Side effects, regressions, and limitations introduced by — or still present after — DPG 0.3.0, each traced to source with a runnable, actually-executed example.
 
 ## Workflows
 
