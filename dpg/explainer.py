@@ -265,7 +265,6 @@ class DPGExplainer:
                 sample_array.shape[0], expected_features
             )
 
-        # node_lookup = {label: node_id for node_id, label in self._require_nodes()}
         node_metrics_lookup = self._get_node_metrics_lookup()
 
         tree_paths = []
@@ -477,6 +476,7 @@ class DPGExplainer:
 
         weights = self._validate_faithfulness_weights(weights)
 
+        X_eval: pd.DataFrame | np.ndarray
         if isinstance(X, pd.DataFrame):
             X_eval = X.iloc[:max_samples].copy() if max_samples is not None else X.copy()
             row_iter = [(i, X_eval.iloc[i], X_eval.iloc[i].values) for i in range(len(X_eval))]
@@ -648,7 +648,6 @@ class DPGExplainer:
         sample: np.ndarray,
         sample_id: int,
         tree_index: int,
-        node_lookup: dict[str, str],
         node_metrics_lookup: dict[str, dict[str, Any]],
         validate_graph: bool,
     ) -> DPGTreePathExplanation:
@@ -683,7 +682,7 @@ class DPGExplainer:
 
         native_node_ids = self._builder.get_node_ids_for_trace(labels)
         node_ids = [
-            native_node_id if (not validate_graph or native_node_id in self._graph) else None
+            native_node_id if (not validate_graph or native_node_id in self._require_graph()) else None
             for native_node_id in native_node_ids
         ]
 
@@ -1035,6 +1034,8 @@ class DPGExplainer:
         labels: list[str] = []
 
         node_index = __path[0] if len(__path) > 0 else None
+        # decision_path always includes the root node for a fitted tree.
+        assert node_index is not None
 
         while True:
             left = tree_.children_left[node_index]

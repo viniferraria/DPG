@@ -7,9 +7,12 @@ that was actually executed.
 
 ## Crashes at HEAD
 
-* [explain-local-node-lookup-crash](explain-local-node-lookup-crash.md) - `DPGExplainer.explain_local` raises `TypeError` for every model; a ruff cleanup commented out `node_lookup` but left `_trace_tree_path` requiring it.
-* [context-order-pairwise-crash](context-order-pairwise-crash.md) - `discover_dfg_context` raises `TypeError` for every `context_order > 1` fit; a "ruff fixes" commit called `itertools.pairwise` with two arguments instead of one.
 * [console-script-entrypoint](console-script-entrypoint.md) - The installed `dpg` console script points at a nonexistent module; `[project.scripts]` silently wins over `[tool.poetry.scripts]`.
+
+## Fixed regressions (on `feature/first_runs`, after `276a503`)
+
+* [explain-local-node-lookup-crash](explain-local-node-lookup-crash.md) - `DPGExplainer.explain_local` raised `TypeError` for every model; a ruff cleanup commented out `node_lookup` but left `_trace_tree_path` requiring it. Fixed by deleting the now-unused parameter.
+* [context-order-pairwise-crash](context-order-pairwise-crash.md) - `discover_dfg_context` raised `TypeError` for every `context_order > 1` fit; a "ruff fixes" commit called `itertools.pairwise` with two arguments instead of one. Fixed by dropping the second argument.
 
 ## Behavior changes vs 0.2.0
 

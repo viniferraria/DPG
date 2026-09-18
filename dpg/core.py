@@ -233,8 +233,8 @@ class DecisionPredicateGraph:
         self._resolved_decimal_threshold: int | None = (
             self.decimal_threshold if isinstance(self.decimal_threshold, int) else None
         )
-        self._resolved_context_order: int | float = 1
-        self._context_order_history: dict[int | float, int] = {}
+        self._resolved_context_order: int = 1
+        self._context_order_history: dict[int, int] = {}
         self._node_context_by_id: dict[str, tuple[str, ...]] = {}
         self._node_label_by_id: dict[str, str] = {}
 
@@ -642,11 +642,11 @@ class DecisionPredicateGraph:
         min_count = log["case:concept:name"].nunique() * self.perc_var
         return {edge: count for edge, count in dfg.items() if count >= min_count}
 
-    def get_context_order(self) -> int | float:
+    def get_context_order(self) -> int:
         """Return the effective context order from the last ``fit`` call."""
         return self._resolved_context_order
 
-    def get_context_order_history(self) -> dict[int | float, int]:
+    def get_context_order_history(self) -> dict[int, int]:
         """Return local recombination violations measured for each tested k."""
         return dict(self._context_order_history)
 
@@ -943,7 +943,7 @@ class DecisionPredicateGraph:
             node_id, label, attributes = match.groups()
             context = self._node_context_by_id.get(node_id, ())
             order_match = re.search(r"dpg_context_order=([^,\]]+)", attributes)
-            order = self.get_context_order()
+            order: int | float = self.get_context_order()
             if order_match:
                 try:
                     order = float(order_match.group(1).strip('"'))

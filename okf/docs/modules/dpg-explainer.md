@@ -92,17 +92,17 @@ that flattened copy would break `GradientBoostingClassifier`'s own internal `sel
 
 1. Optionally `fit(X)`; raises `DPGValidationError.sample_feature_count` if the flattened sample
    length does not match `len(builder.feature_names)`.
-2. **At HEAD (`276a503`), this always raises `TypeError` before doing anything else.** The
-   `node_lookup = {label: node_id for node_id, label in self._require_nodes()}` line that used to
-   build the lookup `_trace_tree_path` needs is commented out (`explainer.py:268`), but
-   `_trace_tree_path`'s signature still requires `node_lookup` as a positional parameter
-   (`explainer.py:651`), and the call site at `explainer.py:274-281` does not pass it. Reproduced
-   directly: fitting a 3-tree `RandomForestClassifier` on iris and calling `explain_local` raises
-   `TypeError: DPGExplainer._trace_tree_path() missing 1 required positional argument:
-   'node_lookup'` — for every model, not a specific ensemble type. See
+2. **A `6df6e20` regression made this always raise `TypeError`; fixed on `feature/first_runs`.** A ruff
+   cleanup commented out the `node_lookup = {label: node_id for node_id, label in
+   self._require_nodes()}` line but left `_trace_tree_path`'s signature requiring `node_lookup` as a
+   positional parameter, with no call site passing it — every call raised `TypeError:
+   DPGExplainer._trace_tree_path() missing 1 required positional argument: 'node_lookup'`, for every
+   model. The fix deletes the now-unused `node_lookup` parameter from `_trace_tree_path`'s signature
+   entirely (it stopped being used for routing once `_trace_tree_path` moved to the `decision_path`
+   rewrite — see [exact-routing-label-shift](/side-effects/exact-routing-label-shift.md)). Confirmed:
+   fitting a 3-tree `RandomForestClassifier` on iris and calling `explain_local` now returns a
+   `DPGLocalExplanation` with no error. See
    [/side-effects/explain-local-node-lookup-crash.md](/side-effects/explain-local-node-lookup-crash.md).
-   The rest of this section describes `_trace_tree_path`'s logic as written, i.e. what it would do if
-   called with `node_lookup` supplied.
 3. For every `tree` in `builder.model.estimators_` (already flattened by
    `SklearnEnsembleNormalizer` inside the builder), `_trace_tree_path` walks the tree following the
    sample and appends predicate labels, finishing with a leaf label.
@@ -139,9 +139,9 @@ that flattened copy would break `GradientBoostingClassifier`'s own internal `sel
 
 ## LRC source by construction mode and context order
 
-`_get_node_metrics` (backing `explain_global`, `local_path_dataframe`'s `mean_lrc` column, and the
-`node_lookup`-dependent parts of `explain_local` once the crash above is fixed) picks the
-trace-aware LRC source before calling `NodeMetrics.extract_node_metrics`:
+`_get_node_metrics` (backing `explain_global`, `local_path_dataframe`'s `mean_lrc` column, and
+`explain_local`'s node-metrics lookup) picks the trace-aware LRC source before calling
+`NodeMetrics.extract_node_metrics`:
 
 | `graph_construction_mode` | `get_context_order()` | `trace_lrc_by_label` source |
 |---|---|---|
@@ -151,12 +151,13 @@ trace-aware LRC source before calling `NodeMetrics.extract_node_metrics`:
 
 # Gotchas
 
-- **`explain_local` is unusable at HEAD for every model** — see the node-lookup `TypeError` under
-  Behavior above. `plot_local_on_dpg(sample=..., local_explanation=None)` calls it with no
-  `try`/`except`, so the `TypeError` propagates straight out. `evaluate_faithfulness`'s per-sample
-  loop *does* wrap its `explain_local` call in `except Exception`, so it doesn't crash — every sample
-  instead lands in `n_local_failures` with `record["error"]` set, which is how the crash surfaces
-  there.
+- **`explain_local` was unusable for every model between `6df6e20` and the working-tree fix** — see
+  the node-lookup `TypeError` under Behavior above, now fixed. While it was broken,
+  `plot_local_on_dpg(sample=..., local_explanation=None)` called it with no `try`/`except`, so the
+  `TypeError` propagated straight out; `evaluate_faithfulness`'s per-sample loop wraps its
+  `explain_local` call in `except Exception`, so every sample instead landed in `n_local_failures`
+  with `record["error"]` set. See
+  [/side-effects/explain-local-node-lookup-crash.md](/side-effects/explain-local-node-lookup-crash.md).
 - **Label formats are load-bearing.** `_label_to_node_id` is
   `str(int(hashlib.sha1(label.encode()).hexdigest(), 16))`, so a traced label only maps onto a graph
   node when the string is byte-identical to the one `generate_dot` emitted. See

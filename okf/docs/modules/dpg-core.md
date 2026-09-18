@@ -68,8 +68,8 @@ Details in [/conventions/config-resolution.md](/conventions/config-resolution.md
 
 | Name | Signature | Purpose |
 |---|---|---|
-| `get_context_order` | `() -> int \| float` | The effective context order from the last `fit`; `1` unless `graph_construction_mode == "execution_trace"` resolved otherwise. |
-| `get_context_order_history` | `() -> dict[int \| float, int]` | `{k: violations}` for every order tried — from `resolve_context_order` when `context_order == "auto"`, or from `_local_context_violations` for each `k` up to an explicit order otherwise. |
+| `get_context_order` | `() -> int` | The effective context order from the last `fit`; `1` unless `graph_construction_mode == "execution_trace"` resolved otherwise. |
+| `get_context_order_history` | `() -> dict[int, int]` | `{k: violations}` for every order tried — from `resolve_context_order` when `context_order == "auto"`, or from `_local_context_violations` for each `k` up to an explicit order otherwise. |
 | `get_node_context` | `(node) -> tuple[str, ...]` | The contextual predicate tuple backing a graph node id; empty tuple for sinks and for any node in a `k=1` graph. |
 | `get_node_ids_for_trace` | `(labels: Iterable[str]) -> list[str]` | Maps one executed label sequence to the fitted graph's node ids, honoring the resolved context order (used by `DPGExplainer._trace_tree_path`, see [/modules/dpg-explainer.md](/modules/dpg-explainer.md)). |
 | `get_predicate_lrc` | `(graph) -> dict[str, float]` | Sums each node's `nx.local_reaching_centrality` back onto its predicate label — at `k>1` one predicate can occupy several contextual nodes and gets credit for all of them. |
@@ -120,7 +120,7 @@ Stage by stage inside `fit`:
      `get_context_order_history`. `discover_dfg_execution_trace(log_df)` runs when the resolved order
      is `1`; `discover_dfg_context(log_df, resolved_order)` runs otherwise (see
      [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md) —
-     the latter call currently always raises `TypeError`).
+     a `TypeError` regression on this call that has since been fixed on `feature/first_runs`).
    - Otherwise (`"aggregated_transitions"`): context order is forced to `1` regardless of config,
      `filter_log` runs first **only if `perc_var > 0`**, then `discover_dfg`. See
      [/conventions/graph-construction-modes.md](/conventions/graph-construction-modes.md).
@@ -173,19 +173,16 @@ Regressor detection is an `isinstance` check against `RandomForestRegressor`,
   no matter how much context precedes it, which can make unrelated decision paths converge on a
   single terminal node. See
   [/side-effects/regression-sink-collisions.md](/side-effects/regression-sink-collisions.md).
-- **`discover_dfg_context` (`context_order > 1`, explicit or `"auto"`-resolved) crashes.**
-  `core.py:636` calls `pairwise(nodes, nodes[1:])`, but `itertools.pairwise` (imported `core.py:8`)
-  takes exactly one iterable argument — `TypeError: pairwise expected 1 argument, got 2` on every
-  `fit()` that resolves to an order above `1` under `"execution_trace"`. Introduced by commit
-  `6df6e20` ("chore: ruff fixes"), which replaced a `zip(nodes, nodes[1:])` call; the correct call is
-  `pairwise(nodes)` alone. Reproduced directly against HEAD with a 3-tree RandomForest on iris and
-  `dpg_config={"graph_construction": {"mode": "execution_trace", "context_order": 2}, ...}`.
-  `tests/test_dpg_k.py` doesn't currently exercise this exact path end to end (its `context_order`
-  cases either assert the validation error under `"aggregated_transitions"` or resolve to `k=1` on
-  their fixture data, both of which skip `discover_dfg_context`); at HEAD it has one unrelated
-  failure, `test_execution_trace_graph_preserves_long_case_order`, from the same
-  `pairwise(seq, seq[1:])` two-argument misuse pattern inside the test file itself (`test_dpg_k.py:95`),
-  not from `core.py`. See
+- **`discover_dfg_context` (`context_order > 1`, explicit or `"auto"`-resolved) crashed, now fixed.**
+  Commit `6df6e20` ("chore: ruff fixes") replaced a working `zip(nodes, nodes[1:])` with
+  `pairwise(nodes, nodes[1:])`, but `itertools.pairwise` (imported `core.py:8`) takes exactly one
+  iterable argument — `TypeError: pairwise expected 1 argument, got 2` on every `fit()` that resolved
+  to an order above `1` under `"execution_trace"`. fixed on `feature/first_runs`: `core.py:636` now calls
+  `pairwise(nodes)` alone. Confirmed with a 3-tree RandomForest on iris and
+  `dpg_config={"graph_construction": {"mode": "execution_trace", "context_order": 2}, ...}` — `fit()`
+  now completes. `uv run pytest tests/test_dpg_k.py` passes all 7 tests (was 2 failures,
+  including `test_execution_trace_graph_preserves_long_case_order`, whose own independent
+  `pairwise(seq, seq[1:])` misuse at `test_dpg_k.py:95` was fixed alongside `core.py`). See
   [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md).
 - `to_networkx` re-parses `graphviz_graph.body` *text* (splitting on `"->"` and regexing
   `label="([^"]*)"`). Any change to label escaping or attribute ordering in `generate_dot` can

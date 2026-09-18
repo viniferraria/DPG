@@ -78,13 +78,16 @@ value greater than 1).
 
 # Reproduction
 
-`context_order > 1` currently cannot be fit at HEAD `276a503` due to an unrelated regression — see
-[context-order-pairwise-crash](context-order-pairwise-crash.md) (`discover_dfg_context` calls
-`itertools.pairwise` with two arguments, which raises `TypeError` before any graph is built). To
-demonstrate the deprecation itself, this example was run in a temporary git worktree checked out at
-`f16a977` (the 0.3.0 release merge commit, before the `pairwise` regression) and removed afterward —
-the deprecation/getter behavior itself is otherwise unchanged through the parallel worker's owned
-files at HEAD:
+At HEAD `276a503`, `context_order > 1` could not be fit due to an unrelated regression — see
+[context-order-pairwise-crash](context-order-pairwise-crash.md) (`discover_dfg_context` called
+`itertools.pairwise` with two arguments, which raised `TypeError` before any graph was built). To
+demonstrate the deprecation itself at the time, this example was run in a temporary git worktree
+checked out at `f16a977` (the 0.3.0 release merge commit, before the `pairwise` regression) and
+removed afterward — the deprecation/getter behavior itself was otherwise unchanged through the
+parallel worker's owned files at HEAD. **That regression is now fixed on `feature/first_runs`** (see
+[context-order-pairwise-crash](context-order-pairwise-crash.md)), so this example can now also be run
+directly against `feature/first_runs` without a worktree; the output shown below is unaffected either
+way, since the deprecation logic itself never changed:
 
 ```python
 import warnings

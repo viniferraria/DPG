@@ -73,3 +73,28 @@
   and the console-script entry-point mismatch.
 * **Update**: CLAUDE.md's Known breakage list gained the `explain_local`/`node_lookup` crash (see
   [explain-local-node-lookup-crash](/side-effects/explain-local-node-lookup-crash.md)).
+* **Update**: Three code fixes landed on `feature/first_runs` on `feature/first_runs` (uncommitted, on top
+  of HEAD `276a503`), closing out two of the crashes documented above:
+  `discover_dfg_context`'s `pairwise(nodes, nodes[1:])` is now `pairwise(nodes)` (`dpg/core.py:636`;
+  `tests/test_dpg_k.py:95` had the identical bug and is now `pairwise(labels)` — `uv run pytest
+  tests/test_dpg_k.py` passes all 7 tests), `_trace_tree_path`'s vestigial `node_lookup` parameter is
+  removed from its signature (`dpg/explainer.py`, the dead commented-out producer line at ~268 is also
+  gone), and `resolve_context_order`/`get_context_order`/`get_context_order_history` are now typed
+  `int`/`dict[int, int]` instead of `int | float`/`dict[int | float, int]` (`path_violations` and
+  `_node_windows` still take `k: float`, unchanged, since they accept `math.inf`). Confirmed both
+  fixes with a 3-tree `RandomForestClassifier` on iris: `context_order=2` now fits successfully, and
+  `explain_local` now returns a populated explanation instead of raising `TypeError`. Updated
+  [explain-local-node-lookup-crash](/side-effects/explain-local-node-lookup-crash.md) and
+  [context-order-pairwise-crash](/side-effects/context-order-pairwise-crash.md) in place to describe
+  the fix rather than the crash (kept, per project convention, as the one page per side effect — now
+  documenting a fixed regression instead of a live one), moved both out of
+  [side-effects/index.md](/side-effects/index.md)'s "Crashes at HEAD" section into a new "Fixed
+  regressions" section, removed the two corresponding bullets from CLAUDE.md's Known breakage, and
+  updated the stale crash descriptions and signatures in
+  [dpg.core](/modules/dpg-core.md), [dpg.explainer](/modules/dpg-explainer.md),
+  [dpg.context_order](/modules/dpg-context-order.md),
+  [graph construction modes](/conventions/graph-construction-modes.md),
+  [trace-consistent-lrc-deprecation](/side-effects/trace-consistent-lrc-deprecation.md) (the
+  worktree-based reproduction can now also be run directly, without a worktree), and
+  [exact-routing-label-shift](/side-effects/exact-routing-label-shift.md) (`_trace_tree_path`'s cited
+  line range shifted from `645-696` to `645-695` after the `node_lookup` parameter was removed).

@@ -90,8 +90,8 @@ predicate label for a threshold-adjacent value depending on which mode built the
 Both modes can produce an empty graph; `discover_dfg` raises
 `DPGGraphError.no_paths(perc_var, decimal_threshold)` when the log contains zero unique cases.
 
-**`context_order > 1` under this mode currently crashes** — `discover_dfg_context` passes two
-arguments to `itertools.pairwise`, which accepts only one. See
+**`context_order > 1` under this mode used to crash** — `discover_dfg_context` passed two arguments
+to `itertools.pairwise`, which accepts only one. This is fixed on `feature/first_runs`. See
 [/modules/dpg-core.md](/modules/dpg-core.md) and
 [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md).
 

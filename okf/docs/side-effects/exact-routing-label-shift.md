@@ -19,7 +19,7 @@ formatting the predicate label, never when choosing the branch:
 
 ```python
 # dpg/core.py:491-520 — _trace_tree_labels (execution_trace, and mirrored in
-# dpg/explainer.py:645-696 DPGExplainer._trace_tree_path for local explanations)
+# dpg/explainer.py:645-695 DPGExplainer._trace_tree_path for local explanations)
 decision_path = tree.decision_path(sample_array)
 ...
 went_left = int(path[position + 1]) == int(tree_.children_left[node_index])
@@ -125,7 +125,7 @@ patch around.
   `_trace_tree_labels_legacy` vs `_trace_tree_labels` by `graph_construction_mode`.
 - `dpg/core.py:453-489` — `_trace_tree_labels_legacy` (rounded-threshold routing, `aggregated_transitions`).
 - `dpg/core.py:491-520` — `_trace_tree_labels` (exact `decision_path` routing, `execution_trace`).
-- `dpg/explainer.py:645-696` — `DPGExplainer._trace_tree_path`, the local-explanation mirror of the
+- `dpg/explainer.py:645-695` — `DPGExplainer._trace_tree_path`, the local-explanation mirror of the
   exact-routing traversal (always used by `explain_local`, regardless of `graph_construction_mode` —
   see [explain-local-node-lookup-crash](explain-local-node-lookup-crash.md) for why it currently
   cannot run at all).
