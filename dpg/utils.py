@@ -89,8 +89,7 @@ def change_node_color(graph: Digraph, node_id: str, new_color: str) -> None:
     # Remove existing color attribute if present
     for i, line in enumerate(graph.body):
         if node_id in line and "fillcolor=" in line:
-            parts = line.split("fillcolor=")
-            graph.body[i] = parts[0] + parts[1].split("]")[0][-1] + "]"
+            graph.body[i] = re.sub(r'\bfillcolor=(".*?"|[^ \]]+)\s*', "", line)
 
     # Append a new line to the graph body to change the fill color of the specified node
     graph.body.append(f'{node_id} [fillcolor="{new_color}"]')
