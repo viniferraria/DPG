@@ -65,7 +65,7 @@ def log_timer(func: Callable[..., Any]) -> Callable[..., Any]:
         start_time = time.time()
         result = func(self, *args, **kwargs)
         end_time = time.time()
-        logger.info(
+        logger.debug(
             f"Execution time for {func_name}: {end_time - start_time:.4f} seconds"
         )
         return result
