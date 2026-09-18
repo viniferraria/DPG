@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,7 +7,7 @@ from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 
 from dpg.context_order import resolve_context_order
-from dpg.core import DPGError, DecisionPredicateGraph
+from dpg.core import DecisionPredicateGraph, DPGError
 
 
 def _forest():
@@ -90,7 +92,7 @@ def test_execution_trace_graph_preserves_long_case_order():
     )
 
     assert dpg.discover_dfg(log) == {
-        (source, target): 1 for source, target in zip(labels, labels[1:])
+        (source, target): 1 for source, target in pairwise(labels)
     }
 
 

@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import argparse
 import os
-from typing import Iterable, Sequence, Tuple
+from collections.abc import Sequence
 
 import pandas as pd
-
 
 REQUIRED_SUMMARY_COLUMNS = {
     "dataset",
@@ -54,7 +53,7 @@ COHORT_METRICS = [
 ]
 
 
-def load_results(results_dir: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_results(results_dir: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     summary_path = os.path.join(results_dir, "summary.csv")
     per_sample_path = os.path.join(results_dir, "per_sample.csv")
 
