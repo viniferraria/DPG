@@ -317,18 +317,3 @@ Verified against the source. Mention these rather than tripping over them.
   regressor therefore emit `Class …` labels the graph cannot match.
 - `evaluate_faithfulness` reports `mean_path_purity`, `mean_competitor_exposure`, and
   `mean_explanation_confidence` as permanently `0.0` — `_compute_sample_confidence` never writes those keys.
-- `DPGExplainer.explain_local` raises `TypeError: DPGExplainer._trace_tree_path() missing 1 required
-  positional argument: 'node_lookup'` for every model. The `node_lookup` construction that
-  `_trace_tree_path` needs is commented out at `dpg/explainer.py:268`, but `_trace_tree_path` still
-  declares `node_lookup` as a required positional parameter (`dpg/explainer.py:651`) and the call site
-  (`dpg/explainer.py:274-281`) doesn't pass it. Reproduced with a 3-tree `RandomForestClassifier` on
-  iris. `evaluate_faithfulness` catches this per sample (`n_local_failures`), but
-  `plot_local_on_dpg(sample=...)` propagates it uncaught.
-- `DecisionPredicateGraph.discover_dfg_context` crashes whenever `graph_construction.context_order`
-  resolves above `1` under `mode="execution_trace"` (an explicit order `> 1`, or `"auto"` resolving
-  that way): `dpg/core.py:636` calls `pairwise(nodes, nodes[1:])`, but `itertools.pairwise` (imported
-  `dpg/core.py:8`) takes exactly one argument, raising `TypeError: pairwise expected 1 argument, got
-  2`. Introduced by `6df6e20` ("chore: ruff fixes"), which replaced a working `zip(nodes,
-  nodes[1:])`; the fix is `pairwise(nodes)`. Reproduced directly; `tests/test_dpg_k.py`'s own
-  `context_order` cases don't hit this exact path (they either assert the mode-validation error or
-  resolve to `k=1` on their fixture data).

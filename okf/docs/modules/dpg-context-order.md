@@ -26,7 +26,7 @@ the contextual-node representation both functions share. No `dpg` or `metrics` i
 |---|---|---|
 | `_node_windows` | `(sequence: Sequence[str], k: float) -> list[object]` | One contextual node per trace position: `("sink", label)` for a `"Class "`/`"Pred "` terminal, `("ctx", tuple)` otherwise — the tuple is the last `k` labels ending at that position (or the full prefix when `k` is `math.inf`). |
 | `path_violations` | `(traces: Iterable[Sequence[str]], k: float) -> int` | A diagnostic count of contextual nodes whose observed continuations disagree — see Behavior. `0` is the acceptance condition. |
-| `resolve_context_order` | `(traces: Iterable[Sequence[str]], max_k: int \| None = None) -> tuple[int \| float, dict[int \| float, int]]` | `(resolved_k, history)` — the smallest `k` in `[1, max_k]` with zero violations, plus every tested `k`'s violation count. |
+| `resolve_context_order` | `(traces: Iterable[Sequence[str]], max_k: int \| None = None) -> tuple[int, dict[int, int]]` | `(resolved_k, history)` — the smallest `k` in `[1, max_k]` with zero violations, plus every tested `k`'s violation count. |
 
 `traces` in both functions is an iterable of label sequences — in practice the per-`(sample, tree)`
 predicate/leaf sequences produced by `DecisionPredicateGraph._trace_sequences`
@@ -85,10 +85,11 @@ magnitude for nonzero values.
   guaranteed-success default always applies there — the `ValueError` path only fires if a caller
   invokes `resolve_context_order` directly with an explicit `max_k` too small for the data.
 - **Calling `DecisionPredicateGraph.fit()` with `context_order > 1` (explicit or `"auto"`-resolved)
-  crashes before this module's result is ever used**, in the DFG-building step downstream —
-  `discover_dfg_context` passes two arguments to `itertools.pairwise`, which only accepts one. See
-  [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md). The
-  example below therefore exercises `context_order.py` directly; it does not go through `fit()`.
+  used to crash** in the DFG-building step downstream — `discover_dfg_context` passed two arguments
+  to `itertools.pairwise`, which only accepts one. This is now fixed on `feature/first_runs` (see
+  [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md)), so
+  `fit()` with `context_order > 1` works end to end. The example below still exercises
+  `context_order.py` directly, since it is demonstrating the resolver in isolation, not `fit()`.
 - `_node_windows` treats `math.isinf(k)` as "use the full prefix" — `resolve_context_order` never
   passes `math.inf` itself (its loop is over `int`s), but `path_violations` is a public function and
   accepts it if called directly.

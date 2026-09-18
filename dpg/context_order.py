@@ -83,7 +83,7 @@ def path_violations(traces: Iterable[Sequence[str]], k: float) -> int:
 
 def resolve_context_order(
     traces: Iterable[Sequence[str]], max_k: int | None = None
-) -> tuple[int | float, dict[int | float, int]]:
+) -> tuple[int, dict[int, int]]:
     """Return the smallest order with no global trace recombination.
 
     ``max_k`` defaults to the longest observed trace.  At that order every
@@ -103,7 +103,7 @@ def resolve_context_order(
     if max_k is None:
         max_k = max(len(trace) for trace in materialized)
 
-    history: dict[int | float, int] = {}
+    history: dict[int, int] = {}
     for k in range(1, max_k + 1):
         violations = path_violations(materialized, k)
         history[k] = violations
