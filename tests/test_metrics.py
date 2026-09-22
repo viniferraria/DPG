@@ -168,7 +168,10 @@ class TestCentralityNetworkXParity:
     def test_harmonic_matches_networkx(self, small_digraph):
         import networkx as nx
 
-        from metrics.nodes import _nx_to_igraph, calc_harmonic_centrality
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_harmonic_centrality,
+        )
 
         ig_graph, node_ids = _nx_to_igraph(small_digraph)
         got = calc_harmonic_centrality(ig_graph, node_ids)
@@ -183,7 +186,10 @@ class TestCentralityNetworkXParity:
     def test_closeness_matches_networkx(self, small_digraph):
         import networkx as nx
 
-        from metrics.nodes import _nx_to_igraph, calc_closeness_centrality
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_closeness_centrality,
+        )
 
         ig_graph, node_ids = _nx_to_igraph(small_digraph)
         got = calc_closeness_centrality(ig_graph, node_ids)
@@ -202,7 +208,10 @@ class TestCentralityNetworkXParity:
         The old implementation summed inf into the denominator, forcing
         closeness to 0 for almost every node in a DAG-like graph.
         """
-        from metrics.nodes import _nx_to_igraph, calc_closeness_centrality
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_closeness_centrality,
+        )
 
         ig_graph, node_ids = _nx_to_igraph(small_digraph)
         got = calc_closeness_centrality(ig_graph, node_ids)

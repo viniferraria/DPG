@@ -22,6 +22,7 @@ from tqdm import tqdm
 
 from dpg.context_order import resolve_context_order
 from dpg.sklearn_normalizer import SklearnEnsembleNormalizer
+from metrics.backends import BACKEND_NAMES
 
 from .exceptions import (
     DPGConfigurationError,
@@ -53,6 +54,9 @@ DEFAULT_DPG_CONFIG: dict[str, Any] = {
             # Keep the 0.2.x graph as the default. DPG-k is opt-in through
             # context_order="auto" or an explicit order > 1.
             "context_order": 1,
+        },
+        "metrics": {
+            "backend": "igraph",
         },
         "visualization": {},
     }
@@ -161,6 +165,11 @@ class DecisionPredicateGraph:
             "context_order",
             DEFAULT_DPG_CONFIG["dpg"]["graph_construction"]["context_order"],
         )
+        metrics_config = dpg_config_section.get("metrics", {})
+        self.metrics_backend = metrics_config.get(
+            "backend",
+            DEFAULT_DPG_CONFIG["dpg"]["metrics"]["backend"],
+        )
 
         # Validate required config values
         if self.perc_var is None:
@@ -213,6 +222,14 @@ class DecisionPredicateGraph:
             raise DPGError(
                 "context_order='auto' or context_order > 1 requires "
                 "mode='execution_trace'"
+            )
+
+        # Only the name is validated here: importing the backend would fail for
+        # an optional library (graph_tool) that is not the default.
+        if self.metrics_backend not in BACKEND_NAMES:
+            raise DPGError(
+                f"Unknown metrics backend '{self.metrics_backend}'. "
+                f"Supported backends: {', '.join(BACKEND_NAMES)}"
             )
 
         print(
@@ -645,6 +662,10 @@ class DecisionPredicateGraph:
     def get_context_order(self) -> int:
         """Return the effective context order from the last ``fit`` call."""
         return self._resolved_context_order
+
+    def get_metrics_backend(self) -> str:
+        """Return the configured centrality backend name."""
+        return str(self.metrics_backend)
 
     def get_context_order_history(self) -> dict[int, int]:
         """Return local recombination violations measured for each tested k."""

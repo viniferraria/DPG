@@ -6,6 +6,8 @@ dpg:
   graph_construction:
     mode: "aggregated_transitions"
     context_order: 1
+  metrics:
+    backend: "igraph"
   visualization:
     graph_attrs:
       bgcolor: "white"

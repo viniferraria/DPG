@@ -1,6 +1,8 @@
 # Modules
 
 Source-level concepts for the two packages. `metrics/` is imported by `dpg/`, never the reverse.
+`metrics/` now has four modules: `nodes`, `edges`, `graph`, and `backends` (the pluggable
+centrality implementations `nodes` delegates to).
 
 ## dpg — core library
 
@@ -15,7 +17,8 @@ Source-level concepts for the two packages. `metrics/` is imported by `dpg/`, ne
 
 ## metrics — graph metrics
 
-* [metrics.nodes — NodeMetrics](metrics-nodes.md) - Computes per-node degree and centrality metrics for a DPG by converting the NetworkX DiGraph to igraph and returning a labelled pandas DataFrame.
+* [metrics.nodes — NodeMetrics](metrics-nodes.md) - Computes per-node degree and centrality metrics for a DPG by delegating to a pluggable centrality backend and returning a labelled pandas DataFrame.
+* [metrics.backends — pluggable centrality backends](metrics-backends.md) - Registry and three interchangeable graph-library implementations (networkx, igraph, graph_tool) for the four DPG node centralities.
 * [metrics.edges — EdgeMetrics](metrics-edges.md) - Flattens a DPG's directed edges into a pandas DataFrame carrying each edge's weight plus the resolved source and target predicate labels.
 * [metrics.graph — GraphMetrics](metrics-graph.md) - Graph-level DPG analysis — LPA communities, absorbing-Markov-chain clustering toward class nodes, and per-class feature boundary extraction from predicate labels.
 

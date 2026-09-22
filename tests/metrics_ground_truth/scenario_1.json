@@ -1,0 +1,187 @@
+{
+  "n_edges": 25,
+  "n_nodes": 20,
+  "nodes": {
+    "Class 0": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.0,
+      "Degree": 5,
+      "Harmonic centrality": 0,
+      "In degree nodes": 5,
+      "Local reaching centrality": 0.0,
+      "Out degree nodes": 0
+    },
+    "Class 1": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.0,
+      "Degree": 6,
+      "Harmonic centrality": 0,
+      "In degree nodes": 6,
+      "Local reaching centrality": 0.0,
+      "Out degree nodes": 0
+    },
+    "F1 <= -0.001": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.0033169741072939583,
+      "Degree": 1,
+      "Harmonic centrality": 0.06302250803858521,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.08292435268234896,
+      "Out degree nodes": 1
+    },
+    "F1 <= -0.002": {
+      "Betweenness centrality": 0.0029239766081871343,
+      "Closeness centrality": 0.001875105770858013,
+      "Degree": 2,
+      "Harmonic centrality": 0.03562700964630225,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.04687764427145033,
+      "Out degree nodes": 1
+    },
+    "F1 <= 0.001": {
+      "Betweenness centrality": 0.005847953216374269,
+      "Closeness centrality": 0.010059231680487392,
+      "Degree": 3,
+      "Harmonic centrality": 0.19112540192926045,
+      "In degree nodes": 2,
+      "Local reaching centrality": 0.2514807920121848,
+      "Out degree nodes": 1
+    },
+    "F1 > -0.001": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.0034523608055508546,
+      "Degree": 1,
+      "Harmonic centrality": 0.06559485530546624,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.08630902013877137,
+      "Out degree nodes": 1
+    },
+    "F1 > -0.002": {
+      "Betweenness centrality": 0.0029239766081871343,
+      "Closeness centrality": 0.002105263157894737,
+      "Degree": 2,
+      "Harmonic centrality": 0.04,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.05263157894736842,
+      "Out degree nodes": 1
+    },
+    "F1 > 0.001": {
+      "Betweenness centrality": 0.005847953216374269,
+      "Closeness centrality": 0.010445083770519547,
+      "Degree": 3,
+      "Harmonic centrality": 0.1984565916398714,
+      "In degree nodes": 2,
+      "Local reaching centrality": 0.2611270942629887,
+      "Out degree nodes": 1
+    },
+    "F2 <= -0.755": {
+      "Betweenness centrality": 0.017543859649122806,
+      "Closeness centrality": 0.00021502593252565878,
+      "Degree": 3,
+      "Harmonic centrality": 0.0075884244372990345,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.013030969707226265,
+      "Out degree nodes": 2
+    },
+    "F2 <= -0.814": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.00024369605686241322,
+      "Degree": 2,
+      "Harmonic centrality": 0.004630225080385852,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.006092401421560332,
+      "Out degree nodes": 1
+    },
+    "F2 <= -1.163": {
+      "Betweenness centrality": 0.005847953216374269,
+      "Closeness centrality": 0.0004666691123092471,
+      "Degree": 3,
+      "Harmonic centrality": 0.009960681444079389,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.26620409544762225,
+      "Out degree nodes": 2
+    },
+    "F2 <= -2.462": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 6.769334912844813e-05,
+      "Degree": 1,
+      "Harmonic centrality": 0.0012861736334405145,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.0016923337282112032,
+      "Out degree nodes": 1
+    },
+    "F2 <= 2.191": {
+      "Betweenness centrality": 0.008771929824561403,
+      "Closeness centrality": 0.002206803181587409,
+      "Degree": 2,
+      "Harmonic centrality": 0.04192926045016077,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.055170079539685224,
+      "Out degree nodes": 1
+    },
+    "F2 > -0.755": {
+      "Betweenness centrality": 0.017543859649122806,
+      "Closeness centrality": 0.00021270392111685872,
+      "Degree": 3,
+      "Harmonic centrality": 0.06405144694533763,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.11237095955322389,
+      "Out degree nodes": 2
+    },
+    "F2 > -0.814": {
+      "Betweenness centrality": 0.008771929824561403,
+      "Closeness centrality": 3.384667456422407e-05,
+      "Degree": 2,
+      "Harmonic centrality": 0.0006430868167202572,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.0008461668641056016,
+      "Out degree nodes": 1
+    },
+    "F2 > -1.163": {
+      "Betweenness centrality": 0.023391812865497075,
+      "Closeness centrality": 0.0007616536255325404,
+      "Degree": 3,
+      "Harmonic centrality": 0.08859664222793512,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.21969312348395106,
+      "Out degree nodes": 2
+    },
+    "F2 > -2.462": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.011510919310097347,
+      "Degree": 2,
+      "Harmonic centrality": 0.2232945448906105,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.5076155017769505,
+      "Out degree nodes": 2
+    },
+    "F2 > 2.191": {
+      "Betweenness centrality": 0.0029239766081871343,
+      "Closeness centrality": 4.061600947706888e-05,
+      "Degree": 2,
+      "Harmonic centrality": 0.0007717041800643087,
+      "In degree nodes": 1,
+      "Local reaching centrality": 0.001015400236926722,
+      "Out degree nodes": 1
+    },
+    "F3_A <= 0.5": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.005289414011218523,
+      "Degree": 2,
+      "Harmonic centrality": 0.11344051446945339,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.1990184464376375,
+      "Out degree nodes": 2
+    },
+    "F3_A > 0.5": {
+      "Betweenness centrality": 0.0,
+      "Closeness centrality": 0.001241371167076051,
+      "Degree": 2,
+      "Harmonic centrality": 0.11436369982843511,
+      "In degree nodes": 0,
+      "Local reaching centrality": 0.39957409601173355,
+      "Out degree nodes": 2
+    }
+  },
+  "scenario": "scenario_1"
+}

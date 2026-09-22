@@ -14,8 +14,9 @@ status: stable
 betweenness centrality, local reaching centrality, closeness centrality, and harmonic
 centrality. It exports the class `NodeMetrics` (re-exported from `metrics/__init__.py`
 alongside `EdgeMetrics` and `GraphMetrics`), plus module-level helpers `get_logger`,
-`log_timer`, `_nx_to_igraph`, `calc_node_metrics`, `calc_betweenness_centrality`,
-`calc_local_reaching_centrality`, `calc_closeness_centrality`, `calc_harmonic_centrality`.
+`log_timer`, `calc_node_metrics`. The four centrality calculators and the NetworkX-to-igraph
+conversion no longer live here — they moved to `metrics/backends/`, selectable by name; see
+[/modules/metrics-backends.md](/modules/metrics-backends.md).
 
 ## Stateless contract
 
@@ -23,36 +24,46 @@ alongside `EdgeMetrics` and `GraphMetrics`), plus module-level helpers `get_logg
 `@staticmethod`. The real signature is:
 
 ```python
-NodeMetrics.extract_node_metrics(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any
+NodeMetrics.extract_node_metrics(
+    dpg_model: nx.DiGraph,
+    nodes_list: list[list[str]],
+    trace_lrc_by_label: dict[str, float] | None = None,
+    backend: str | GraphBackend = "igraph",
+) -> Any
 ```
 
-Note: it takes **only** `(dpg_model, nodes_list)` — there is no `target_names` parameter here.
-`target_names` is only part of the `GraphMetrics` interface
+Note: it takes no `target_names` parameter — that's only part of the `GraphMetrics` interface
 ([/modules/metrics-graph.md](/modules/metrics-graph.md)). `nodes_list` is the
 `[node_id, label]` pair list returned by `DecisionPredicateGraph.to_networkx`
-([/modules/dpg-core.md](/modules/dpg-core.md)).
+([/modules/dpg-core.md](/modules/dpg-core.md)). `trace_lrc_by_label`, when given, overrides the
+backend-computed local reaching centrality for any label present in the mapping (used for
+`context_order > 1` trace-consistent LRC). `backend` selects which `GraphBackend` computes the
+four centralities — a name from `metrics.backends.BACKEND_NAMES` (default `"igraph"`) or an
+already-instantiated backend object; see [/modules/metrics-backends.md](/modules/metrics-backends.md)
+for the registry and the metric contract every backend implements.
 
 ## Dependency direction
 
 `metrics/` is imported by `dpg/` — never the reverse for module-level imports. `dpg/explainer.py`
-and `dpg/sklearn_dpg.py` both do `from metrics.nodes import NodeMetrics`. The one exception is
-deliberate and local: the three weight-validation guards inside this module perform a
-*function-body* import `from dpg.exceptions import DPGMetricError` so the top-level import graph
-stays one-directional.
+and `dpg/sklearn_dpg.py` both do `from metrics.nodes import NodeMetrics`. The weight-validation
+guards that perform a *function-body* import `from dpg.exceptions import DPGMetricError` now live
+in the backend modules (`metrics/backends/`), not here — see
+[/modules/metrics-backends.md](/modules/metrics-backends.md) — but the same one-directional rule
+applies to them.
 
 # API
 
 | Name | Signature | Returns | What it computes |
 |---|---|---|---|
-| `NodeMetrics.extract_node_metrics` | `(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any` (`@staticmethod`, `@log_timer`) | `pd.DataFrame` | Runs all calculators below and joins them with node labels |
+| `NodeMetrics.extract_node_metrics` | `(dpg_model: nx.DiGraph, nodes_list: list[list[str]], trace_lrc_by_label: dict[str, float] \| None = None, backend: str \| GraphBackend = "igraph") -> Any` (`@staticmethod`, `@log_timer`) | `pd.DataFrame` | Resolves `backend` (via `metrics.backends.get_backend` when given a string), calls its `node_centralities`, applies any `trace_lrc_by_label` override, and joins with degree and node labels |
 | `get_logger` | `(name: str, log_file: str \| None = None) -> logging.Logger` | Logger at `INFO`, console handler always, file handler when `log_file` given | Returns early if the logger already `hasHandlers()` so handlers are never duplicated |
 | `log_timer` | `(func: Callable[..., Any]) -> Callable[..., Any]` | Wrapped function | Logs `Execution time for <name>: <secs>.4f seconds`; the wrapper signature is `wrapper(self, *args, **kwargs)` |
-| `_nx_to_igraph` | `(nx_graph: nx.DiGraph) -> tuple[ig.Graph, list[str]]` | `(igraph.Graph, node_ids)` where `node_ids[i]` is the NetworkX id of igraph vertex `i` | Copies `weight` onto `es["weight"]` (default `1.0`) and derives `es["distance"] = total_weight / w`, or `inf` when `w <= 0` |
-| `calc_node_metrics` | `(dpg_model: nx.DiGraph) -> tuple[dict[str,int], dict[str,int], dict[str,int]]` | `(in_nodes, out_nodes, degree)` | `degree[node] = in_degree + out_degree`, computed on the NetworkX graph, not igraph |
-| `calc_betweenness_centrality` | `(ig_graph: ig.Graph) -> dict[int, float]` | Dict keyed by **igraph vertex index**, not node id | `ig_graph.betweenness(directed=True, normalized=False, weights="weight")` divided by `(n-1)*(n-2)` (or `1.0` when `n <= 2`) to match the NetworkX normalization |
-| `calc_local_reaching_centrality` | `(ig_graph: ig.Graph, node_ids: list[str]) -> dict[str, float]` | Dict keyed by node id | Per source, shortest paths on `distance`; for each reachable path sums the original edge weights and divides by path length; the summed averages are divided by `total_weight / num_edges` then by `(n-1)` |
-| `calc_closeness_centrality` | `(ig_graph: ig.Graph, node_ids: list[str]) -> dict[str, float]` | Dict keyed by node id | Wasserman–Faust over *reachable* nodes only: `((reachable-1)/totsp) * ((reachable-1)/(n-1))`, else `0.0` |
-| `calc_harmonic_centrality` | `(ig_graph: ig.Graph, node_ids: list[str]) -> dict[str, float]` | Dict keyed by node id | `sum(1/d)` over outgoing `distance` lengths that are finite and `> 0`; **not** normalized by `n-1` |
+| `calc_node_metrics` | `(dpg_model: nx.DiGraph) -> tuple[dict[str,int], dict[str,int], dict[str,int]]` | `(in_nodes, out_nodes, degree)` | `degree[node] = in_degree + out_degree`, computed on the NetworkX graph directly — this stays in `nodes.py`, not in any backend |
+
+The four centrality calculators (`calc_betweenness_centrality`, `calc_local_reaching_centrality`,
+`calc_closeness_centrality`, `calc_harmonic_centrality`) and `_nx_to_igraph` moved to
+`metrics/backends/igraph_backend.py`; see [/modules/metrics-backends.md](/modules/metrics-backends.md)
+for their signatures and the metric contract every backend (including igraph's) must satisfy.
 
 ## Output DataFrame
 
@@ -64,41 +75,48 @@ join="inner").reset_index()`.
 
 # Behavior
 
-## Why igraph
+## Why igraph is still the default backend
 
-`_nx_to_igraph` exists because the two expensive metrics — betweenness centrality and local
-reaching centrality — are O(V·E)-ish and run far faster in igraph's C core than in pure-Python
-NetworkX. **This conversion plus the centrality calls are the hot path of the whole metrics
-layer**; every calculator except `calc_node_metrics` operates on the igraph copy. Each
-calculator is wrapped in `@log_timer`, so an `INFO`-level run prints a per-stage timing
-breakdown that makes the hot path visible without a profiler.
+Betweenness centrality and local reaching centrality are O(V·E)-ish and run far faster in
+igraph's C core than in pure-Python NetworkX, which is why `"igraph"` stays the default
+`backend` for `extract_node_metrics` and the default `dpg.metrics.backend` config value. **The
+NetworkX-to-igraph conversion plus the centrality calls are the hot path of the whole metrics
+layer** — see [/modules/metrics-backends.md](/modules/metrics-backends.md) for where that
+conversion (`_nx_to_igraph`) and the calculators now live, and for the `networkx` and
+`graph_tool` alternatives selectable via the same `backend` parameter. Each calculator stays
+wrapped in `@log_timer`, so an `INFO`-level run prints a per-stage timing breakdown that makes
+the hot path visible without a profiler.
 
 ## Weight-to-distance inversion
 
-igraph shortest paths minimize a *cost*, but DPG edge weights are directly-follows
-*frequencies* — a heavier edge should be closer, not farther. `_nx_to_igraph` therefore stores
-`distance = total_weight / weight` on every edge and every path computation passes
-`weights="distance"`, while weight *averages* inside local reaching centrality are taken from
-the original `weight` attribute. `tests/test_metrics.py::TestCentralityNetworkXParity` pins
-closeness and harmonic to NetworkX computed on this same inverted metric, including the
-reversal (`nx.closeness_centrality` measures incoming distance; this module measures outgoing).
+Shortest-path libraries minimize a *cost*, but DPG edge weights are directly-follows
+*frequencies* — a heavier edge should be closer, not farther. Every backend therefore derives
+`distance = total_weight / weight` per edge before any shortest-path call, while weight
+*averages* inside local reaching centrality are taken from the original `weight` attribute. Full
+details, including the `tests/test_metrics.py::TestCentralityNetworkXParity` reversal caveat, are
+in [/modules/metrics-backends.md](/modules/metrics-backends.md).
 
 ## Guards
 
-`calc_local_reaching_centrality`, `calc_closeness_centrality`, and `calc_harmonic_centrality`
-each raise a `DPGMetricError` (`non_positive_lrc_weight`, `non_positive_closeness_weight`,
-`non_positive_harmonic_weight`) when `sum(es["weight"]) <= 0`. All three lazily import
-`dpg.exceptions` inside the function body. igraph's `Couldn't reach some` `RuntimeWarning` is
-suppressed per-call via `warnings.catch_warnings()`.
+The three weight-validation guards (`non_positive_lrc_weight`, `non_positive_closeness_weight`,
+`non_positive_harmonic_weight`, all `DPGMetricError` raised via a function-body
+`from dpg.exceptions import DPGMetricError`) now live inside the backend implementations in
+`metrics/backends/`, not in this module — see
+[/modules/metrics-backends.md](/modules/metrics-backends.md).
 
 # Gotchas
 
-- **`calc_betweenness_centrality` returns integer keys.** It is the only calculator not keyed by
-  node id; `extract_node_metrics` gets away with `list(...values())` because dict insertion order
-  matches `list(dpg_model.nodes())`. Consuming it directly requires mapping through `node_ids`.
-- **`extract_node_metrics` assumes iteration-order alignment.** `data_node` is assembled from
-  `list(dpg_model.nodes())` and four `list(dict.values())` calls; correctness depends on every
-  calculator iterating the graph in the same order that `_nx_to_igraph` captured.
+- **igraph's raw `calc_betweenness_centrality` returns integer keys**, not node ids — it is the
+  one calculator in `metrics/backends/igraph_backend.py` not keyed by node id.
+  `IGraphBackend.node_centralities` maps it back through `node_ids` before it ever reaches
+  `NodeMetrics`, so every `NodeCentralities` dict `extract_node_metrics` sees is keyed by node id
+  regardless of backend — see [/modules/metrics-backends.md](/modules/metrics-backends.md).
+- **`extract_node_metrics` indexes the four centrality dicts by node id** (`[centrality[n] for n
+  in nodes]`), so backend iteration order no longer matters for them. Degree, in-degree, and
+  out-degree still come from `list(dict.values())` on `calc_node_metrics`'s output, which does
+  depend on `calc_node_metrics` iterating `dpg_model.nodes()` in the same order as the `nodes`
+  list built alongside it — both iterate the same NetworkX graph, so this holds today but is
+  still an implicit ordering assumption.
 - **The join is `inner`.** A node present in the graph but missing from `nodes_list` is silently
   dropped from the result, and vice versa — a row-count shortfall is a labelling problem, not a
   metrics bug.

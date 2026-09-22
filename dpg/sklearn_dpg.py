@@ -218,7 +218,7 @@ def test_dpg(datasets: str,
     else:
         clusters = node_prob = confidence = None
 
-    df = NodeMetrics.extract_node_metrics(dpg_model, nodes_list)
+    df = NodeMetrics.extract_node_metrics(dpg_model, nodes_list, backend=dpg.metrics_backend)
     df_edges = EdgeMetrics.extract_edge_metrics(dpg_model, nodes_list)
     df_dpg = GraphMetrics.extract_graph_metrics_lpa(dpg_model, nodes_list,target_names=np.unique(y_train).astype(str).tolist())
     # df_dpg = {}

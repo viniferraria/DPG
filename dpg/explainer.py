@@ -774,7 +774,10 @@ class DPGExplainer:
             elif self._builder.get_context_order() > 1:
                 trace_lrc_by_label = self._builder.get_predicate_lrc(self._graph)
             self._node_metrics = NodeMetrics.extract_node_metrics(
-                self._graph, self._nodes, trace_lrc_by_label=trace_lrc_by_label
+                self._graph,
+                self._nodes,
+                trace_lrc_by_label=trace_lrc_by_label,
+                backend=self._builder.metrics_backend,
             )
         return self._node_metrics
 

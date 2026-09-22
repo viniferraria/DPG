@@ -98,3 +98,35 @@
   worktree-based reproduction can now also be run directly, without a worktree), and
   [exact-routing-label-shift](/side-effects/exact-routing-label-shift.md) (`_trace_tree_path`'s cited
   line range shifted from `645-696` to `645-695` after the `node_lookup` parameter was removed).
+* **Creation**: [metrics.backends](/modules/metrics-backends.md) — node-centrality computation
+  (betweenness, local reaching, closeness, harmonic) made pluggable by graph library. The four
+  `calc_*_centrality` helpers and `_nx_to_igraph` moved out of `metrics/nodes.py` into
+  `metrics/backends/igraph_backend.py` unchanged; two new implementations,
+  `metrics/backends/networkx_backend.py` (the reference definitions every backend is checked
+  against) and `metrics/backends/graph_tool_backend.py` (with a Wasserman–Faust `r/(n-1)`
+  correction on top of graph_tool's own closeness, and a `pred_map`-walk reconstruction of local
+  reaching centrality's shortest paths), sit alongside it behind a `GraphBackend` ABC / lazy
+  `get_backend(name)` registry in `metrics/backends/__init__.py` and `base.py`.
+  `NodeMetrics.extract_node_metrics` gained a `backend: str | GraphBackend = "igraph"` parameter
+  (`dpg/explainer.py`'s `_get_node_metrics` and `dpg/sklearn_dpg.py`'s `test_dpg` now pass
+  `backend=<builder>.metrics_backend` instead of relying on the igraph default).
+  `DEFAULT_DPG_CONFIG["dpg"]["metrics"] = {"backend": "igraph"}` and a matching `config.yaml`
+  section were added; `DecisionPredicateGraph.__init__` resolves `self.metrics_backend`
+  per-key (same style as `perc_var`), validates it against `metrics.backends.BACKEND_NAMES` at
+  construction (`DPGError` on an unknown name) without importing the backend library, and exposes
+  it via `get_metrics_backend()`. graph_tool is conda-forge only, so a standalone `pixi.toml`
+  (`pixi run pytest` from the repo root) was added for the graph_tool test path;
+  `tests/test_metrics_backends.py` skips it under `uv run pytest` via
+  `pytest.importorskip("graph_tool")`. A new ground-truth fixture mechanism,
+  `tests/metrics_ground_truth/` (`scenarios.py`'s shared recipe, `generate.py` writing
+  `<scenario>.json` keyed by node label from four RandomForest-on-CSV scenarios, regenerated with
+  `uv run python -m tests.metrics_ground_truth.generate`), pins all three backends to
+  networkx-derived values within `abs=1e-3`, independent of any backend implementation.
+  `tests/test_metrics.py`'s igraph-specific parity tests were repointed at
+  `metrics.backends.igraph_backend` after the move. Updated
+  [metrics.nodes](/modules/metrics-nodes.md) (stale helper table, "Why igraph" section, and an
+  iteration-order gotcha that no longer applies now that the four centrality dicts are indexed by
+  node id rather than relied on for dict order) and
+  [config resolution](/conventions/config-resolution.md) (`metrics.backend` resolution and the
+  no-disagreement row) to match. Updated `CLAUDE.md`'s `metrics/` section, Config table, and
+  Development setup.

@@ -1,0 +1,28 @@
+[workspace]
+name = "dpg_v-graph-tool"
+description = "Standalone pixi env for running graph-tool-backed tests alongside dpg_v (uv stays the primary tool)."
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.12.*"
+graph-tool = "*"
+python-igraph = "*"
+networkx = "*"
+numpy = "*"
+pandas = "*"
+scikit-learn = "*"
+scipy = "*"
+matplotlib = "*"
+graphviz = "*"
+python-graphviz = "*"
+joblib = "*"
+tqdm = "*"
+pyyaml = "*"
+omegaconf = "*"
+pytest = "*"
+pillow = "*"
+
+[tasks]
+test = "pytest"
+check-imports = "python -c 'import graph_tool, igraph, networkx, sklearn, pandas, omegaconf, dpg, metrics; print(graph_tool.__version__, igraph.__version__, networkx.__version__)'"

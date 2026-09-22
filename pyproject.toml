@@ -109,6 +109,7 @@ module = [
     "omegaconf.*",
     "PIL.*",
     "igraph.*",
+    "graph_tool.*",
 ]
 ignore_missing_imports = true
 

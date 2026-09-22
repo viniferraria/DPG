@@ -10,9 +10,9 @@ status: stable
 
 # Responsibility
 
-`DecisionPredicateGraph.__init__` resolves five behavioral settings (`perc_var`,
-`decimal_threshold`, `n_jobs`, `graph_construction.mode`, and — new in 0.3.0 —
-`graph_construction.context_order`) plus a `visualization` block. The source it reads from depends
+`DecisionPredicateGraph.__init__` resolves six behavioral settings (`perc_var`,
+`decimal_threshold`, `n_jobs`, `graph_construction.mode`, `graph_construction.context_order`, and
+`metrics.backend`) plus a `visualization` block. The source it reads from depends
 on arguments *and* on the process working directory. See [/modules/dpg-core.md](/modules/dpg-core.md).
 
 # Behavior
@@ -46,6 +46,17 @@ with `config["dpg"]["graph_construction"].get("mode", "aggregated_transitions")`
 `DPGConfigurationError.missing_perc_var()`, `.missing_decimal_threshold()`, or `.missing_n_jobs()`.
 `visualization` falls back to `DEFAULT_DPG_CONFIG["dpg"]["visualization"]`, which is `{}`.
 
+`metrics.backend` resolves the same per-key way:
+`config["dpg"].get("metrics", {}).get("backend", DEFAULT_DPG_CONFIG["dpg"]["metrics"]["backend"])`,
+stored on `self.metrics_backend` and readable via `get_metrics_backend()`. The default in both
+`config.yaml` and `DEFAULT_DPG_CONFIG` is `"igraph"`, so — unlike `perc_var`/`decimal_threshold` —
+this key can't disagree between the two sources yet. The name is validated against
+`metrics.backends.BACKEND_NAMES` at construction time (`DPGError` on an unknown name), but the
+backend's library is **not** imported at construction — only at metric-computation time, inside
+`metrics.backends.get_backend` — so selecting `"graph_tool"` doesn't require the library to be
+installed until a metric is actually computed. See
+[/modules/metrics-backends.md](/modules/metrics-backends.md).
+
 `decimal_threshold` now also accepts the literal string `"auto"` (any other non-`int`, `bool`, or
 negative value raises a plain `DPGError`), and `context_order` accepts a positive `int` or `"auto"`
 (same validation shape) — see [/modules/dpg-core.md](/modules/dpg-core.md) for the resolution
@@ -64,10 +75,11 @@ Read from `config.yaml` at the repo root and `DEFAULT_DPG_CONFIG` in `dpg/core.p
 | `dpg.default.n_jobs` | `-1` | `-1` | No difference (both fan out across all cores) |
 | `dpg.graph_construction.mode` | `"aggregated_transitions"` | `"aggregated_transitions"` | No difference — **as of 0.3.0** `config.yaml` carries an explicit `graph_construction` section that matches the default; previously (0.1.x/0.2.x) it was absent |
 | `dpg.graph_construction.context_order` | `1` | `1` | No difference — new key, added to `config.yaml` alongside `mode` |
+| `dpg.metrics.backend` | `"igraph"` | `"igraph"` | No difference — new key, `config.yaml` carries an explicit `metrics` section matching the default |
 | `dpg.visualization` | `graph_attrs` (`bgcolor: white`, `rankdir: R`), `node_attrs` (`shape: box`, `fillcolor: #ffc3c3`), `class_node` block | `{}` | With defaults, `generate_dot` drops `bgcolor`/`rankdir`/`shape` and passes `fillcolor=None` |
 
 Only `perc_var` and `decimal_threshold` still disagree between the two sources — the
-`graph_construction` section can no longer produce a CWD-dependent surprise.
+`graph_construction` and `metrics` sections can no longer produce a CWD-dependent surprise.
 
 `n_jobs` also selects the tracing entry point in `_extract_trace_log`: `n_jobs == 1` dispatches
 `tracing_ensemble` (generator), anything else dispatches `tracing_ensemble_parallel`.

@@ -25,7 +25,7 @@ Cross-module contracts. Read these before changing anything in `dpg/core.py`.
 
 ## Modules
 
-* [modules/](modules/) - Source-level reference for the eight `dpg/` modules and the three `metrics/` modules.
+* [modules/](modules/) - Source-level reference for the eight `dpg/` modules and the four `metrics/` modules.
 
 ## Concepts
 
