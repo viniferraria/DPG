@@ -158,9 +158,10 @@ that flattened copy would break `GradientBoostingClassifier`'s own internal `sel
   `explain_local` call in `except Exception`, so every sample instead landed in `n_local_failures`
   with `record["error"]` set. See
   [/side-effects/explain-local-node-lookup-crash.md](/side-effects/explain-local-node-lookup-crash.md).
-- **Label formats are load-bearing.** `_label_to_node_id` is
-  `str(int(hashlib.sha1(label.encode()).hexdigest(), 16))`, so a traced label only maps onto a graph
-  node when the string is byte-identical to the one `generate_dot` emitted. See
+- **Label formats are load-bearing.** `_label_to_node_id` delegates to
+  `DecisionPredicateGraph._node_id_for_key` (`"n" + hashlib.sha1(key.encode()).hexdigest()[:12]`), so
+  a traced label only maps onto a graph node when the string is byte-identical to the one the graph
+  was built with. Note for accuracy: `_label_to_node_id` currently has no call sites in the repo. See
   [the label contract](/conventions/label-contract.md).
 - `explain_local` re-traces raw trees; it does not read paths out of the DFG. Aggressive `perc_var`
   filtering therefore makes `graph_path_valid` / `all_trees_valid` go `False` legitimately.

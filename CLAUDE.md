@@ -173,8 +173,9 @@ sklearn model + X
   → tracing_ensemble(_parallel)        replay each sample down every tree → [case_id, event] pairs
   → DataFrame["case:concept:name", "concept:name"]   the trace log; one case per (sample, tree)
   → filter_log / discover_dfg          count directly-follows pairs → {(src_label, dst_label): frequency}
-  → generate_dot                       graphviz.Digraph; node id = str(int(sha1(label), 16))
-  → to_networkx                        parses dot.body text back into nx.DiGraph + nodes_list
+  → build_graph                        builds nx.DiGraph + nodes_list directly from the DFG; node id = "n" + sha1(key)[:12]
+  → generate_dot                       renders that graph to graphviz.Digraph (display/export only)
+  → to_networkx                        returns the graph fit() already built; re-parses dot.body only as a fallback
   → NodeMetrics / EdgeMetrics / GraphMetrics
   → DPGExplanation / DPGLocalExplanation
   → visualizer.py                      render to graphviz / matplotlib
@@ -182,8 +183,8 @@ sklearn model + X
 
 Consequences:
 
-- **Node identity is the predicate text.** IDs are `sha1` of the label, so two predicates merge iff their
-  labels are byte-identical. `decimal_threshold` therefore controls how much the graph merges. At
+- **Node identity is the predicate text.** IDs are `"n" + sha1(label)[:12]`, so two predicates merge iff
+  their labels are byte-identical. `decimal_threshold` therefore controls how much the graph merges. At
   `context_order > 1` identity is the last `context_order` executed predicates, not just the label — see
   Graph construction modes below. `Class`/`Pred` sinks are never contextualized and stay one shared node
   per outcome regardless of `context_order`.
@@ -191,8 +192,9 @@ Consequences:
   `visualizer.py`: `"<feature> <= <threshold>"`, `"<feature> > <threshold>"`, `"Class <name>"`,
   `"Pred <value>"`. Parsing helpers depend on these exact shapes — see
   `okf/docs/conventions/label-contract.md`.
-- `to_networkx` round-trips through the DOT *source text*, so changes to label escaping or attribute
-  ordering in `generate_dot` can silently break parsing.
+- `build_graph` builds the graph directly from the DFG; `to_networkx` just returns that cached result.
+  DOT is a rendering output, not a construction step — its text is only re-parsed as a fallback for a
+  dot this instance didn't build itself.
 - Local explanations use normalized class names (`"0"`) in `class_votes` / `majority_vote`, but keep raw
   labels (`"Class 0"`) in `tree_paths[*].labels`.
 

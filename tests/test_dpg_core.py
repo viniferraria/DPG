@@ -1130,7 +1130,7 @@ class TestNodeLookupHelpers:
         # k=1 keys are just the label strings, hashed the same way the dot
         # generator hashes them.
         for label, node_id in zip(labels, ids):
-            assert node_id == str(int(hashlib.sha1(label.encode()).hexdigest(), 16))
+            assert node_id == "n" + hashlib.sha1(label.encode()).hexdigest()[:12]
 
     def test_get_node_ids_for_trace_k_gt_1_uses_context_keys(self, iris_rf):
         from sklearn.datasets import load_iris

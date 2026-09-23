@@ -1,4 +1,3 @@
-import hashlib
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -734,7 +733,7 @@ class DPGExplainer:
 
     @staticmethod
     def _label_to_node_id(label: str) -> str:
-        return str(int(hashlib.sha1(label.encode()).hexdigest(), 16))
+        return DecisionPredicateGraph._node_id_for_key(label)
 
     def _leaf_class_label(self, tree_index: int, tree_: Any, node_index: int) -> str:
         """Return the class label for a classifier leaf node."""

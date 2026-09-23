@@ -10,13 +10,16 @@ status: stable
 
 # Why this is a contract
 
-DPG has no separate node-identity model. A node's identity **is** its label text: the node id is the
-SHA-1 of the label string, rendered as a decimal integer.
+DPG has no separate node-identity model. A node's identity **is** its label text: the node id is a
+truncated SHA-1 of the label string, prefixed with `n` (a bare leading digit is not a valid DOT id).
 
 ```python
-# dpg/core.py — id derivation, mirrored verbatim in dpg/explainer.py:_label_to_node_id
-str(int(hashlib.sha1(activity.encode()).hexdigest(), 16))
+# dpg/core.py — DecisionPredicateGraph._node_id_for_key
+"n" + hashlib.sha1(stable_key.encode()).hexdigest()[:12]
 ```
+
+`dpg/explainer.py:_label_to_node_id` now delegates to `_node_id_for_key` directly instead of holding a
+second copy of the formula.
 
 Two predicates collapse into one node **iff their label strings are byte-identical**. Everything
 downstream — metrics, explanations, plots — re-derives meaning by parsing those strings. So the label
@@ -56,9 +59,12 @@ Note the duplication: `_normalize_class_label` exists separately in `metrics/gra
   regression leaf granularity is not configurable through the same knob.
 - **Feature names with `<=` or `>` in them would break parsing.** `_parse_predicate` is non-greedy on the
   feature group, so a feature named e.g. `a > b` parses ambiguously.
-- **`to_networkx` round-trips through DOT source text.** The graph is rebuilt by parsing the text emitted
-  by `generate_dot`, so any change to label escaping or attribute ordering in `generate_dot` can silently
-  break node/edge parsing. See [dpg.core](/modules/dpg-core.md).
+- **The contract still governs parsing and display, not construction.** `build_graph` builds the graph
+  directly from the DFG, so label escaping or attribute ordering in `generate_dot` can no longer break
+  graph construction. The DOT text-parsing path in `to_networkx` still exists as a fallback for a
+  `graphviz.Digraph` this instance did not build itself, and `_parse_predicate` /
+  `_normalize_class_label` / `_label_to_node_id` still require these exact string shapes. See
+  [dpg.core](/modules/dpg-core.md).
 - **Normalized vs raw labels differ by field.** Local explanations use normalized class names (`"0"`) in
   `class_votes` / `majority_vote`, but keep raw DPG labels (`"Class 0"`) inside `tree_paths[*].labels`.
   See [explanation dataclasses](/concepts/explanation-dataclasses.md).

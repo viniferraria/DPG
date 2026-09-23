@@ -254,6 +254,8 @@ class DecisionPredicateGraph:
         self._context_order_history: dict[int, int] = {}
         self._node_context_by_id: dict[str, tuple[str, ...]] = {}
         self._node_label_by_id: dict[str, str] = {}
+        self._graph: Any = None
+        self._nodes_list: list[list[str]] | None = None
 
     def fit(self, X_train: Any) -> Any:
         """
@@ -278,6 +280,8 @@ class DecisionPredicateGraph:
         self._trace_signatures = []
         self._node_context_by_id = {}
         self._node_label_by_id = {}
+        self._graph = None
+        self._nodes_list = None
 
         log_df = self._extract_trace_log(X_train)
 
@@ -306,7 +310,8 @@ class DecisionPredicateGraph:
             dfg = self.discover_dfg(log_df)
 
         print('Extracting graph...')
-        return self.generate_dot(dfg)
+        self._graph, self._nodes_list = self.build_graph(dfg)
+        return self.generate_dot(self._graph)
 
     def _extract_trace_log(self, X_train: Any) -> pd.DataFrame:
         """
@@ -711,8 +716,16 @@ class DecisionPredicateGraph:
 
     @staticmethod
     def _node_id_for_key(key: Any) -> str:
+        """Return the content-addressed identifier for a graph node key.
+
+        Nothing reads the id as a number, and 48 bits of digest is far past
+        collision risk at DPG sizes.  The ``n`` prefix keeps the token
+        unambiguous in DOT, where a bare leading digit is not a valid id.
+        Truncating the digest preserves content addressing: the same label
+        still maps to the same id across runs and machines.
+        """
         stable_key = key if isinstance(key, str) else repr(key)
-        return str(int(hashlib.sha1(stable_key.encode()).hexdigest(), 16))
+        return "n" + hashlib.sha1(stable_key.encode()).hexdigest()[:12]
 
     _PREDICATE_LABEL_RE = re.compile(
         r"^\s*(.+?)\s*(<=|>)\s*[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?\s*$"
@@ -850,12 +863,57 @@ class DecisionPredicateGraph:
         """
         return list(self._trace_signatures)
 
-    def generate_dot(self, dfg: dict[tuple[Any, Any], int]) -> Any:
+    def build_graph(self, dfg: dict[tuple[Any, Any], int]) -> tuple[Any, list[list[str]]]:
         """
-        Convert frequency graph to Graphviz format.
-        
+        Build the NetworkX DPG straight from the DFG, without going through DOT.
+
         Args:
             dfg: Directed frequency graph
+
+        Returns:
+            tuple[nx.DiGraph, list]: NetworkX graph and node metadata
+        """
+        graph = nx.DiGraph()
+        nodes_list: list[list[str]] = []
+        edge_order: list[tuple[str, str]] = []
+        # Weight order is what feeds nx node/edge iteration order, and that in
+        # turn feeds the metrics DataFrame row order.
+        for edge, weight in sorted(dfg.items(), key=lambda item: item[1]):
+            source, target = edge
+            for node_key in (source, target):
+                node_id = self._node_id_for_key(node_key)
+                if node_id in graph:
+                    continue
+                label: str
+                context: tuple[str, ...]
+                if isinstance(node_key, str):
+                    label, context = node_key, ()
+                else:
+                    label, context = self._context_node_info(node_key)
+                self._node_label_by_id[node_id] = label
+                self._node_context_by_id[node_id] = context
+                nodes_list.append([node_id, label])
+                graph.add_node(
+                    node_id,
+                    predicate=label,
+                    context=context,
+                    context_order=self.get_context_order(),
+                )
+            source_id = self._node_id_for_key(source)
+            target_id = self._node_id_for_key(target)
+            graph.add_edge(source_id, target_id, weight=float(weight))
+            edge_order.append((source_id, target_id))
+        # nx.DiGraph.edges() iterates node-major, so the weight order cannot be
+        # recovered from the graph; generate_dot reads it back from here.
+        graph.graph["edge_order"] = edge_order
+        return graph, sorted(nodes_list, key=lambda x: x[0])
+
+    def generate_dot(self, graph: Any) -> Any:
+        """
+        Convert the NetworkX DPG to Graphviz format.
+        
+        Args:
+            graph: NetworkX graph produced by :meth:`build_graph`
             
         Returns:
             graphviz.Digraph: Visualizable graph
@@ -899,20 +957,13 @@ class DecisionPredicateGraph:
             )
 
         added_nodes = set()
-        for edge, weight in sorted(dfg.items(), key=lambda item: item[1]):
-            source, target = edge
-            for node_key in (source, target):
-                node_id = self._node_id_for_key(node_key)
+        for source, target in graph.graph.get("edge_order", graph.edges()):
+            for node_id in (source, target):
                 if node_id in added_nodes:
                     continue
-                label: str
-                context: tuple[str, ...]
-                if isinstance(node_key, str):
-                    label, context = node_key, ()
-                else:
-                    label, context = self._context_node_info(node_key)
-                self._node_label_by_id[node_id] = label
-                self._node_context_by_id[node_id] = context
+                node_data = graph.nodes[node_id]
+                label = node_data["predicate"]
+                context = node_data["context"]
                 tooltip = " > ".join(context) if context else label
                 dot.node(
                     node_id,
@@ -924,10 +975,13 @@ class DecisionPredicateGraph:
                     fillcolor=default_fillcolor,
                 )
                 added_nodes.add(node_id)
+            weight = graph.edges[source, target]["weight"]
             dot.edge(
-                self._node_id_for_key(source),
-                self._node_id_for_key(target),
-                label=str(weight),
+                source,
+                target,
+                # Weights are float on the graph but integral counts in the DOT
+                # label, so an integral weight renders as "3", not "3.0".
+                label=str(int(weight)) if float(weight).is_integer() else str(weight),
                 penwidth="1",
                 fontsize="18"
             )
@@ -943,6 +997,11 @@ class DecisionPredicateGraph:
         Returns:
             tuple[nx.DiGraph, list]: NetworkX graph and node metadata
         """
+        # fit() already built the graph directly from the DFG; only a dot this
+        # instance did not build still has to be parsed back out of DOT text.
+        if self._graph is not None and self._nodes_list is not None:
+            return self._graph, self._nodes_list
+
         networkx_graph = nx.DiGraph()
         nodes_list: list[list[str]] = []
         edges: list[tuple[str, str]] = []

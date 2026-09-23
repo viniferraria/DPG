@@ -54,15 +54,16 @@ Details in [/conventions/config-resolution.md](/conventions/config-resolution.md
 
 | Name | Signature | Produces |
 |---|---|---|
-| `fit` | `fit(X_train) -> graphviz.Digraph` | Runs the whole pipeline and returns the DOT graph |
+| `fit` | `fit(X_train) -> graphviz.Digraph` | Runs the whole pipeline, calls `build_graph` (storing the result on `self._graph`/`self._nodes_list`), then `generate_dot`, and returns the DOT graph |
 | `tracing_ensemble` | `tracing_ensemble(case_id, sample) -> Generator[list[str]]` | Yields `[prefix, event]` pairs (sequential path, used when `n_jobs == 1`) |
 | `tracing_ensemble_parallel` | `tracing_ensemble_parallel(case_id, sample) -> list[list[str]]` | Same content as a materialized list, for joblib workers |
 | `filter_log` | `filter_log(log) -> pd.DataFrame` | Drops whole path *variants* below `n_cases * perc_var` |
 | `discover_dfg` | `discover_dfg(log) -> dict[tuple[str, str], int]` | Directly-follows counts `{(src_label, dst_label): frequency}` |
 | `discover_dfg_execution_trace` | `discover_dfg_execution_trace(log) -> dict[tuple[str, str], int]` | `discover_dfg` then drops individual *edges* below `n_cases * perc_var` |
 | `discover_dfg_context` | `discover_dfg_context(log, context_order) -> dict[tuple[Any, Any], int]` | **New in 0.3.0.** Context-aware DFG: for `context_order <= 1` delegates to `discover_dfg_execution_trace`; otherwise keys non-terminal nodes by `("ctx", last-k-labels)` tuples (via `_context_node`) and terminals by `("sink", label)`, then applies the same `perc_var` edge-count filter. |
-| `generate_dot` | `generate_dot(dfg) -> graphviz.Digraph` | Nodes + weighted edges with sha1-derived ids; node keys can now be the `("ctx", ...)`/`("sink", ...)` tuples from `discover_dfg_context` — `_node_id_for_key` hashes `repr(key)` for non-`str` keys |
-| `to_networkx` | `to_networkx(graphviz_graph) -> tuple[nx.DiGraph, list[list[str]]]` | Graph plus `nodes_list` of `[node_id, label]`, sorted by id. Each graph node now also carries `predicate`, `context`, `context_order` attributes (see Behavior). |
+| `build_graph` | `build_graph(dfg) -> tuple[nx.DiGraph, list[list[str]]]` | **New.** Builds the NetworkX DPG directly from the DFG — no DOT involved. Nodes + weighted edges with sha1-derived ids; node keys can be the `("ctx", ...)`/`("sink", ...)` tuples from `discover_dfg_context` — `_node_id_for_key` hashes `repr(key)` for non-`str` keys. Also records `graph.graph["edge_order"]` (see Behavior). `fit()` calls this and stores the result on `self._graph`/`self._nodes_list`. |
+| `generate_dot` | `generate_dot(graph) -> graphviz.Digraph` | **Signature changed** (was `generate_dot(dfg)`). Renders the already-built NetworkX graph (from `build_graph`) to DOT — a display/export step, not part of graph construction. Output is byte-identical to the pre-change DOT. |
+| `to_networkx` | `to_networkx(graphviz_graph) -> tuple[nx.DiGraph, list[list[str]]]` | **No longer the construction path.** Returns the graph `fit()` already built (`self._graph`/`self._nodes_list`) when set; only falls back to re-parsing `graphviz_graph.body` text for a dot this instance did not build. Graph plus `nodes_list` of `[node_id, label]`, sorted by id. Each graph node carries `predicate`, `context`, `context_order` attributes (see Behavior). |
 
 **New in 0.3.0, public accessors** (all read state populated by the last `fit()`):
 
@@ -124,16 +125,27 @@ Stage by stage inside `fit`:
    - Otherwise (`"aggregated_transitions"`): context order is forced to `1` regardless of config,
      `filter_log` runs first **only if `perc_var > 0`**, then `discover_dfg`. See
      [/conventions/graph-construction-modes.md](/conventions/graph-construction-modes.md).
-4. `generate_dot` iterates `sorted(dfg.items(), key=lambda item: item[1])` (ascending frequency) and
-   writes each edge with `label=str(frequency)`, `penwidth="1"`, `fontsize="18"`. Every node also gets
-   a `dpg_context_order` DOT attribute (`str(self.get_context_order())`) and a `tooltip` — the
-   contextual predicates joined by `" > "` when the node has a non-empty context, else the label
-   itself.
-5. `to_networkx` parses `dpg_context_order` back off each node line (falling back to
-   `self.get_context_order()` if the attribute is missing) and sets three attributes on every
-   NetworkX node: `predicate` (the label), `context` (the contextual-predicate tuple, `()` for a
-   sink or a `k=1` node), `context_order` (the parsed int/float). This is the node metadata read by
-   `DecisionPredicateGraph._is_predicate_label`/`get_predicate_lrc` and by
+4. `build_graph` iterates `sorted(dfg.items(), key=lambda item: item[1])` (ascending frequency)
+   directly off the DFG. Each node is added once with `predicate`/`context`/`context_order`
+   attributes; each edge is added with `weight=float(frequency)`. The same iteration order is
+   recorded as `graph.graph["edge_order"]` — a list of `(source_id, target_id)` — because
+   `nx.DiGraph.edges()` iterates node-major and cannot reproduce the DFG-weight order on its own.
+   `generate_dot` reads it back from there so its DOT output stays byte-identical to the pre-`build_graph`
+   version. `nodes_list` is returned sorted by node id.
+5. `generate_dot` walks `graph.graph.get("edge_order", graph.edges())` (the fallback covers a graph
+   with no `edge_order`, e.g. one not produced by `build_graph`), writing each node once — label
+   escaped via `_escape_dot_label`, a `dpg_context_order` DOT attribute
+   (`str(self.get_context_order())`), and a `tooltip` (contextual predicates joined by `" > "` when
+   the node has a non-empty context, else the label itself) — and each edge with
+   `label=str(int(weight))` when the weight is integral, else `str(weight)`, `penwidth="1"`,
+   `fontsize="18"`.
+6. `to_networkx` returns `self._graph`/`self._nodes_list` directly when `fit()` already populated
+   them — the normal case. Only for a `graphviz.Digraph` this instance did not build does it fall
+   back to parsing `dpg_context_order` back off each node line of `graphviz_graph.body` (falling
+   back further to `self.get_context_order()` if even that attribute is missing) and setting three
+   attributes on every NetworkX node: `predicate` (the label), `context` (the contextual-predicate
+   tuple, `()` for a sink or a `k=1` node), `context_order` (the parsed int/float). This is the node
+   metadata read by `DecisionPredicateGraph._is_predicate_label`/`get_predicate_lrc` and by
    `DPGExplainer._get_node_metrics` — see [/modules/dpg-explainer.md](/modules/dpg-explainer.md).
 
 ## `decimal_threshold="auto"`
@@ -151,11 +163,16 @@ Stage by stage inside `fit`:
    label's displayed precision is approximate for those features. See
    [/side-effects/decimal-threshold-auto-warning.md](/side-effects/decimal-threshold-auto-warning.md).
 
-Node id derivation, verbatim from `generate_dot`:
+Node id derivation, `_node_id_for_key` (called from `build_graph`; `dpg/explainer.py:_label_to_node_id`
+now delegates to it instead of holding a second copy of the formula):
 
 ```python
-str(int(hashlib.sha1(activity.encode()).hexdigest(), 16))
+"n" + hashlib.sha1(stable_key.encode()).hexdigest()[:12]
 ```
+
+Truncating the digest to 12 hex chars still preserves content addressing — the same key maps to the
+same id across runs and machines — and the `n` prefix keeps the token a valid DOT identifier, where a
+bare leading digit is not.
 
 Labels are escaped for DOT via a local `_escape_dot_label`, which replaces `\`, `"`, `[`, and `]`.
 
@@ -184,9 +201,15 @@ Regressor detection is an `isinstance` check against `RandomForestRegressor`,
   including `test_execution_trace_graph_preserves_long_case_order`, whose own independent
   `pairwise(seq, seq[1:])` misuse at `test_dpg_k.py:95` was fixed alongside `core.py`). See
   [/side-effects/context-order-pairwise-crash.md](/side-effects/context-order-pairwise-crash.md).
-- `to_networkx` re-parses `graphviz_graph.body` *text* (splitting on `"->"` and regexing
-  `label="([^"]*)"`). Any change to label escaping or attribute ordering in `generate_dot` can
-  silently break node/edge parsing.
+- **DOT is a rendering output, not the construction path.** `build_graph` builds the `nx.DiGraph`
+  directly from the DFG; `to_networkx` normally just returns that cached graph. The old text-parsing
+  fallback — re-parsing `graphviz_graph.body` (splitting on `"->"` and regexing `label="([^"]*)"`) —
+  only runs for a `graphviz.Digraph` this instance did not build itself, so label escaping or
+  attribute ordering changes in `generate_dot` can no longer silently break the graph this instance
+  produces.
+- **`graph.graph["edge_order"]`** is a `list[tuple[str, str]]` of `(source_id, target_id)` pairs in
+  DFG weight order, set by `build_graph` and read by `generate_dot` — the one piece of construction
+  state carried on the graph object itself rather than on `self`.
 - Edge weights are only attached when the label parses as numeric
   (`attr.replace(".", "").isdigit()`); otherwise the edge is added with no `weight`.
 - `discover_dfg` raises `DPGGraphError.no_paths(perc_var, decimal_threshold)` when the log has zero

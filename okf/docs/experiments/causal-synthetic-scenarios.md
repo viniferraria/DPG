@@ -137,4 +137,5 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
   predicate labels read `F3_B <= 0.5`; `extract_top_k_features` takes the token before the first space
   and does *not* map one-hot columns back to a source attribute (unlike the MONK's runner). `y` is also
   passed whole into `_build_explanation`, so `target_names` come from the full dataset, not the split.
-- Node IDs in `node_metrics_*.csv` are sha1-derived integers, stable only for byte-identical labels.
+- Node IDs in `node_metrics_*.csv` are sha1-derived id strings (`"n" + sha1(label)[:12]`), stable only
+  for byte-identical labels.
