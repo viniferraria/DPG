@@ -2,6 +2,27 @@
 
 ## 2026-09-22
 
+* **Update (breaking change)**: Documented a further uncommitted change on `feature/first_runs`
+  (`dpg/core.py`, `dpg/exceptions.py`, `dpg/explainer.py`, `dpg/sklearn_dpg.py`):
+  `DecisionPredicateGraph.fit(X)` now returns `self` instead of a `graphviz.Digraph` — it builds the
+  graph and no longer renders DOT. New `to_dot()` renders the fitted graph via `generate_dot` afresh on
+  every call (deliberately uncached, since the visualizer recolors a dot it is given in place); it
+  raises `DPGNotFittedError` (new factory `DPGNotFittedError.for_builder()`) before `fit`.
+  `to_networkx(graphviz_graph=None)` now takes an optional argument: returns the fitted graph when set;
+  if not fitted and a dot is given, falls back to parsing it; if neither, raises
+  `DPGNotFittedError`. **Breaking** for external callers that used `fit`'s return value as a `Digraph`
+  (`.source`, `.render`, `.body`, or passing it to `plot_dpg`) — `to_networkx(dpg.fit(X))` still works
+  because the argument is ignored once fitted, but the old `dot = dpg.fit(X_train)` idiom no longer
+  yields a dot. `DPGExplainer.fit` and `dpg/sklearn_dpg.py::test_dpg` were updated to call `fit()`, then
+  `to_dot()`, then `to_networkx()`; `DPGExplainer.fit` already returned `self`, so the README-level API
+  is unaffected. Updated [the DPG pipeline](/pipeline.md) (diagram, stage table, "DOT is a rendering
+  output" consequence), [dpg.core](/modules/dpg-core.md) (`fit`/`to_networkx` rows rewritten, new
+  `to_dot` row, Behavior step 6, example), [dpg.explainer](/modules/dpg-explainer.md) and
+  [dpg.sklearn_dpg](/modules/dpg-sklearn-dpg.md) (call-pattern descriptions),
+  [metrics.edge](/modules/metrics-edges.md) and [metrics backends](/modules/metrics-backends.md)
+  (stale `to_networkx(dot)` call-shape snippets), [explanation dataclasses](/concepts/explanation-dataclasses.md)
+  (`dot` field now sourced from `builder.to_dot()`), and CLAUDE.md's pipeline diagram and consequences.
+
 * **Update**: Documented an uncommitted code change on `feature/first_runs` (`dpg/core.py`,
   `dpg/explainer.py`) that moves graph construction off the DOT round trip. New public method
   `DecisionPredicateGraph.build_graph(dfg) -> tuple[nx.DiGraph, list[list[str]]]` builds the NetworkX

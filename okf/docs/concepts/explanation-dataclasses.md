@@ -24,7 +24,7 @@ Returned by `DPGExplainer.explain_global()`.
 |---|---|---|
 | `graph` | `Any` (an `nx.DiGraph`) | The fitted graph produced by `builder.to_networkx`. |
 | `nodes` | `list[list[str]]` | The `[node_id, label]` pairs from `to_networkx`; the `nodes_list` every `metrics/` API expects. |
-| `dot` | `Any` (a `graphviz.Digraph`) | The DOT object from `builder.fit`; what the plot functions render. |
+| `dot` | `Any` (a `graphviz.Digraph`) | The DOT object from `builder.to_dot()`; what the plot functions render. |
 | `node_metrics` | `Any` (a `pd.DataFrame`) | Output of `NodeMetrics.extract_node_metrics`; keyed by a `"Node"` column and containing `"Local reaching centrality"` and `"Betweenness centrality"`. |
 | `edge_metrics` | `Any` | Output of `EdgeMetrics.extract_edge_metrics`. |
 | `class_boundaries` | `dict[str, Any]` | Output of `GraphMetrics.extract_class_boundaries(graph, nodes, target_names=builder.target_names or [])`. |

@@ -224,4 +224,4 @@ def plot_pca(df, title):
 
 
 plot_pca(dataset, "PCA of Synthetic Dataset (Scenario 5 - Binary Y)")
-print("\nPCA plot generated s5uccessfully.")
+print("\nPCA plot generated successfully.")

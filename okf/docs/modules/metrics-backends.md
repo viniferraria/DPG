@@ -171,7 +171,7 @@ any backend implementation:
   `RandomForestClassifier(n_estimators=5, max_depth=4, random_state=42)`, built into a DPG with an
   explicit `dpg_config` (`perc_var=0.0001`, `decimal_threshold=3`, `n_jobs=1`,
   `mode="aggregated_transitions"`, `context_order=1` — never relying on `config.yaml`/CWD), then
-  `dpg.fit(X.values)` and `dpg.to_networkx(dot)`. `build_scenario_graph(name)` is the single
+  `dpg.fit(X.values)` and `dpg.to_networkx()`. `build_scenario_graph(name)` is the single
   function both consumers call, so the generator and the tests build byte-identical graphs.
 - `generate.py` computes betweenness/local-reaching/closeness/harmonic straight from the same
   `networkx` reference calls as `networkx_backend.py` (not via `NodeMetrics` or any backend

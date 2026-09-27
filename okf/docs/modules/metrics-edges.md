@@ -80,8 +80,8 @@ shapes.
 Real call shape, from `tests/test_metrics.py`:
 
 ```python
-dot = dpg.fit(X_train)
-dpg_graph, nodes_list = dpg.to_networkx(dot)
+dpg.fit(X_train)
+dpg_graph, nodes_list = dpg.to_networkx()
 df = EdgeMetrics.extract_edge_metrics(dpg_graph, nodes_list)
 ```
 

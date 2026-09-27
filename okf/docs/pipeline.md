@@ -23,8 +23,10 @@ sklearn model + X
   ↓ DataFrame                        columns: "case:concept:name", "concept:name"; one case per (sample, tree)
   ↓ filter_log / discover_dfg        count directly-follows pairs → {(src_label, dst_label): frequency}
   ↓ build_graph                      build nx.DiGraph + nodes_list directly from the DFG; node id = "n" + sha1(key)[:12]
-  ↓ generate_dot                     render that graph to graphviz.Digraph (display only); fit() caches graph+nodes_list
-  ↓ to_networkx                      returns the cached graph/nodes_list; re-parses dot.body TEXT only as a fallback
+                                      fit() ends here, caches graph+nodes_list, and returns self (not a dot)
+  ↓ to_dot() / to_networkx()         called after fit(): to_dot() renders graphviz.Digraph afresh every call
+                                      (display only); to_networkx() returns the cached graph/nodes_list,
+                                      re-parsing dot.body TEXT only as a fallback when not fitted
   ↓ NodeMetrics / EdgeMetrics / GraphMetrics
   ↓ DPGExplanation / DPGLocalExplanation
   ↓ visualizer.py                    render to graphviz / matplotlib
@@ -37,7 +39,7 @@ sklearn model + X
 | Filter | [dpg.core](/modules/dpg-core.md) | trace log | log with rare variants (or edges) dropped |
 | Mine | [dpg.core](/modules/dpg-core.md) | trace log | DFG: `{(src, dst): frequency}` |
 | Build graph | [dpg.core](/modules/dpg-core.md) | DFG | `nx.DiGraph` + `nodes_list` (`build_graph`) |
-| Render to DOT | [dpg.core](/modules/dpg-core.md) | `nx.DiGraph` | `graphviz.Digraph`, for display/export only |
+| Render to DOT | [dpg.core](/modules/dpg-core.md) | `nx.DiGraph` (via `to_dot()`) | `graphviz.Digraph`, for display/export only |
 | Measure | [metrics](/modules/metrics-graph.md) | `nx.DiGraph`, `nodes_list`, `target_names` | metric frames/dicts |
 | Explain | [DPGExplainer](/modules/dpg-explainer.md) | all of the above | explanation dataclasses |
 | Visualize | [dpg.visualizer](/modules/dpg-visualizer.md) | explanation | figures / DOT renders |
@@ -50,11 +52,12 @@ sklearn model + X
 2. **Label formats are a cross-module contract.** `dpg/core.py`, `metrics/graph.py`, `dpg/explainer.py`
    and `dpg/visualizer.py` all parse the same string shapes.
 3. **DOT is a rendering output, not a construction step.** `build_graph` builds the `nx.DiGraph`
-   directly from the DFG; `generate_dot` only renders that graph to DOT for display/export.
-   `to_networkx` returns the graph `fit()` already built via a cached reference. The old text-parsing
-   path (splitting `dot.body` on `"->"` and regexing `label="..."`) is still there, but only as a
-   fallback for a `graphviz.Digraph` this instance did not build itself — so label-escaping or
-   attribute-ordering changes in `generate_dot` no longer risk silently breaking graph construction.
+   directly from the DFG; `fit(X)` returns `self`, not a dot. `to_dot()` renders that graph to DOT
+   afresh on every call — deliberately uncached, since the visualizer recolors a dot it is given in
+   place — and raises `DPGNotFittedError` before `fit`. `to_networkx(graphviz_graph=None)` returns the
+   graph `fit()` already built via a cached reference; the old text-parsing path (splitting `dot.body`
+   on `"->"` and regexing `label="..."`) only runs when this instance isn't fitted and a
+   `graphviz.Digraph` it did not build is passed in — with neither, it raises `DPGNotFittedError` too.
 4. **Filtering is a modelling choice, not noise removal.** The two
    [graph-construction modes](/conventions/graph-construction-modes.md) drop whole path *variants* or
    individual *edges*. Aggressive `perc_var` legitimately makes local-explanation validity flags go

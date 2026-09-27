@@ -29,6 +29,7 @@ from .exceptions import (
     DPGError,
     DPGGraphError,
     DPGModelError,
+    DPGNotFittedError,
     DPGValidationError,
 )
 
@@ -257,15 +258,16 @@ class DecisionPredicateGraph:
         self._graph: Any = None
         self._nodes_list: list[list[str]] | None = None
 
-    def fit(self, X_train: Any) -> Any:
+    def fit(self, X_train: Any) -> "DecisionPredicateGraph":
         """
-        Main pipeline: Extract decision paths → Build graph → Generate visualization.
+        Main pipeline: Extract decision paths → Build graph.
         
         Args:
             X_train: Training data (n_samples, n_features)
             
         Returns:
-            graphviz.Digraph: Visualizable graph object
+            DecisionPredicateGraph: This instance; read the graph with
+            :meth:`to_networkx` and render it with :meth:`to_dot`.
         """
         print("\nStarting DPG extraction *****************************************")
         print("Model Class:", self.model.__class__.__name__)
@@ -311,6 +313,20 @@ class DecisionPredicateGraph:
 
         print('Extracting graph...')
         self._graph, self._nodes_list = self.build_graph(dfg)
+        return self
+
+    def to_dot(self) -> Any:
+        """
+        Render the fitted graph to Graphviz.
+
+        Renders afresh on every call: plotting recolors the dot it is given in
+        place, so a shared dot would carry one plot's colors into the next.
+
+        Returns:
+            graphviz.Digraph: Visualizable graph
+        """
+        if self._graph is None:
+            raise DPGNotFittedError.for_builder()
         return self.generate_dot(self._graph)
 
     def _extract_trace_log(self, X_train: Any) -> pd.DataFrame:
@@ -987,12 +1003,12 @@ class DecisionPredicateGraph:
             )
         return dot
 
-    def to_networkx(self, graphviz_graph: Any) -> tuple[Any, list[list[str]]]:
+    def to_networkx(self, graphviz_graph: Any = None) -> tuple[Any, list[list[str]]]:
         """
-        Convert Graphviz graph to NetworkX format.
+        Return the fitted graph, or parse ``graphviz_graph`` if not fitted.
         
         Args:
-            graphviz_graph: Input graph
+            graphviz_graph: Graphviz graph to parse when this instance is not fitted
             
         Returns:
             tuple[nx.DiGraph, list]: NetworkX graph and node metadata
@@ -1001,6 +1017,8 @@ class DecisionPredicateGraph:
         # instance did not build still has to be parsed back out of DOT text.
         if self._graph is not None and self._nodes_list is not None:
             return self._graph, self._nodes_list
+        if graphviz_graph is None:
+            raise DPGNotFittedError.for_builder()
 
         networkx_graph = nx.DiGraph()
         nodes_list: list[list[str]] = []

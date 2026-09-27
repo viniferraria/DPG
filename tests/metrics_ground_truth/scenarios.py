@@ -54,6 +54,6 @@ def build_scenario_graph(name: str) -> tuple[nx.DiGraph, list[list[str]]]:
         target_names=target_names,
         dpg_config=DPG_CONFIG,
     )
-    dot = dpg.fit(X.values)
-    graph, nodes_list = dpg.to_networkx(dot)
+    dpg.fit(X.values)
+    graph, nodes_list = dpg.to_networkx()
     return graph, nodes_list

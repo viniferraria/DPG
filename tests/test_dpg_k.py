@@ -52,7 +52,8 @@ def test_auto_context_has_one_sink_per_class_and_no_local_violations():
         target_names=["0", "1", "2"],
         dpg_config=_config(context_order="auto"),
     )
-    graph, nodes = dpg.to_networkx(dpg.fit(iris.data))
+    dpg.fit(iris.data)
+    graph, nodes = dpg.to_networkx()
 
     assert dpg.get_context_order() >= 1
     assert dpg.get_context_order_history()[dpg.get_context_order()] == 0

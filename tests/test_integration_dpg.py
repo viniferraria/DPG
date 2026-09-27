@@ -34,8 +34,9 @@ def _build_small_dpg():
         feature_names=features.columns,
         target_names=target_names,
     )
-    graph_dot = dpg_builder.fit(features.values)
-    dpg_graph, dpg_nodes = dpg_builder.to_networkx(graph_dot)
+    dpg_builder.fit(features.values)
+    dpg_graph, dpg_nodes = dpg_builder.to_networkx()
+    graph_dot = dpg_builder.to_dot()
 
     class_boundaries = GraphMetrics.extract_class_boundaries(
         dpg_graph, dpg_nodes, target_names=target_names

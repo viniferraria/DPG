@@ -67,7 +67,8 @@ Supported `model_name` strings (anything else raises `DPGModelError.unsupported_
 Flow: validate `n_learners > 0` (`DPGValidationError.positive_learner_count`) → `select_dataset` →
 `train_test_split(test_size=0.3, random_state=seed)` → instantiate
 `model(n_estimators=n_learners, random_state=seed, n_jobs=n_jobs)` → `fit` / `predict` → report →
-`DecisionPredicateGraph(...).fit(X_train)` → `to_networkx` → metrics → optional plot.
+`DecisionPredicateGraph(...).fit(X_train)` (returns `self`) → `to_dot()` → `to_networkx()` → metrics →
+optional plot.
 
 The report at `file_name` (parent dirs are created) is classifier- or regressor-shaped:
 

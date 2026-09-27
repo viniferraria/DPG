@@ -41,8 +41,8 @@ def iris_dpg():
         feature_names=iris.feature_names,
         target_names=target_names,
     )
-    dot = dpg.fit(X_train)
-    dpg_graph, nodes_list = dpg.to_networkx(dot)
+    dpg.fit(X_train)
+    dpg_graph, nodes_list = dpg.to_networkx()
     return dpg_graph, nodes_list, target_names
 
 
@@ -442,8 +442,8 @@ class TestMetricsOnWine:
             feature_names=wine.feature_names,
             target_names=target_names,
         )
-        dot = dpg.fit(X_train)
-        dpg_graph, nodes_list = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        dpg_graph, nodes_list = dpg.to_networkx()
         return dpg_graph, nodes_list, target_names
 
     def test_node_metrics_shape(self, wine_dpg):
@@ -523,7 +523,8 @@ class TestExtractCommunitiesClassifierGuard:
         dpg = DecisionPredicateGraph(
             model, feature_names, dpg_config=_config_for_test()
         )
-        graph, nodes = dpg.to_networkx(dpg.fit(X))
+        dpg.fit(X)
+        graph, nodes = dpg.to_networkx()
 
         df_node_metrics = pd.DataFrame(
             {"Node": [nid for nid, _ in nodes], "Label": [lbl for _, lbl in nodes]}

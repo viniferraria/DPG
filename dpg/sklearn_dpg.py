@@ -200,10 +200,11 @@ def test_dpg(datasets: str,
             }
         },
     )
-    dot = dpg.fit(X_train)
+    dpg.fit(X_train)
+    dot = dpg.to_dot()
     
     # Convert to NetworkX and get metrics
-    dpg_model, nodes_list = dpg.to_networkx(dot)
+    dpg_model, nodes_list = dpg.to_networkx()
     if len(nodes_list) < 2:
         print("Warning: Insufficient nodes for DPG analysis")
         return None, None

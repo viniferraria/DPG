@@ -213,6 +213,10 @@ class DPGNotFittedError(DPGValidationError):
     def for_faithfulness(cls) -> "DPGNotFittedError":
         return cls.require_fit("fit(X) before evaluate_faithfulness()")
 
+    @classmethod
+    def for_builder(cls) -> "DPGNotFittedError":
+        return cls("DecisionPredicateGraph is not fitted. Call fit(X) first.")
+
 
 class DPGExplanationError(DPGValidationError):
     """Raised when an explanation cannot be produced or evaluated."""

@@ -177,8 +177,9 @@ class DPGExplainer:
 
     def fit(self, X: Any) -> "DPGExplainer":
         """Fit the DPG structure from training data."""
-        self._dot = self._builder.fit(X)
-        self._graph, self._nodes = self._builder.to_networkx(self._dot)
+        self._builder.fit(X)
+        self._dot = self._builder.to_dot()
+        self._graph, self._nodes = self._builder.to_networkx()
         self._node_metrics = None
         self._node_metrics_lookup = None
         self._edge_metrics = None

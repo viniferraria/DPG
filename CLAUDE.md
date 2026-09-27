@@ -174,8 +174,10 @@ sklearn model + X
   → DataFrame["case:concept:name", "concept:name"]   the trace log; one case per (sample, tree)
   → filter_log / discover_dfg          count directly-follows pairs → {(src_label, dst_label): frequency}
   → build_graph                        builds nx.DiGraph + nodes_list directly from the DFG; node id = "n" + sha1(key)[:12]
-  → generate_dot                       renders that graph to graphviz.Digraph (display/export only)
-  → to_networkx                        returns the graph fit() already built; re-parses dot.body only as a fallback
+                                        fit() ends here and returns self
+  → to_dot() / to_networkx()           called after fit(): to_dot() renders graphviz.Digraph afresh each
+                                        call (display/export only); to_networkx() returns the fitted graph,
+                                        re-parsing a dot only as a fallback when not fitted
   → NodeMetrics / EdgeMetrics / GraphMetrics
   → DPGExplanation / DPGLocalExplanation
   → visualizer.py                      render to graphviz / matplotlib
@@ -192,9 +194,10 @@ Consequences:
   `visualizer.py`: `"<feature> <= <threshold>"`, `"<feature> > <threshold>"`, `"Class <name>"`,
   `"Pred <value>"`. Parsing helpers depend on these exact shapes — see
   `okf/docs/conventions/label-contract.md`.
-- `build_graph` builds the graph directly from the DFG; `to_networkx` just returns that cached result.
-  DOT is a rendering output, not a construction step — its text is only re-parsed as a fallback for a
-  dot this instance didn't build itself.
+- `build_graph` builds the graph directly from the DFG; `fit(X)` returns `self` (not a dot). `to_dot()`
+  renders the fitted graph fresh on every call; `to_networkx()` (arg now optional) just returns the
+  cached result. DOT is a rendering output, not a construction step — its text is only re-parsed as a
+  fallback for a dot this instance didn't build itself, and only when the builder isn't fitted.
 - Local explanations use normalized class names (`"0"`) in `class_votes` / `majority_vote`, but keep raw
   labels (`"Class 0"`) in `tree_paths[*].labels`.
 

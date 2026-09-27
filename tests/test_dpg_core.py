@@ -55,8 +55,9 @@ def iris_dpg(iris_rf, iris_split):
         feature_names=feature_names,
         target_names=target_names,
     )
-    dot = dpg.fit(X_train)
-    dpg_graph, nodes_list = dpg.to_networkx(dot)
+    dpg.fit(X_train)
+    dpg_graph, nodes_list = dpg.to_networkx()
+    dot = dpg.to_dot()
     return dpg_graph, nodes_list, dot
 
 
@@ -235,8 +236,8 @@ class TestDPGInitValidation:
             },
         )
 
-        dot = dpg.fit(X_train)
-        graph, _ = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        graph, _ = dpg.to_networkx()
 
         assert dpg.graph_construction_mode == "aggregated_transitions"
         assert graph.number_of_edges() > 0
@@ -261,8 +262,8 @@ class TestDPGInitValidation:
             },
         )
 
-        dot = dpg.fit(X_train)
-        graph, _ = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        graph, _ = dpg.to_networkx()
 
         assert dpg.graph_construction_mode == "execution_trace"
         assert graph.number_of_edges() > 0
@@ -366,8 +367,8 @@ class TestMultipleModels:
             feature_names=feature_names,
             target_names=target_names,
         )
-        dot = dpg.fit(X_train)
-        graph, nodes = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        graph, nodes = dpg.to_networkx()
         assert graph.number_of_nodes() > 3
         assert graph.number_of_edges() > 3
         class_labels = {n[1] for n in nodes if n[1].startswith("Class ")}
@@ -390,8 +391,8 @@ class TestDifferentDataset:
             feature_names=wine.feature_names,
             target_names=target_names,
         )
-        dot = dpg.fit(X_train)
-        graph, nodes = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        graph, nodes = dpg.to_networkx()
 
         assert graph.number_of_nodes() == 87
         assert graph.number_of_edges() == 126
@@ -588,8 +589,8 @@ class TestTraceArtifacts:
                 }
             },
         )
-        dot = dpg_filtered.fit(X_train)
-        filtered_graph, _ = dpg_filtered.to_networkx(dot)
+        dpg_filtered.fit(X_train)
+        filtered_graph, _ = dpg_filtered.to_networkx()
 
         # ...but the same fit's trace artefacts are unaffected by perc_var.
         dpg_unfiltered = DecisionPredicateGraph(
@@ -1158,7 +1159,8 @@ class TestGetPredicateLrc:
         dpg = DecisionPredicateGraph(
             iris_rf, iris.feature_names, dpg_config=_config(context_order=2)
         )
-        graph, _ = dpg.to_networkx(dpg.fit(iris.data))
+        dpg.fit(iris.data)
+        graph, _ = dpg.to_networkx()
         scores = dpg.get_predicate_lrc(graph)
         assert isinstance(scores, dict)
         assert all(0.0 <= s <= 1.0 for s in scores.values())
@@ -1173,7 +1175,8 @@ class TestGetPredicateLrc:
         dpg = DecisionPredicateGraph(
             iris_rf, iris.feature_names, dpg_config=_config(context_order=2)
         )
-        graph, _ = dpg.to_networkx(dpg.fit(iris.data))
+        dpg.fit(iris.data)
+        graph, _ = dpg.to_networkx()
 
         # Build the per-predicate sum ourselves and compare.
         expected = {}
@@ -1227,8 +1230,8 @@ class TestDOTAndNetworkXRoundTrip:
         dpg = DecisionPredicateGraph(
             iris_rf, iris.feature_names, dpg_config=_config(context_order=2)
         )
-        dot = dpg.fit(iris.data)
-        body = "\n".join(dot.body)
+        dpg.fit(iris.data)
+        body = "\n".join(dpg.to_dot().body)
         assert "dpg_context_order=" in body
 
     def test_to_networkx_parses_context_order_from_dot(self, iris_rf):
@@ -1238,13 +1241,26 @@ class TestDOTAndNetworkXRoundTrip:
         dpg = DecisionPredicateGraph(
             iris_rf, iris.feature_names, dpg_config=_config(context_order=2)
         )
-        dot = dpg.fit(iris.data)
-        graph, _ = dpg.to_networkx(dot)
+        dpg.fit(iris.data)
+        graph, _ = dpg.to_networkx()
 
         assert all(
             data["context_order"] == dpg.get_context_order() == 2
             for _, data in graph.nodes(data=True)
         )
+
+    def test_fit_returns_self_and_to_dot_renders_fresh(self, iris_rf):
+        from dpg.exceptions import DPGNotFittedError
+
+        iris = load_iris()
+        dpg = DecisionPredicateGraph(iris_rf, iris.feature_names, dpg_config=_config())
+        with pytest.raises(DPGNotFittedError):
+            dpg.to_dot()
+
+        assert dpg.fit(iris.data) is dpg
+        first, second = dpg.to_dot(), dpg.to_dot()
+        assert first is not second
+        assert first.source == second.source
 
     def test_node_records_attach_predicate_and_context(self, iris_rf):
         from sklearn.datasets import load_iris
@@ -1253,8 +1269,8 @@ class TestDOTAndNetworkXRoundTrip:
         dpg = DecisionPredicateGraph(
             iris_rf, iris.feature_names, dpg_config=_config(context_order=2)
         )
-        dot = dpg.fit(iris.data)
-        graph, _ = dpg.to_networkx(dot)
+        dpg.fit(iris.data)
+        graph, _ = dpg.to_networkx()
         for _, data in graph.nodes(data=True):
             assert "predicate" in data
             assert "context" in data

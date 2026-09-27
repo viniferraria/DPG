@@ -54,7 +54,8 @@ Details in [/conventions/config-resolution.md](/conventions/config-resolution.md
 
 | Name | Signature | Produces |
 |---|---|---|
-| `fit` | `fit(X_train) -> graphviz.Digraph` | Runs the whole pipeline, calls `build_graph` (storing the result on `self._graph`/`self._nodes_list`), then `generate_dot`, and returns the DOT graph |
+| `fit` | `fit(X_train) -> DecisionPredicateGraph` | **Signature changed.** Runs the whole pipeline, calls `build_graph` (storing the result on `self._graph`/`self._nodes_list`), and returns `self` — it no longer renders DOT. Read the graph with `to_networkx()`, render it with `to_dot()`. |
+| `to_dot` | `to_dot() -> graphviz.Digraph` | **New.** Renders the fitted graph via `generate_dot`, freshly on every call — deliberately uncached, since the visualizer recolors a dot it is given in place. Raises `DPGNotFittedError` (`DPGNotFittedError.for_builder()`) if called before `fit`. |
 | `tracing_ensemble` | `tracing_ensemble(case_id, sample) -> Generator[list[str]]` | Yields `[prefix, event]` pairs (sequential path, used when `n_jobs == 1`) |
 | `tracing_ensemble_parallel` | `tracing_ensemble_parallel(case_id, sample) -> list[list[str]]` | Same content as a materialized list, for joblib workers |
 | `filter_log` | `filter_log(log) -> pd.DataFrame` | Drops whole path *variants* below `n_cases * perc_var` |
@@ -63,7 +64,7 @@ Details in [/conventions/config-resolution.md](/conventions/config-resolution.md
 | `discover_dfg_context` | `discover_dfg_context(log, context_order) -> dict[tuple[Any, Any], int]` | **New in 0.3.0.** Context-aware DFG: for `context_order <= 1` delegates to `discover_dfg_execution_trace`; otherwise keys non-terminal nodes by `("ctx", last-k-labels)` tuples (via `_context_node`) and terminals by `("sink", label)`, then applies the same `perc_var` edge-count filter. |
 | `build_graph` | `build_graph(dfg) -> tuple[nx.DiGraph, list[list[str]]]` | **New.** Builds the NetworkX DPG directly from the DFG — no DOT involved. Nodes + weighted edges with sha1-derived ids; node keys can be the `("ctx", ...)`/`("sink", ...)` tuples from `discover_dfg_context` — `_node_id_for_key` hashes `repr(key)` for non-`str` keys. Also records `graph.graph["edge_order"]` (see Behavior). `fit()` calls this and stores the result on `self._graph`/`self._nodes_list`. |
 | `generate_dot` | `generate_dot(graph) -> graphviz.Digraph` | **Signature changed** (was `generate_dot(dfg)`). Renders the already-built NetworkX graph (from `build_graph`) to DOT — a display/export step, not part of graph construction. Output is byte-identical to the pre-change DOT. |
-| `to_networkx` | `to_networkx(graphviz_graph) -> tuple[nx.DiGraph, list[list[str]]]` | **No longer the construction path.** Returns the graph `fit()` already built (`self._graph`/`self._nodes_list`) when set; only falls back to re-parsing `graphviz_graph.body` text for a dot this instance did not build. Graph plus `nodes_list` of `[node_id, label]`, sorted by id. Each graph node carries `predicate`, `context`, `context_order` attributes (see Behavior). |
+| `to_networkx` | `to_networkx(graphviz_graph=None) -> tuple[nx.DiGraph, list[list[str]]]` | **`graphviz_graph` is now optional; no longer the construction path.** Returns the graph `fit()` already built (`self._graph`/`self._nodes_list`) when set — `graphviz_graph` is then ignored, even a stale one. If not fitted, falls back to re-parsing `graphviz_graph.body` text for a dot this instance did not build; if not fitted and `graphviz_graph` is `None`, raises `DPGNotFittedError`. Graph plus `nodes_list` of `[node_id, label]`, sorted by id. Each graph node carries `predicate`, `context`, `context_order` attributes (see Behavior). |
 
 **New in 0.3.0, public accessors** (all read state populated by the last `fit()`):
 
@@ -139,14 +140,18 @@ Stage by stage inside `fit`:
    the node has a non-empty context, else the label itself) — and each edge with
    `label=str(int(weight))` when the weight is integral, else `str(weight)`, `penwidth="1"`,
    `fontsize="18"`.
-6. `to_networkx` returns `self._graph`/`self._nodes_list` directly when `fit()` already populated
-   them — the normal case. Only for a `graphviz.Digraph` this instance did not build does it fall
-   back to parsing `dpg_context_order` back off each node line of `graphviz_graph.body` (falling
-   back further to `self.get_context_order()` if even that attribute is missing) and setting three
-   attributes on every NetworkX node: `predicate` (the label), `context` (the contextual-predicate
-   tuple, `()` for a sink or a `k=1` node), `context_order` (the parsed int/float). This is the node
-   metadata read by `DecisionPredicateGraph._is_predicate_label`/`get_predicate_lrc` and by
-   `DPGExplainer._get_node_metrics` — see [/modules/dpg-explainer.md](/modules/dpg-explainer.md).
+6. `fit` itself stops after `build_graph` and returns `self`. `to_dot()` renders `self._graph` via
+   `generate_dot` afresh on every call and raises `DPGNotFittedError.for_builder()` if `self._graph`
+   is still `None`. `to_networkx` returns `self._graph`/`self._nodes_list` directly when `fit()`
+   already populated them — the normal case, and `graphviz_graph` is ignored even if passed. Only for
+   an unfitted instance does it look at `graphviz_graph`: if `None`, it raises
+   `DPGNotFittedError.for_builder()`; otherwise it falls back to parsing `dpg_context_order` back off
+   each node line of `graphviz_graph.body` (falling back further to `self.get_context_order()` if even
+   that attribute is missing) and setting three attributes on every NetworkX node: `predicate` (the
+   label), `context` (the contextual-predicate tuple, `()` for a sink or a `k=1` node), `context_order`
+   (the parsed int/float). This is the node metadata read by
+   `DecisionPredicateGraph._is_predicate_label`/`get_predicate_lrc` and by `DPGExplainer._get_node_metrics`
+   — see [/modules/dpg-explainer.md](/modules/dpg-explainer.md).
 
 ## `decimal_threshold="auto"`
 
@@ -228,11 +233,13 @@ dpg = DecisionPredicateGraph(
     target_names=list(target_names),
     dpg_config=DEFAULT_DPG_CONFIG,   # explicit: never depends on the CWD
 )
-dot = dpg.fit(X_train)
-graph, nodes_list = dpg.to_networkx(dot)
+dpg.fit(X_train)          # returns self
+dot = dpg.to_dot()         # graphviz.Digraph, rendered fresh
+graph, nodes_list = dpg.to_networkx()
 ```
 
 Exceptions raised by this module all live in `dpg/exceptions.py` and derive from `DPGError`:
 `DPGModelError.invalid_ensemble`, `DPGValidationError.empty_feature_names`,
 `DPGConfigurationError.missing_perc_var` / `.missing_decimal_threshold` / `.missing_n_jobs` /
-`.unsupported_graph_mode`, and `DPGGraphError.no_paths`.
+`.unsupported_graph_mode`, `DPGGraphError.no_paths`, and `DPGNotFittedError.for_builder` (raised by
+`to_dot()`/`to_networkx()` before `fit`).

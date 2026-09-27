@@ -30,7 +30,7 @@ All four public names (`DPGExplainer`, `DPGExplanation`, `DPGLocalExplanation`,
 |---|---|---|
 | `__init__` | `(model, feature_names, target_names=None, config_file="config.yaml", dpg_config=None)` | Keeps `self._original_model = model` **before** forwarding to `DecisionPredicateGraph` (which normalizes its own copy). Forwards everything else; `feature_names`/`target_names` are copied to `list`. |
 | `builder` | property → `DecisionPredicateGraph` | The wrapped builder (holds `model`, `feature_names`, `target_names`, `decimal_threshold`, `perc_var`). |
-| `fit(X)` | → `DPGExplainer` | Calls `builder.fit(X)` to get the `dot`, then `builder.to_networkx(dot)` for `(graph, nodes)`. Clears cached node/edge metrics and sets `_is_fitted`. |
+| `fit(X)` | → `DPGExplainer` | Calls `builder.fit(X)` (returns `self`, now ignored), then `builder.to_dot()` for `dot` and `builder.to_networkx()` for `(graph, nodes)`. Clears cached node/edge metrics and sets `_is_fitted`. |
 
 Internal caches (`_get_node_metrics`, `_get_node_metrics_lookup`, `_get_edge_metrics`) are lazy and
 invalidated on every `fit`. `_get_node_metrics_lookup` keys node-metric rows by the `"Node"` column
