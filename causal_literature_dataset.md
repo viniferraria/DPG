@@ -1,4 +1,4 @@
-The user chose analysis-only (no code), so this is a research deliverable rather than an implementation plan — I'll present the findings directly. I've written the full write-up to /Users/vinicius/.claude/plans/is-it-possible-to-prancy-firefly.md. Summary:
+The user chose analysis-only (no code), so this is a research deliverable rather than an implementation plan — I'll present the findings directly. I've written the full write-up to ./.claude/plans/is-it-possible-to-prancy-firefly.md. Summary:
 
 Q1 — Keep only a NetworkX structure in memory? Feasible, with one caveat.
 

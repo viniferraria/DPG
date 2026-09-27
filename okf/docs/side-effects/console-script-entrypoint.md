@@ -58,7 +58,7 @@ Running the installed script:
 ```text
 $ uv run dpg --help
 Traceback (most recent call last):
-  File "/Users/vinicius/Projects/DPG/.venv/bin/dpg", line 4, in <module>
+  File "./Projects/DPG/.venv/bin/dpg", line 4, in <module>
     from scripts.run_dpg_standard import main
 ModuleNotFoundError: No module named 'scripts'
 ```

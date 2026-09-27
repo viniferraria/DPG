@@ -90,7 +90,7 @@ hypothesis, say so and drop the finding — that is a successful review, not a f
 
 # This repository
 
-Read `/Users/vinicius/Projects/DPG/okf/docs/index.md` for the architecture bundle, and `CLAUDE.md` for
+Read `./Projects/DPG/okf/docs/index.md` for the architecture bundle, and `CLAUDE.md` for
 house rules. The knowledge that changes how you review:
 
 - **The pipeline is process-mining shaped.** Samples are replayed through every tree into an event log,
