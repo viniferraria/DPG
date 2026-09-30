@@ -5,18 +5,99 @@ from typing import Any, ClassVar
 import graph_tool as gt
 import networkx as nx
 import numpy as np
+import scipy.sparse as sp
 from graph_tool import centrality as gt_centrality
+from graph_tool import spectral as gt_spectral
 from graph_tool import topology as gt_topology
 
-from .base import GraphBackend, NodeCentralities
+from .base import GraphBackend, NodeCentralities, percolation_states
+
+
+def _collective_influence(
+    graph: gt.Graph, node_ids: list[Any], ci_radius: int
+) -> dict[Any, float]:
+    """Directed-out collective influence at radius ``ci_radius``."""
+    # get_out_degrees is unsigned; cast before subtracting so sinks give 0, not wrap.
+    out_degrees = graph.get_out_degrees(graph.get_vertices()).astype(np.int64)
+    excess = np.maximum(out_degrees - 1, 0)
+    influence: dict[Any, float] = {}
+    for i, node_id in enumerate(node_ids):
+        # Unweighted hop distances; nodes beyond max_dist get a huge sentinel.
+        hops = gt_topology.shortest_distance(
+            graph, source=graph.vertex(i), max_dist=ci_radius
+        ).a
+        frontier = excess[hops == ci_radius].sum()
+        influence[node_id] = float(excess[i] * frontier)
+    return influence
+
+
+def _clustering(graph: gt.Graph, node_ids: list[Any]) -> dict[Any, float]:
+    """Directed, unweighted local clustering coefficient.
+
+    graph-tool's ``local_clustering`` uses a different directed definition, so
+    this evaluates Fagiolo's (the one ``nx.clustering`` uses) on the sparse
+    adjacency: with S = A + A^T, c_i = diag(S^3)_i / (2 (d(d-1) - 2 d_bi)),
+    d being in + out degree and d_bi the number of reciprocated pairs.
+    """
+    n = len(node_ids)
+    # graph-tool's adjacency is transposed (A[target, source]); every term
+    # below is invariant under transposition.
+    adj = sp.csr_matrix(gt_spectral.adjacency(graph), dtype=float)
+    adj.setdiag(0)  # self-loops are ignored, as in NetworkX
+    adj.eliminate_zeros()
+    adj.data[:] = 1.0
+    sym = adj + adj.T
+    triangles = np.asarray((sym @ sym).multiply(sym.T).sum(axis=1)).ravel()
+    degree = np.asarray(sym.sum(axis=1)).ravel()
+    reciprocal = np.asarray((adj @ adj).multiply(sp.identity(n)).sum(axis=1)).ravel()
+    denominator = 2 * (degree * (degree - 1) - 2 * reciprocal)
+    coefficient = np.divide(
+        triangles, denominator, out=np.zeros(n), where=denominator > 0
+    )
+    return {node_ids[i]: float(coefficient[i]) for i in range(n)}
+
+
+def _percolation(
+    graph: gt.Graph,
+    weight_prop: Any,
+    node_ids: list[Any],
+    states: dict[Any, float],
+) -> dict[Any, float]:
+    """Percolation centrality with raw weights as distances."""
+    n = len(node_ids)
+    if n <= 2:
+        return dict.fromkeys(node_ids, 0.0)
+    x = [states[node_id] for node_id in node_ids]
+    total = sum(x)
+    # sum_s x_s * delta_s(v): with ``pivots`` and norm=False, betweenness is the
+    # exact sum_{s in pivots} delta_s(v) (no rescaling), so pivots that share a
+    # state value are handled in one call and scaled by that value.
+    pivots_by_state: dict[float, list[int]] = {}
+    for i, value in enumerate(x):
+        if value != 0:
+            pivots_by_state.setdefault(value, []).append(i)
+    weighted_dependency = np.zeros(n)
+    for value, pivots in pivots_by_state.items():
+        vertex_bc, _ = gt_centrality.betweenness(
+            graph, pivots=np.array(pivots), weight=weight_prop, norm=False
+        )
+        weighted_dependency += value * vertex_bc.a
+    return {
+        node_ids[i]: float(weighted_dependency[i] / (total - x[i]) / (n - 2))
+        if total - x[i] != 0
+        else 0.0
+        for i in range(n)
+    }
 
 
 class GraphToolBackend(GraphBackend):
-    """Compute the four DPG node centralities with graph-tool."""
+    """Compute the DPG node centralities with graph-tool."""
 
     name: ClassVar[str] = "graph_tool"
 
-    def node_centralities(self, dpg_model: nx.DiGraph) -> NodeCentralities:
+    def node_centralities(
+        self, dpg_model: nx.DiGraph, ci_radius: int = 2
+    ) -> NodeCentralities:
         node_ids: list[Any] = list(dpg_model.nodes())
         n = len(node_ids)
         index = {node_id: i for i, node_id in enumerate(node_ids)}
@@ -109,4 +190,9 @@ class GraphToolBackend(GraphBackend):
             local_reaching=local_reaching,
             closeness=closeness,
             harmonic=harmonic,
+            collective_influence=_collective_influence(graph, node_ids, ci_radius),
+            clustering=_clustering(graph, node_ids),
+            percolation=_percolation(
+                graph, weight_prop, node_ids, percolation_states(dpg_model)
+            ),
         )

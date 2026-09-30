@@ -1,14 +1,15 @@
 """NetworkX implementation of the centrality backend.
 
-These calls are the reference definitions of the four DPG centralities; every
+These calls are the reference definitions of the DPG node centralities; every
 other backend must reproduce them to an absolute tolerance of 1e-3.
 """
 
 from typing import Any, ClassVar
 
 import networkx as nx
+import numpy as np
 
-from .base import GraphBackend, NodeCentralities
+from .base import GraphBackend, NodeCentralities, percolation_states
 
 
 def _distance_graph(dpg_model: nx.DiGraph) -> tuple[nx.DiGraph, float]:
@@ -30,12 +31,53 @@ def _distance_graph(dpg_model: nx.DiGraph) -> tuple[nx.DiGraph, float]:
     return distance_graph, total_weight
 
 
+def _collective_influence(dpg_model: nx.DiGraph, ci_radius: int) -> dict[Any, float]:
+    """Directed-out collective influence at radius ``ci_radius``."""
+    excess = {node: max(dpg_model.out_degree(node) - 1, 0) for node in dpg_model}
+    influence: dict[Any, float] = {}
+    for node in dpg_model:
+        hops = nx.single_source_shortest_path_length(
+            dpg_model, node, cutoff=ci_radius
+        )
+        frontier = sum(excess[j] for j, d in hops.items() if d == ci_radius)
+        influence[node] = float(excess[node] * frontier)
+    return influence
+
+
+def _clustering(dpg_model: nx.DiGraph) -> dict[Any, float]:
+    """Directed, unweighted local clustering coefficient (Fagiolo)."""
+    return {node: float(c) for node, c in nx.clustering(dpg_model).items()}
+
+
+def _percolation(dpg_model: nx.DiGraph, states: dict[Any, float]) -> dict[Any, float]:
+    """Percolation centrality with the given per-node ``states``.
+
+    ``n <= 2`` and nodes with ``sum(states) - state == 0`` score ``0.0``, where
+    ``nx.percolation_centrality`` would divide by zero.
+    """
+    n = len(dpg_model)
+    if n <= 2:
+        return dict.fromkeys(dpg_model.nodes(), 0.0)
+    # numpy scalars turn the zero denominators into nan instead of raising;
+    # those entries are overwritten below.
+    np_states = {node: np.float64(value) for node, value in states.items()}
+    total = sum(np_states.values())
+    with np.errstate(divide="ignore", invalid="ignore"):
+        raw = nx.percolation_centrality(dpg_model, states=np_states, weight="weight")
+    return {
+        node: float(raw[node]) if total - np_states[node] != 0 else 0.0
+        for node in dpg_model.nodes()
+    }
+
+
 class NetworkXBackend(GraphBackend):
-    """Computes the four node centralities with NetworkX itself."""
+    """Computes the node centralities with NetworkX itself."""
 
     name: ClassVar[str] = "networkx"
 
-    def node_centralities(self, dpg_model: nx.DiGraph) -> NodeCentralities:
+    def node_centralities(
+        self, dpg_model: nx.DiGraph, ci_radius: int = 2
+    ) -> NodeCentralities:
         distance_graph, total_weight = _distance_graph(dpg_model)
         # NetworkX measures closeness/harmonic on incoming paths; reverse the
         # graph to obtain the outgoing variant DPG uses.
@@ -65,4 +107,7 @@ class NetworkXBackend(GraphBackend):
             local_reaching=local_reaching,
             closeness=closeness,
             harmonic=harmonic,
+            collective_influence=_collective_influence(dpg_model, ci_radius),
+            clustering=_clustering(dpg_model),
+            percolation=_percolation(dpg_model, percolation_states(dpg_model)),
         )

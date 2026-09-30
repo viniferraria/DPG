@@ -11,10 +11,10 @@ status: stable
 # Responsibility
 
 `metrics/nodes.py` owns node-level graph metrics for a built DPG: degree, in/out degree,
-betweenness centrality, local reaching centrality, closeness centrality, and harmonic
-centrality. It exports the class `NodeMetrics` (re-exported from `metrics/__init__.py`
+betweenness centrality, local reaching centrality, closeness centrality, harmonic
+centrality, collective influence, local clustering coefficient, and percolation centrality. It exports the class `NodeMetrics` (re-exported from `metrics/__init__.py`
 alongside `EdgeMetrics` and `GraphMetrics`), plus module-level helpers `get_logger`,
-`log_timer`, `calc_node_metrics`. The four centrality calculators and the NetworkX-to-igraph
+`log_timer`, `calc_node_metrics`. The centrality calculators and the NetworkX-to-igraph
 conversion no longer live here — they moved to `metrics/backends/`, selectable by name; see
 [/modules/metrics-backends.md](/modules/metrics-backends.md).
 
@@ -29,6 +29,7 @@ NodeMetrics.extract_node_metrics(
     nodes_list: list[list[str]],
     trace_lrc_by_label: dict[str, float] | None = None,
     backend: str | GraphBackend = "igraph",
+    ci_radius: int = 2,
 ) -> Any
 ```
 
@@ -38,7 +39,7 @@ Note: it takes no `target_names` parameter — that's only part of the `GraphMet
 ([/modules/dpg-core.md](/modules/dpg-core.md)). `trace_lrc_by_label`, when given, overrides the
 backend-computed local reaching centrality for any label present in the mapping (used for
 `context_order > 1` trace-consistent LRC). `backend` selects which `GraphBackend` computes the
-four centralities — a name from `metrics.backends.BACKEND_NAMES` (default `"igraph"`) or an
+seven centralities — a name from `metrics.backends.BACKEND_NAMES` (default `"igraph"`) or an
 already-instantiated backend object; see [/modules/metrics-backends.md](/modules/metrics-backends.md)
 for the registry and the metric contract every backend implements.
 
@@ -55,13 +56,14 @@ applies to them.
 
 | Name | Signature | Returns | What it computes |
 |---|---|---|---|
-| `NodeMetrics.extract_node_metrics` | `(dpg_model: nx.DiGraph, nodes_list: list[list[str]], trace_lrc_by_label: dict[str, float] \| None = None, backend: str \| GraphBackend = "igraph") -> Any` (`@staticmethod`, `@log_timer`) | `pd.DataFrame` | Resolves `backend` (via `metrics.backends.get_backend` when given a string), calls its `node_centralities`, applies any `trace_lrc_by_label` override, and joins with degree and node labels |
+| `NodeMetrics.extract_node_metrics` | `(dpg_model: nx.DiGraph, nodes_list: list[list[str]], trace_lrc_by_label: dict[str, float] \| None = None, backend: str \| GraphBackend = "igraph", ci_radius: int = 2) -> Any` (`@staticmethod`, `@log_timer`) | `pd.DataFrame` | Raises `ValueError` if `ci_radius < 1`, resolves `backend` (via `metrics.backends.get_backend` when given a string), calls its `node_centralities(dpg_model, ci_radius=ci_radius)`, applies any `trace_lrc_by_label` override, and joins with degree and node labels |
 | `get_logger` | `(name: str, log_file: str \| None = None) -> logging.Logger` | Logger at `INFO`, console handler always, file handler when `log_file` given | Returns early if the logger already `hasHandlers()` so handlers are never duplicated |
 | `log_timer` | `(func: Callable[..., Any]) -> Callable[..., Any]` | Wrapped function | Logs `Execution time for <name>: <secs>.4f seconds`; the wrapper signature is `wrapper(self, *args, **kwargs)` |
 | `calc_node_metrics` | `(dpg_model: nx.DiGraph) -> tuple[dict[str,int], dict[str,int], dict[str,int]]` | `(in_nodes, out_nodes, degree)` | `degree[node] = in_degree + out_degree`, computed on the NetworkX graph directly — this stays in `nodes.py`, not in any backend |
 
-The four centrality calculators (`calc_betweenness_centrality`, `calc_local_reaching_centrality`,
-`calc_closeness_centrality`, `calc_harmonic_centrality`) and `_nx_to_igraph` moved to
+The centrality calculators (`calc_betweenness_centrality`, `calc_local_reaching_centrality`,
+`calc_closeness_centrality`, `calc_harmonic_centrality`, `calc_collective_influence`,
+`calc_clustering_coefficient`, `calc_percolation_centrality`) and `_nx_to_igraph` moved to
 `metrics/backends/igraph_backend.py`; see [/modules/metrics-backends.md](/modules/metrics-backends.md)
 for their signatures and the metric contract every backend (including igraph's) must satisfy.
 
@@ -69,7 +71,8 @@ for their signatures and the metric contract every backend (including igraph's) 
 
 Columns, in order: `Node`, `Degree`, `In degree nodes`, `Out degree nodes`,
 `Betweenness centrality`, `Local reaching centrality`, `Closeness centrality`,
-`Harmonic centrality`, `Label`. Built by indexing the metric frame on `Node`, indexing
+`Harmonic centrality`, `Collective influence`, `Local clustering coefficient`,
+`Percolation centrality`, `Label`. Built by indexing the metric frame on `Node`, indexing
 `nodes_list` (as columns `["Node", "Label"]`) on `Node`, then `pd.concat(..., axis=1,
 join="inner").reset_index()`.
 
@@ -111,7 +114,7 @@ The three weight-validation guards (`non_positive_lrc_weight`, `non_positive_clo
   `IGraphBackend.node_centralities` maps it back through `node_ids` before it ever reaches
   `NodeMetrics`, so every `NodeCentralities` dict `extract_node_metrics` sees is keyed by node id
   regardless of backend — see [/modules/metrics-backends.md](/modules/metrics-backends.md).
-- **`extract_node_metrics` indexes the four centrality dicts by node id** (`[centrality[n] for n
+- **`extract_node_metrics` indexes the centrality dicts by node id** (`[centrality[n] for n
   in nodes]`), so backend iteration order no longer matters for them. Degree, in-degree, and
   out-degree still come from `list(dict.values())` on `calc_node_metrics`'s output, which does
   depend on `calc_node_metrics` iterating `dpg_model.nodes()` in the same order as the `nodes`
@@ -121,8 +124,10 @@ The three weight-validation guards (`non_positive_lrc_weight`, `non_positive_clo
   dropped from the result, and vice versa — a row-count shortfall is a labelling problem, not a
   metrics bug.
 - **Harmonic centrality is unnormalized** and scales with `total_weight`, so values are not
-  comparable across graphs with different edge counts. Betweenness, closeness, and local
-  reaching centrality are all normalized to `[0, 1]`.
+  comparable across graphs with different edge counts. Collective influence is an unnormalized
+  integer-valued product of excess out-degrees and grows with `ci_radius` and branching.
+  Betweenness, closeness, local reaching centrality, local clustering, and percolation
+  centrality are all normalized to `[0, 1]`.
 - **Self-distance is excluded everywhere**: harmonic skips `d == 0`, closeness counts the source
   in `reachable_nodes` but subtracts it via `reachable_nodes - 1`, and local reaching centrality
   skips paths of length `<= 0`.

@@ -9,11 +9,13 @@ import datetime
 import types
 from dataclasses import fields
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 
 import experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic as m
+from metrics.nodes import NodeMetrics
 
 # --- timestamp ---------------------------------------------------------------
 
@@ -90,6 +92,11 @@ def test_records_from_explanation_maps_columns_and_types():
                 "Out degree nodes": 2,
                 "Betweenness centrality": 0.5,
                 "Local reaching centrality": 0.25,
+                "Closeness centrality": 0.1,
+                "Harmonic centrality": 0.2,
+                "Collective influence": 4.0,
+                "Local clustering coefficient": 0.3,
+                "Percolation centrality": 0.4,
                 "Label": "F1 <= 0.5",
             }
         ]
@@ -107,6 +114,11 @@ def test_records_from_explanation_maps_columns_and_types():
     assert rec.out_degree == 2
     assert rec.betweenness_centrality == 0.5
     assert rec.local_reaching_centrality == 0.25
+    assert rec.closeness_centrality == 0.1
+    assert rec.harmonic_centrality == 0.2
+    assert rec.collective_influence == 4.0
+    assert rec.local_clustering_coefficient == 0.3
+    assert rec.percolation_centrality == 0.4
     assert rec.node_idx == 0
     assert rec.label == "F1 <= 0.5"
     assert rec.processing_time == 1.2346  # rounded to 4 dp
@@ -124,10 +136,39 @@ def test_records_from_explanation_empty_frame():
             "Out degree nodes",
             "Betweenness centrality",
             "Local reaching centrality",
+            "Closeness centrality",
+            "Harmonic centrality",
+            "Collective influence",
+            "Local clustering coefficient",
+            "Percolation centrality",
             "Label",
         ]
     )
     assert m.records_from_explanation(expl, "exp", 1, 0.0) == []
+
+
+def test_records_from_real_node_metrics_have_all_runner_columns():
+    """A wrong metric/column name would raise KeyError, swallowed by the runner's per-run except."""
+    G = nx.DiGraph()
+    G.add_weighted_edges_from(
+        [("a", "b", 3), ("a", "c", 2), ("b", "d", 3), ("c", "d", 1), ("c", "e", 1)]
+    )
+    nodes_list = [
+        ["a", "F1 <= 0.5"],
+        ["b", "F2 <= 1.5"],
+        ["c", "F2 > 1.5"],
+        ["d", "Class 0"],
+        ["e", "Class 1"],
+    ]
+
+    df = NodeMetrics.extract_node_metrics(G, nodes_list)
+
+    for name in m.METRICS:
+        assert name in df.columns
+    records = m.records_from_explanation(
+        types.SimpleNamespace(node_metrics=df), "exp", 0, processing_time=0.0
+    )
+    assert len(records) == len(nodes_list)
 
 
 # --- write_records_to_csv ----------------------------------------------------
@@ -144,6 +185,11 @@ def test_write_records_to_csv_roundtrip(tmp_path):
             out_degree=2,
             betweenness_centrality=0.5,
             local_reaching_centrality=0.25,
+            closeness_centrality=0.0,
+            harmonic_centrality=0.0,
+            collective_influence=0.0,
+            local_clustering_coefficient=0.0,
+            percolation_centrality=0.0,
             node_idx=0,
             label="F1 <= 0.5",
             processing_time=1.2346,
@@ -249,6 +295,11 @@ def test_run_experiments_wiring_with_stubs(tmp_path, monkeypatch):
                 out_degree=1,
                 betweenness_centrality=0.0,
                 local_reaching_centrality=0.0,
+                closeness_centrality=0.0,
+                harmonic_centrality=0.0,
+                collective_influence=0.0,
+                local_clustering_coefficient=0.0,
+                percolation_centrality=0.0,
                 node_idx=0,
                 label="leaf",
                 processing_time=0.0,

@@ -63,7 +63,8 @@ uv run python run_monk.py
 No CLI flags exist. The knobs are module constants: `RANDOM_STATE = 42`, `TOP_K = 3`,
 `ATTRIBUTES = ["a1".."a6"]`, `MODEL_FACTORIES = {"RandomForest", "ExtraTrees"}` (both
 `random_state=42`, otherwise sklearn defaults), and
-`METRICS = ["Local reaching centrality", "Closeness centrality", "Harmonic centrality"]`.
+`METRICS = ["Local reaching centrality", "Closeness centrality", "Harmonic centrality",
+"Betweenness centrality", "Collective influence", "Percolation centrality"]`.
 `main()` creates `states/` and calls `run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH,
 OUTPUT_PATH, logger)`.
 
@@ -84,7 +85,8 @@ Both under `results/`, created by `write_records_to_csv` / `write_causal_accurac
 - `results/node_metrics_<timestamp>.csv` — one path per run; every column of
   `explanation.node_metrics` is carried through verbatim, plus `node_index` and the fixed columns
   `experiment`, `split_idx`, `processing_time`. Column names are snake-cased by `to_snake_case`
-  ("In degree nodes" → `in_degree_nodes`). Written with `mode="a"` and
+  ("In degree nodes" → `in_degree_nodes`), so the newer metrics land as `collective_influence`,
+  `local_clustering_coefficient`, and `percolation_centrality` with no runner change. Written with `mode="a"` and
   `header=not output_path.exists()`, so the four (scenario × model) runs append into one file.
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
   explanation_top_features, metric, intersection, precision, recall`, list fields `;`-joined.
@@ -101,19 +103,21 @@ source. Nothing is cleaned or overwritten between runs, so both directories grow
 
 # Test coverage
 
-**None.** No file under `tests/` imports `experiments.monks` or `run_monk`; the suite has no
-`__init__.py`, so it is not importable as a package the way
-[local_explanation](/experiments/local-explanation.md) is. The pure helpers are written to be testable
-in isolation — `to_snake_case`, `timestamp`, `load_dataset`, `pre_process_dataset`,
-`base_feature_name`, `extract_top_k_features`, `calculate_causal_accuracy`, `records_from_explanation`
-— but nothing exercises them. Note also that the suite is **entirely untracked in git**
-(`git ls-files experiments/monks` returns nothing), unlike the other two.
-
-The closest analogue is `tests/test_run_dpg_causal_synthetic.py`, which covers the near-identical
-helpers of the causal suite; any change shared between the two runners is only guarded there.
+`tests/test_run_monk.py` is minimal. The suite has no `__init__.py`, so the test loads `run_monk.py`
+by file path (`importlib.util.spec_from_file_location`) in a module-scoped fixture, after `chdir` to a
+temp dir because importing the module opens a log file in the CWD. It checks that every `METRICS`
+name is a column of the real `NodeMetrics.extract_node_metrics` output (a missing one would raise a
+`KeyError` swallowed by the per-run `except Exception`), that `extract_top_k_features` maps one-hot
+labels back to distinct `aN` names, and the snake-case names of the new node-metric columns. The
+other helpers (`load_dataset`, `pre_process_dataset`, `calculate_causal_accuracy`, ...) are still
+untested. `run_monk.py` is tracked in git.
 
 # Gotchas
 
+- `Collective influence` is always computed at radius ℓ = 2: `DPGExplainer` calls
+  `NodeMetrics.extract_node_metrics` without `ci_radius` and no config key sets it. It is
+  integer-valued with many ties at `0`, so its top-k order among tied nodes is arbitrary. `Local
+  clustering coefficient` is saved in the node CSV but deliberately not ranked (same tie problem).
 - **monks-2 ships but is never run.** `monks-2.train`/`.test` sit in `datasets/` and are absent from
   `SCENARIO_GROUND_TRUTH`. `monks.names` gives its concept as "EXACTLY TWO of {a1 = 1, ..., a6 = 1}",
   which implicates all six attributes — so a top-3 ground-truth set would be ill-defined.

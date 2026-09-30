@@ -97,6 +97,7 @@ class NodeMetrics:
         nodes_list: list[list[str]],
         trace_lrc_by_label: dict[str, float] | None = None,
         backend: str | GraphBackend = "igraph",
+        ci_radius: int = 2,
     ) -> Any:
         """Compute per-node graph metrics for a DPG model.
 
@@ -114,15 +115,19 @@ class NodeMetrics:
             backend: Centrality backend name (see
                 ``metrics.backends.BACKEND_NAMES``) or an instantiated
                 ``GraphBackend``.
+            ci_radius: Ball radius ℓ for collective influence (``>= 1``).
 
         Returns:
             DataFrame with columns ``['Node', 'Label', 'Degree', 'In degree nodes',
             'Out degree nodes', 'Betweenness centrality', 'Local reaching centrality',
-            'Closeness centrality', 'Harmonic centrality']``.
+            'Closeness centrality', 'Harmonic centrality', 'Collective influence',
+            'Local clustering coefficient', 'Percolation centrality']``.
         """
 
+        if ci_radius < 1:
+            raise ValueError(f"ci_radius must be >= 1, got {ci_radius}")
         graph_backend = get_backend(backend) if isinstance(backend, str) else backend
-        centralities = graph_backend.node_centralities(dpg_model)
+        centralities = graph_backend.node_centralities(dpg_model, ci_radius=ci_radius)
         in_nodes, out_nodes, degree = calc_node_metrics(dpg_model)
         betweenness_centrality = centralities.betweenness
         local_reaching_centrality = dict(centralities.local_reaching)
@@ -144,6 +149,11 @@ class NodeMetrics:
             "Local reaching centrality": [local_reaching_centrality[n] for n in nodes],
             "Closeness centrality": [closeness_centrality[n] for n in nodes],
             "Harmonic centrality": [harmonic_centrality[n] for n in nodes],
+            "Collective influence": [
+                centralities.collective_influence[n] for n in nodes
+            ],
+            "Local clustering coefficient": [centralities.clustering[n] for n in nodes],
+            "Percolation centrality": [centralities.percolation[n] for n in nodes],
         }
         df_data_node = pd.DataFrame(data_node).set_index("Node")
         df_nodes_list = pd.DataFrame(nodes_list, columns=["Node", "Label"]).set_index(

@@ -22,6 +22,9 @@ _FLOAT_COLS = (
     "Local reaching centrality",
     "Closeness centrality",
     "Harmonic centrality",
+    "Collective influence",
+    "Local clustering coefficient",
+    "Percolation centrality",
 )
 _DEGREE_COLS = ("Degree", "In degree nodes", "Out degree nodes")
 

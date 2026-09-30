@@ -1,7 +1,7 @@
 ---
 type: Python Module
 title: metrics.backends — pluggable centrality backends
-description: Registry and three interchangeable graph-library implementations (networkx, igraph, graph_tool) for the four DPG node centralities, selected by name via dpg.metrics.backend.
+description: Registry and three interchangeable graph-library implementations (networkx, igraph, graph_tool) for the seven DPG node centralities, selected by name via dpg.metrics.backend.
 resource: https://github.com/viniferraria/DPG/blob/main/metrics/backends/__init__.py
 tags: [metrics, centrality, igraph, networkx, graph-tool, backends, performance]
 generated: { by: claude_code/claude-sonnet-5, at: 2026-09-18T00:00:00Z }
@@ -10,7 +10,7 @@ status: stable
 
 # Responsibility
 
-`metrics/backends/` makes the four expensive node-centrality computations pluggable by graph
+`metrics/backends/` makes the seven node-centrality computations pluggable by graph
 library. `metrics/nodes.py` used to hard-code igraph; the centrality code that used to live there
 now lives in this package behind a common interface, selected at metric time by name
 (`"networkx"`, `"igraph"`, `"graph_tool"`) or by passing an already-instantiated backend object.
@@ -43,29 +43,41 @@ Errors:
 ```python
 @dataclass(frozen=True)
 class NodeCentralities:
-    """All four dicts are keyed by the NetworkX node id."""
+    """All seven dicts are keyed by the NetworkX node id."""
     betweenness: dict[Any, float]
     local_reaching: dict[Any, float]
     closeness: dict[Any, float]
     harmonic: dict[Any, float]
+    collective_influence: dict[Any, float]
+    clustering: dict[Any, float]
+    percolation: dict[Any, float]
+
+def percolation_states(dpg_model: nx.DiGraph) -> dict[Any, float]: ...
 
 class GraphBackend(ABC):
     name: ClassVar[str]
     @abstractmethod
-    def node_centralities(self, dpg_model: nx.DiGraph) -> NodeCentralities: ...
+    def node_centralities(
+        self, dpg_model: nx.DiGraph, ci_radius: int = 2
+    ) -> NodeCentralities: ...
 ```
+
+`percolation_states` is the shared input to percolation centrality (contract item 7); every backend
+calls the same helper, so the states can never differ between backends.
 
 Every backend module (`networkx_backend.py`, `igraph_backend.py`, `graph_tool_backend.py`) defines
 one class implementing `GraphBackend`, with `name` set to its registry key
 (`NetworkXBackend.name = "networkx"`, `IGraphBackend.name = "igraph"`,
 `GraphToolBackend.name = "graph_tool"`). `node_centralities` is the only public entry point; all
-four centralities are computed together in one call.
+seven centralities are computed together in one call. `ci_radius` is collective influence's ball
+radius ℓ; `NodeMetrics.extract_node_metrics` rejects `ci_radius < 1` with `ValueError` before any
+backend runs.
 
 # The metric contract
 
 Notation: edge weight `w` = edge attribute `"weight"` (default `1.0`); `W` = sum of all edge
 weights; `m` = number of edges; `n` = number of nodes. All graphs are directed. Every backend must
-reproduce these four definitions to an absolute tolerance of `1e-3`; `networkx_backend.py`'s
+reproduce these seven definitions to an absolute tolerance of `1e-3`; `networkx_backend.py`'s
 docstring calls its own calls "the reference definitions."
 
 1. **Betweenness** — shortest paths using the raw weight `w` as distance (not inverted), directed,
@@ -85,6 +97,21 @@ docstring calls its own calls "the reference definitions."
 4. **Harmonic** (outgoing, unnormalized) — distance `d = W / w`; value = `sum(1 / d(v, t))` over
    reachable `t != v` with `d > 0`. Reference: `nx.harmonic_centrality(H.reverse(copy=True),
    distance="dist")` on the same reversed distance graph.
+5. **Collective influence** (directed out, unweighted, radius ℓ = `ci_radius`, default 2) —
+   `excess(v) = max(k_out(v) - 1, 0)`; value = `excess(i) * Σ excess(j)` over nodes `j` whose
+   unweighted out-hop distance from `i` is exactly ℓ. The clamp at 0 makes sinks and single-exit
+   nodes dead ends (Morone & Makse's excess degree) instead of contributing `-1`. No library ships
+   CI; reference: `_collective_influence` in `tests/metrics_ground_truth/generate.py`
+   (`nx.single_source_shortest_path_length(G, i, cutoff=ℓ)`).
+6. **Local clustering coefficient** (directed, unweighted, Fagiolo) — reference call:
+   `nx.clustering(G)` on the DiGraph, no `weight`.
+7. **Percolation centrality** — shortest paths on the raw weight `w` as distance, like betweenness.
+   State `x_v` = `percolation_states(G)[v]`: the node's flow (sum of incoming weights; outgoing
+   weights for a node with no incoming edges) divided by the largest flow. `X = Σ x`. Value =
+   `(1/(n-2)) · Σ_{s≠v} x_s·δ_s(v) / (X - x_v)` with `δ_s(v)` the Brandes source dependency.
+   Reference call: `nx.percolation_centrality(G, states=percolation_states(G), weight="weight")`.
+   Where NetworkX would divide by zero, every backend returns `0.0` instead: all nodes when
+   `n <= 2`, and node `v` when `X - x_v == 0`.
 
 ## Which library call each backend uses
 
@@ -94,6 +121,9 @@ docstring calls its own calls "the reference definitions."
 | Local reaching | `nx.local_reaching_centrality(dpg_model, node, weight="weight")` per node | `ig_graph.get_shortest_paths(i, mode="out", weights="distance", output="vpath")`, averaged by hand | `graph_tool.topology.shortest_distance(graph, source=v, weights=dist_prop, pred_map=True)`, path reconstructed by walking `pred_map` back to the source and averaging original weights by hand |
 | Closeness | `nx.closeness_centrality(reversed_dist_graph, distance="dist", wf_improved=True)` | `ig_graph.distances(i, mode="out", weights="distance")`, Wasserman–Faust formula applied by hand | `graph_tool.centrality.closeness(graph, weight=dist_prop, harmonic=False, norm=True)`, then a further `* r / (n-1)` correction (see below) |
 | Harmonic | `nx.harmonic_centrality(reversed_dist_graph, distance="dist")` | `ig_graph.distances(i, mode="out", weights="distance")`, `sum(1/d)` applied by hand | `graph_tool.centrality.closeness(graph, weight=dist_prop, harmonic=True, norm=False)` |
+| Collective influence | `nx.single_source_shortest_path_length(G, v, cutoff=ℓ)` per node | `ig_graph.outdegree()` + one `ig_graph.neighborhood(order=ℓ, mode="out", mindist=ℓ)` call | `graph.get_out_degrees(...)` (cast to `int64` — it is unsigned, so `k - 1` on a sink would wrap) + `graph_tool.topology.shortest_distance(graph, source=v, max_dist=ℓ)` per node |
+| Local clustering | `nx.clustering(dpg_model)` | `ig_graph.get_adjacency_sparse()`, Fagiolo formula in `scipy.sparse` (below) | `graph_tool.spectral.adjacency(graph)`, same `scipy.sparse` formula |
+| Percolation | `nx.percolation_centrality(dpg_model, states=..., weight="weight")` with `np.float64` states so zero denominators yield `nan` (then overwritten with `0.0`) | `ig_graph.betweenness(directed=True, weights="weight", sources=[...])` once per distinct non-zero state value, scaled by that value, then divided by `(X - x_v)(n - 2)` | `graph_tool.centrality.betweenness(graph, pivots=..., weight=weight_prop, norm=False)` per distinct state value, same scaling |
 
 # Per-backend notes
 
@@ -143,6 +173,23 @@ not raise the closeness/harmonic-specific variants — all three failure paths s
 
 # Gotchas
 
+## Fagiolo clustering from a sparse adjacency
+
+Neither igraph (`transitivity_local_undirected` is undirected) nor graph-tool
+(`local_clustering(undirected=False)` uses its own directed definition, up to `0.64` off
+`nx.clustering` on random digraphs) ships Fagiolo's directed clustering. Both backends compute it
+from the 0/1 adjacency `A` with its diagonal zeroed (NetworkX ignores self-loops): `S = A + Aᵀ`,
+`c_i = diag(S³)_i / (2·(d_tot(d_tot − 1) − 2·d_bi))`, `d_bi = diag(A²)_i`, `0.0` when the
+denominator is `0`. Only diagonals are formed (`rowsum((S @ S).multiply(Sᵀ))`), never a dense cube.
+graph-tool's adjacency is transposed (`A[target, source]`); every term is transpose-invariant.
+
+## Subset betweenness semantics for percolation
+
+igraph's `betweenness(sources=...)` with no `targets` equals `Σ_{s ∈ sources} δ_s(v)`, and
+graph-tool's `betweenness(pivots=..., norm=False)` is the same sum with no `n/|pivots|` rescaling —
+both checked against a hand-rolled Brandes sum. That is what lets percolation be computed with one
+library call per distinct state value.
+
 ## Shortest-path ties in local reaching centrality
 
 When two shortest paths from a source tie on distance `d` but differ in the mean of their original
@@ -173,8 +220,9 @@ any backend implementation:
   `mode="aggregated_transitions"`, `context_order=1` — never relying on `config.yaml`/CWD), then
   `dpg.fit(X.values)` and `dpg.to_networkx()`. `build_scenario_graph(name)` is the single
   function both consumers call, so the generator and the tests build byte-identical graphs.
-- `generate.py` computes betweenness/local-reaching/closeness/harmonic straight from the same
-  `networkx` reference calls as `networkx_backend.py` (not via `NodeMetrics` or any backend
+- `generate.py` computes all seven metrics straight from the `networkx` reference definitions
+  above (collective influence and the percolation states are re-derived in the generator itself,
+  independently of `metrics/backends/`), at `ci_radius = 2` (not via `NodeMetrics` or any backend
   object), and writes `tests/metrics_ground_truth/<scenario>.json`, keyed by node **label** (unique
   per graph) rather than node id. Regenerate with:
 

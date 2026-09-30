@@ -1,5 +1,33 @@
 # Bundle Update Log
 
+## 2026-09-29
+
+* **Update**: Both experiment runners now rank the new node metrics. `METRICS` in
+  `experiments/monks/run_monk.py` and `experiments/causal_synthetic_scenarios/run_dpg_causal_synthetic.py`
+  gained `Betweenness centrality` (percolation's control), `Collective influence`, and
+  `Percolation centrality`; `Local clustering coefficient` is saved, not ranked. The causal
+  `NodeMetricRecord` gained `closeness_centrality`, `harmonic_centrality`, `collective_influence`,
+  `local_clustering_coefficient`, `percolation_centrality`. New `tests/test_run_monk.py`; new column
+  guard test in `tests/test_run_dpg_causal_synthetic.py`. Updated
+  [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md) and
+  [MONK's problems](/experiments/monks.md) (metrics, outputs, test coverage, ℓ = 2 gotcha; MONK's
+  stale "untracked / no tests" claims fixed). `CLAUDE.md` orchestrator pattern now names Opus 5.5 /
+  Sonnet 5.5.
+
+* **Update**: Added three node metrics to every metrics backend (`metrics/backends/*.py`) and to
+  `NodeMetrics.extract_node_metrics` (`metrics/nodes.py`): **collective influence** (directed out,
+  unweighted, radius `ci_radius`, default 2, new keyword on `extract_node_metrics` and
+  `GraphBackend.node_centralities`; `ValueError` when `< 1`), **local clustering coefficient**
+  (directed, unweighted Fagiolo = `nx.clustering`), and **percolation centrality** (raw weight as
+  distance, states from the new `metrics.backends.base.percolation_states` node-flow helper).
+  `NodeCentralities` gained `collective_influence`, `clustering`, `percolation`; the DataFrame gained
+  `Collective influence`, `Local clustering coefficient`, `Percolation centrality`. Ground-truth
+  fixtures regenerated (pre-existing values unchanged beyond 1e-16 float noise). New tests:
+  `tests/test_metric_collective_influence.py`, `tests/test_metric_clustering.py`,
+  `tests/test_metric_percolation.py`. Updated [metrics backends](/modules/metrics-backends.md)
+  (interface, contract items 5–7, library-call table, two new gotchas, fixture notes) and
+  [metrics.nodes](/modules/metrics-nodes.md) (signature, columns, normalization note).
+
 ## 2026-09-22
 
 * **Update (breaking change)**: Documented a further uncommitted change on `feature/first_runs`

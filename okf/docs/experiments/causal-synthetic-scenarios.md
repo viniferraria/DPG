@@ -26,7 +26,9 @@ Ground truth is hard-coded in `SCENARIO_GROUND_TRUTH` in `run_dpg_causal_synthet
 
 Scoring is set-based (`evaluate_causal_accuracy`): precision `|E ∩ GT| / |E|`, recall `|E ∩ GT| / |GT|`
 with `TOP_K = 3`, repeated for each of `METRICS` — `Local reaching centrality`, `Closeness centrality`,
-`Harmonic centrality`.
+`Harmonic centrality`, `Betweenness centrality`, `Collective influence`, `Percolation centrality`.
+Betweenness is the control for percolation: with equal node states percolation reduces to normalized
+betweenness, so any rank difference comes from the traffic-based states.
 
 # Layout
 
@@ -87,7 +89,9 @@ Written under `results/` and `states/`, both created on demand:
 
 - `results/node_metrics_<timestamp>.csv` — one row per graph node per (scenario, model, split), columns
   from `NodeMetricRecord`: `experiment, split, node, degree, in_degree, out_degree,
-  betweenness_centrality, local_reaching_centrality, node_idx, label, processing_time`. Header written
+  betweenness_centrality, local_reaching_centrality, closeness_centrality, harmonic_centrality,
+  collective_influence, local_clustering_coefficient, percolation_centrality, node_idx, label,
+  processing_time`. Header written
   only when the file does not already exist (`write_records_to_csv` opens in `"a+"`).
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
   explanation_top_features, metric, intersection, precision, recall`; list fields `;`-joined.
@@ -109,7 +113,11 @@ grows monotonically because nothing is overwritten or cleaned.
 `timestamp` (fixed datetime + filesystem safety), `load_dataset` (last column is the target),
 `make_splitter` (reproducibility, `N_SPLITS`), `evaluate_accuracy`, `records_from_explanation` (column
 mapping, types, 4-dp rounding, empty frame), `write_records_to_csv` (roundtrip and no duplicate header),
-`save_pickle`, `mean_or_nan`, and `iter_splits`. Two hygiene tests assert importing the module has no
+`save_pickle`, `mean_or_nan`, and `iter_splits`.
+`test_records_from_real_node_metrics_have_all_runner_columns` runs the real
+`NodeMetrics.extract_node_metrics` on a tiny graph and checks every `METRICS` name and every
+`NodeMetricRecord` source column exists — a missing column would otherwise raise a `KeyError` that
+the per-run `except Exception` swallows, silently dropping rows. Two hygiene tests assert importing the module has no
 side effects and that `MODEL_FACTORIES` yields fresh instances.
 
 `test_run_experiments_wiring_with_stubs` drives `run_experiments` end-to-end with `explain_split`
@@ -119,6 +127,13 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
 
 # Gotchas
 
+- `Collective influence` is always computed at radius ℓ = 2: `DPGExplainer` calls
+  `NodeMetrics.extract_node_metrics` without `ci_radius` and no config key sets it. It is
+  integer-valued with many ties at `0`, so its top-k order among tied nodes is arbitrary. `Local
+  clustering coefficient` is saved in the node CSV but deliberately not ranked (same tie problem).
+- **`extract_top_k_features` does not de-duplicate.** Several predicates on one feature can fill
+  the whole top-k (e.g. `F2;F2;F2`), which caps precision/recall for every metric. MONK's copy of the
+  function de-duplicates; this one does not.
 - **Generators do not write where the runner reads.** All four `scenario_*_generator.py` scripts write
   to `test_datasets/` (CWD-relative for scenarios 1 and 3, `<suite>/test_datasets/` for 2 and 5) while
   the runner reads `datasets/`, and `test_datasets/` does not exist in the tree. Regenerating a

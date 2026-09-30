@@ -85,6 +85,9 @@ METRICS = [
     "Local reaching centrality",
     "Closeness centrality",
     "Harmonic centrality",
+    "Betweenness centrality",
+    "Collective influence",
+    "Percolation centrality",
 ]
 CONFIG_PATH = ((Path(__file__).parent).parent) / "../config.yaml"
 
@@ -108,6 +111,11 @@ class NodeMetricRecord:
     out_degree: int
     betweenness_centrality: float
     local_reaching_centrality: float
+    closeness_centrality: float
+    harmonic_centrality: float
+    collective_influence: float
+    local_clustering_coefficient: float
+    percolation_centrality: float
     node_idx: int
     label: str
     processing_time: float
@@ -203,6 +211,11 @@ def records_from_explanation(
             out_degree=int(row["Out degree nodes"]),
             betweenness_centrality=float(row["Betweenness centrality"]),
             local_reaching_centrality=float(row["Local reaching centrality"]),
+            closeness_centrality=float(row["Closeness centrality"]),
+            harmonic_centrality=float(row["Harmonic centrality"]),
+            collective_influence=float(row["Collective influence"]),
+            local_clustering_coefficient=float(row["Local clustering coefficient"]),
+            percolation_centrality=float(row["Percolation centrality"]),
             node_idx=int(node_idx),
             label=str(row["Label"]),
             processing_time=round(processing_time, 4),

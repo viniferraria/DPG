@@ -9,9 +9,11 @@ from typing import Any, ClassVar
 
 import igraph as ig
 import networkx as nx
+import numpy as np
+import scipy.sparse as sp
 
 from ..nodes import log_timer
-from .base import GraphBackend, NodeCentralities
+from .base import GraphBackend, NodeCentralities, percolation_states
 
 
 @log_timer
@@ -166,12 +168,85 @@ def calc_harmonic_centrality(
     return harmonic_centrality
 
 
+@log_timer
+def calc_collective_influence(
+    ig_graph: ig.Graph, node_ids: list[str], ci_radius: int
+) -> dict[str, float]:
+    """Compute directed-out collective influence for an igraph graph."""
+    excess = [max(degree - 1, 0) for degree in ig_graph.outdegree()]
+    # Unweighted out-neighbourhoods restricted to distance exactly ci_radius.
+    frontiers = ig_graph.neighborhood(order=ci_radius, mode="out", mindist=ci_radius)
+    return {
+        node_ids[i]: float(excess[i] * sum(excess[j] for j in frontier))
+        for i, frontier in enumerate(frontiers)
+    }
+
+
+@log_timer
+def calc_clustering_coefficient(
+    ig_graph: ig.Graph, node_ids: list[str]
+) -> dict[str, float]:
+    """Compute the directed, unweighted local clustering coefficient.
+
+    igraph only has an undirected version, so this evaluates Fagiolo's
+    directed definition (the one ``nx.clustering`` uses) on the sparse
+    adjacency: with S = A + A^T, c_i = diag(S^3)_i / (2 (d(d-1) - 2 d_bi)),
+    d being in + out degree and d_bi the number of reciprocated pairs.
+    """
+    n = ig_graph.vcount()
+    adj = sp.csr_matrix(ig_graph.get_adjacency_sparse(), dtype=float)
+    adj.setdiag(0)  # self-loops are ignored, as in NetworkX
+    adj.eliminate_zeros()
+    adj.data[:] = 1.0
+    sym = adj + adj.T
+    triangles = np.asarray((sym @ sym).multiply(sym.T).sum(axis=1)).ravel()
+    degree = np.asarray(sym.sum(axis=1)).ravel()
+    reciprocal = np.asarray((adj @ adj).multiply(sp.identity(n)).sum(axis=1)).ravel()
+    denominator = 2 * (degree * (degree - 1) - 2 * reciprocal)
+    coefficient = np.divide(
+        triangles, denominator, out=np.zeros(n), where=denominator > 0
+    )
+    return {node_ids[i]: float(coefficient[i]) for i in range(n)}
+
+
+@log_timer
+def calc_percolation_centrality(
+    ig_graph: ig.Graph, node_ids: list[str], states: dict[str, float]
+) -> dict[str, float]:
+    """Compute percolation centrality for an igraph graph."""
+    n = ig_graph.vcount()
+    if n <= 2:
+        return dict.fromkeys(node_ids, 0.0)
+    x = [states[node_id] for node_id in node_ids]
+    total = sum(x)
+    # sum_s x_s * delta_s(v): igraph's subset betweenness with only ``sources``
+    # given is sum_{s in sources} delta_s(v) on the raw weights, so sources that
+    # share a state value are handled in one call and scaled by that value.
+    sources_by_state: dict[float, list[int]] = {}
+    for i, value in enumerate(x):
+        if value != 0:
+            sources_by_state.setdefault(value, []).append(i)
+    weighted_dependency = np.zeros(n)
+    for value, sources in sources_by_state.items():
+        weighted_dependency += value * np.asarray(
+            ig_graph.betweenness(directed=True, weights="weight", sources=sources)
+        )
+    return {
+        node_ids[i]: float(weighted_dependency[i] / (total - x[i]) / (n - 2))
+        if total - x[i] != 0
+        else 0.0
+        for i in range(n)
+    }
+
+
 class IGraphBackend(GraphBackend):
-    """Computes the four node centralities through igraph."""
+    """Computes the node centralities through igraph."""
 
     name: ClassVar[str] = "igraph"
 
-    def node_centralities(self, dpg_model: nx.DiGraph) -> NodeCentralities:
+    def node_centralities(
+        self, dpg_model: nx.DiGraph, ci_radius: int = 2
+    ) -> NodeCentralities:
         ig_graph, node_ids = _nx_to_igraph(dpg_model)
         # calc_betweenness_centrality is keyed by igraph vertex index; map it
         # back to the NetworkX node ids the dataclass promises.
@@ -184,4 +259,11 @@ class IGraphBackend(GraphBackend):
             local_reaching=dict(calc_local_reaching_centrality(ig_graph, node_ids)),
             closeness=dict(calc_closeness_centrality(ig_graph, node_ids)),
             harmonic=dict(calc_harmonic_centrality(ig_graph, node_ids)),
+            collective_influence=calc_collective_influence(
+                ig_graph, node_ids, ci_radius
+            ),
+            clustering=calc_clustering_coefficient(ig_graph, node_ids),
+            percolation=calc_percolation_centrality(
+                ig_graph, node_ids, percolation_states(dpg_model)
+            ),
         )

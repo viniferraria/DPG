@@ -117,7 +117,7 @@ class GraphMetrics:
 
         for class_label, members in clusters.items():
             class_from_cluster = None
-            if str(class_label).lower() != "ambiguous":
+            if class_label.lower() != "ambiguous":
                 class_from_cluster = cls._normalize_class_label(class_label)
 
             for node in members:

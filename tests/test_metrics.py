@@ -68,7 +68,7 @@ class TestNodeMetrics:
         assert isinstance(node_metrics, pd.DataFrame)
 
     def test_expected_shape(self, node_metrics):
-        assert node_metrics.shape == (31, 9)
+        assert node_metrics.shape == (31, 12)
 
     def test_expected_columns(self, node_metrics):
         expected = {
@@ -80,6 +80,9 @@ class TestNodeMetrics:
             "Local reaching centrality",
             "Closeness centrality",
             "Harmonic centrality",
+            "Collective influence",
+            "Local clustering coefficient",
+            "Percolation centrality",
             "Label",
         }
         assert set(node_metrics.columns) == expected

@@ -46,27 +46,27 @@ Test: every changed line traces directly to the request.
 
 ### Orchestrator pattern
 
-**Opus 5 plans and drives. Sonnet 5 workers execute in parallel.**
+**Opus 5.5 plans and drives. Sonnet 5.5 workers execute in parallel.**
 
 ```text
                               ┌─────────────┐
                         ┌────▶│  Worker 1   │↺
-   ┌──────────────┐     │     │  Sonnet 5   │
+   ┌──────────────┐     │     │  Sonnet 5.5 │
 ↺  │ Orchestrator │─────┤     └─────────────┘
-   │   Opus 5     │  fan │     ┌─────────────┐
+   │   Opus 5.5   │  fan │     ┌─────────────┐
    │    (plan)    │  out ├────▶│  Worker 2   │↺
-   └──────────────┘     │     │  Sonnet 5   │
+   └──────────────┘     │     │  Sonnet 5.5 │
      main loop          │     └─────────────┘
                         │     ┌─────────────┐
                         └────▶│  Worker 3   │↺
-                              │  Sonnet 5   │
+                              │  Sonnet 5.5 │
                               └─────────────┘
                                  worker loop
 ```
 
-- **Orchestrator (Opus 5)** owns the plan, the decomposition, and the judgment calls. It holds context,
+- **Orchestrator (Opus 5.5)** owns the plan, the decomposition, and the judgment calls. It holds context,
   verifies what comes back, and is the only party that talks to the user. It doesn't do the bulk reading.
-- **Workers (Sonnet 5)** each loop over one scoped task with an explicit brief, the files they own, and
+- **Workers (Sonnet 5.5)** each loop over one scoped task with an explicit brief, the files they own, and
   the expected output shape.
 - Partition work by file or directory — two workers writing one file is a self-inflicted conflict.
 - Brief workers with constraints, not just goals. They start cold, with no conversation context.
@@ -303,7 +303,7 @@ intended, not a tracing bug.
     `datasets/`, `results/`, `states/`. Covered by `tests/test_run_dpg_causal_synthetic.py`.
   - `local_explanation/` — the only suite that is a package (exports `run_local_explanation_experiments`).
     Imported by `tests/test_smoke.py`.
-  - `monks/` — `run_monk.py` over the UCI MONK's problems. No test coverage, but tracked in git.
+  - `monks/` — `run_monk.py` over the UCI MONK's problems. Covered minimally by `tests/test_run_monk.py`.
   - Runners write timestamped `.log` files and outputs next to themselves. Treat `results/`, `states/`,
     and `*.log` as artifacts, not source.
 - `tutorials/` — notebooks, including the `perc_var` / `decimal_threshold` sensitivity benchmark.

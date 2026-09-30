@@ -87,6 +87,9 @@ METRICS = [
     "Local reaching centrality",
     "Closeness centrality",
     "Harmonic centrality",
+    "Betweenness centrality",
+    "Collective influence",
+    "Percolation centrality",
 ]
 CONFIG_PATH = ((Path(__file__).parent).parent) / "../config.yaml"
 
