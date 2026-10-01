@@ -154,14 +154,20 @@ def extract_top_k_features(
     explanation: pd.DataFrame,
     top_k: int,
     metric: str = "Local reaching centrality",
+    drop_duplicates: bool = False,
 ) -> list[str]:
-    """Return the top-k features by local reaching centrality from a DPG explanation."""
+    """Return the top-k features by ``metric`` from a DPG explanation.
+
+    Several predicates on one feature can fill the top-k (e.g. ``F2;F2;F2``).
+    That is kept by default so the CSV history stays comparable;
+    ``drop_duplicates=True`` keeps only each feature's best-ranked predicate.
+    """
     results = explanation[~(explanation["Label"].str.startswith("Class"))].copy()
     results["Label"] = results["Label"].str.extract(r"([^\s]+)")
-    top_features = (
-        results.sort_values(by=metric, ascending=False).head(top_k)["Label"].tolist()
-    )
-    return top_features
+    ranked = results.sort_values(by=metric, ascending=False)["Label"]
+    if drop_duplicates:
+        ranked = ranked.drop_duplicates()
+    return ranked.head(top_k).tolist()
 
 
 def evaluate_causal_accuracy(
@@ -542,6 +548,7 @@ def run_experiments_with_ground_truth(
 def main() -> None:
     """Entry point: configure logging and run all experiments."""
     STATES_DIR.mkdir(exist_ok=True)
+    OUTPUT_PATH.mkdir(exist_ok=True)
     logger = get_logger(__name__, log_file=f"dpg_explainer_{timestamp()}.log")
 
     logger.info("Starting DPG explainer experiments...")
