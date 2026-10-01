@@ -1,12 +1,14 @@
-import pandas as pd
+from typing import Any
+
 import networkx as nx
+import pandas as pd
 
 
 class EdgeMetrics:
     """Handles edge-level metric calculations."""
 
     @staticmethod
-    def extract_edge_metrics(dpg_model, nodes_list):
+    def extract_edge_metrics(dpg_model: nx.DiGraph, nodes_list: list[list[str]]) -> Any:
         """
         Extracts metrics from the edges of a DPG model, including:
         - Edge Load Centrality
@@ -14,7 +16,8 @@ class EdgeMetrics:
         
         Args:
             dpg_model: A NetworkX graph representing the DPG.
-            nodes_list: List of (node_id, label) tuples.
+            nodes_list: List of [node_id, label] pairs, as returned by
+                DecisionPredicateGraph.to_networkx.
 
         Returns:
             df: A pandas DataFrame containing the metrics for each edge in the DPG.
@@ -22,17 +25,14 @@ class EdgeMetrics:
         # Map node IDs to labels for fast lookup.
         node_id_to_label = {node_id: label for node_id, label in nodes_list}
 
-        # Calculate edge weights (assuming edges have 'weight' attribute).
-        edge_weights = nx.get_edge_attributes(dpg_model, "weight")
-
         # Build edge rows with labels and IDs.
         edge_data_with_labels = []
-        for u, v in dpg_model.edges():
+        for u, v, data in dpg_model.edges(data=True):
             u_label = node_id_to_label.get(u)
             v_label = node_id_to_label.get(v)
             edge_data_with_labels.append([
                 f"{u}-{v}",
-                edge_weights.get((u, v), 0),
+                data.get("weight", 0),
                 u_label,
                 v_label,
                 u,

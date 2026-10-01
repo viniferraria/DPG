@@ -144,7 +144,7 @@ class TestContextOrderModule:
         assert callable(context_order_module.resolve_context_order)
 
     def test_history_is_a_dict_not_a_list(self):
-        resolved, history = resolve_context_order([("A", "Class 0")])
+        __resolved, history = resolve_context_order([("A", "Class 0")])
         assert isinstance(history, dict)
 
     def test_long_history_traces_walk_k_until_zero_violations(self):

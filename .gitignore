@@ -1,3 +1,5 @@
+.DS_Store
+
 # Python bytecode
 __pycache__/
 *.py[cod]
@@ -12,7 +14,7 @@ ENV/
 
 # Data files (keep specific patterns if needed)
 *.jpg
-*.csv
+# *.csv
 *.txt
 !docs/requirements.txt
 
@@ -59,3 +61,8 @@ experiments/results/
 experiments/local_explanation/results/
 wandb/
 .codex/
+
+**/**/*.pkl
+**/*.log
+# pixi environment (graph-tool test env)
+.pixi/

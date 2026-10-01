@@ -1,11 +1,11 @@
 """Fast resolution of the smallest context order without path enumeration."""
 
-from collections import defaultdict
 import math
-from typing import Iterable, Sequence
+from collections import defaultdict
+from collections.abc import Iterable, Sequence
 
 
-def _node_windows(sequence: Sequence[str], k: int | float) -> list[object]:
+def _node_windows(sequence: Sequence[str], k: float) -> list[object]:
     """Represent a trace as contextual predicate nodes and class sinks."""
     nodes: list[object] = []
     for index, label in enumerate(sequence):
@@ -20,7 +20,7 @@ def _node_windows(sequence: Sequence[str], k: int | float) -> list[object]:
     return nodes
 
 
-def path_violations(traces: Iterable[Sequence[str]], k: int | float) -> int:
+def path_violations(traces: Iterable[Sequence[str]], k: float) -> int:
     """Count pooled-graph paths that are not observed trace prefixes.
 
     A pooled DFG can be locally consistent while still recombining after
@@ -83,7 +83,7 @@ def path_violations(traces: Iterable[Sequence[str]], k: int | float) -> int:
 
 def resolve_context_order(
     traces: Iterable[Sequence[str]], max_k: int | None = None
-) -> tuple[int | float, dict[int | float, int]]:
+) -> tuple[int, dict[int, int]]:
     """Return the smallest order with no global trace recombination.
 
     ``max_k`` defaults to the longest observed trace.  At that order every
@@ -103,7 +103,7 @@ def resolve_context_order(
     if max_k is None:
         max_k = max(len(trace) for trace in materialized)
 
-    history: dict[int | float, int] = {}
+    history: dict[int, int] = {}
     for k in range(1, max_k + 1):
         violations = path_violations(materialized, k)
         history[k] = violations

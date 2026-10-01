@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from .sklearn_dpg import test_dpg
 
@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=1e-9,
         help="minimum path frequency proportion",
     )
+    parser.add_argument(
+        "--n_jobs",
+        type=int,
+        default=-1,
+        help="joblib workers for DPG tracing (1 = sequential)",
+    )
     return parser
 
 
@@ -59,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         n_learners=args.n_learners,
         perc_var=args.pv,
         decimal_threshold=args.t,
-        n_jobs=-1,
+        n_jobs=args.n_jobs,
         model_name=args.model_name,
         file_name=str(output_dir / f"{Path(args.dataset).stem}_seed{args.seed}_stats.txt"),
         plot=args.plot,

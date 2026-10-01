@@ -5,9 +5,9 @@ All tests use Iris with a fixed seed (160898) so that the expected metric
 values are deterministic and reproducible.
 """
 
-import math
 import re
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
@@ -42,8 +42,8 @@ def iris_dpg():
         feature_names=iris.feature_names,
         target_names=target_names,
     )
-    dot = dpg.fit(X_train)
-    dpg_graph, nodes_list = dpg.to_networkx(dot)
+    dpg.fit(X_train)
+    dpg_graph, nodes_list = dpg.to_networkx()
     return dpg_graph, nodes_list, target_names
 
 
@@ -69,7 +69,7 @@ class TestNodeMetrics:
         assert isinstance(node_metrics, pd.DataFrame)
 
     def test_expected_shape(self, node_metrics):
-        assert node_metrics.shape == (31, 7)
+        assert node_metrics.shape == (31, 12)
 
     def test_expected_columns(self, node_metrics):
         expected = {
@@ -79,6 +79,11 @@ class TestNodeMetrics:
             "Out degree nodes",
             "Betweenness centrality",
             "Local reaching centrality",
+            "Closeness centrality",
+            "Harmonic centrality",
+            "Collective influence",
+            "Local clustering coefficient",
+            "Percolation centrality",
             "Label",
         }
         assert set(node_metrics.columns) == expected
@@ -121,6 +126,102 @@ class TestNodeMetrics:
     def test_all_nodes_have_labels(self, node_metrics):
         assert node_metrics["Label"].notna().all()
         assert (node_metrics["Label"].str.len() > 0).all()
+
+
+# ---------------------------------------------------------------------------
+# NetworkX parity for weighted closeness / harmonic centrality
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def small_digraph():
+    """A directed weighted graph that is NOT strongly connected.
+
+    Mirrors a DPG's root->leaves flow so several nodes cannot reach all
+    others - this is the case the inf-in-denominator bug used to break.
+    """
+    import networkx as nx
+
+    g = nx.DiGraph()
+    for u, v, w in [
+        ("r", "a", 2.0),
+        ("r", "b", 1.0),
+        ("a", "c", 3.0),
+        ("b", "c", 1.0),
+        ("a", "b", 5.0),
+        ("c", "d", 2.0),
+    ]:
+        g.add_edge(u, v, weight=w)
+    return g
+
+
+def _nx_distance_graph(g):
+    """Replicate the module's edge distance: distance = total_weight / weight."""
+    import networkx as nx
+
+    total_weight = sum(d["weight"] for *_, d in g.edges(data=True))
+    h = nx.DiGraph()
+    for u, v, d in g.edges(data=True):
+        h.add_edge(u, v, dist=total_weight / d["weight"])
+    return h
+
+
+class TestCentralityNetworkXParity:
+    """calc_harmonic/closeness must match NetworkX on the same distance metric."""
+
+    def test_harmonic_matches_networkx(self, small_digraph):
+        import networkx as nx
+
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_harmonic_centrality,
+        )
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_harmonic_centrality(ig_graph, node_ids)
+
+        # Reference: outgoing harmonic via Dijkstra on the same distance attr.
+        h = _nx_distance_graph(small_digraph)
+        for src in small_digraph.nodes():
+            dlen = nx.single_source_dijkstra_path_length(h, src, weight="dist")
+            expected = sum(1 / d for t, d in dlen.items() if t != src and d > 0)
+            assert got[src] == pytest.approx(expected, abs=1e-9)
+
+    def test_closeness_matches_networkx(self, small_digraph):
+        import networkx as nx
+
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_closeness_centrality,
+        )
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_closeness_centrality(ig_graph, node_ids)
+
+        # NetworkX closeness measures incoming distance; reverse for outgoing.
+        h = _nx_distance_graph(small_digraph)
+        expected = nx.closeness_centrality(
+            h.reverse(copy=True), distance="dist", wf_improved=True
+        )
+        for node in small_digraph.nodes():
+            assert got[node] == pytest.approx(expected[node], abs=1e-9)
+
+    def test_closeness_nonzero_for_partially_reaching_node(self, small_digraph):
+        """Regression: a node that can't reach all others must not collapse to 0.
+
+        The old implementation summed inf into the denominator, forcing
+        closeness to 0 for almost every node in a DAG-like graph.
+        """
+        from metrics.backends.igraph_backend import (
+            _nx_to_igraph,
+            calc_closeness_centrality,
+        )
+
+        ig_graph, node_ids = _nx_to_igraph(small_digraph)
+        got = calc_closeness_centrality(ig_graph, node_ids)
+
+        # 'a' reaches b, c, d but not r -> partial reach, must be > 0.
+        assert got["a"] > 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +351,43 @@ class TestClassBoundaries:
 # ---------------------------------------------------------------------------
 
 
+class TestClusteringAbsorption:
+    """Absorption probabilities on small graphs with known answers."""
+
+    def test_loop_graph_matches_hand_computation(self):
+        # S -> A 0.6, S -> B 0.4; A <-> B loop (A -> B 0.5, B -> A 0.25);
+        # A -> Class 0 0.5, B -> Class 1 0.75. Chance of reaching Class 0:
+        # a = 0.5 + 0.5 * b and b = 0.25 * a, so a = 4/7 and b = 1/7;
+        # s = 0.6 * a + 0.4 * b = 0.4.
+        graph = nx.DiGraph()
+        graph.add_weighted_edges_from(
+            [
+                ("S", "A", 6), ("S", "B", 4),
+                ("A", "B", 2), ("A", "c0", 2),
+                ("B", "A", 1), ("B", "c1", 3),
+            ]
+        )
+        class_nodes = {"c0": "Class 0", "c1": "Class 1"}
+
+        clusters, node_prob, confidence = GraphMetrics.clustering(graph, class_nodes)
+
+        assert node_prob["S"] == {"Class 0": 0.4, "Class 1": 0.6}
+        assert node_prob["A"] == {"Class 0": 0.57, "Class 1": 0.43}
+        assert node_prob["B"] == {"Class 0": 0.14, "Class 1": 0.86}
+        assert node_prob["c0"] == {"Class 0": 1.0, "Class 1": 0.0}
+        assert sorted(clusters["Class 1"]) == ["B", "S", "c1"]
+        assert confidence["S"] == 0.2
+
+    def test_non_class_sink_raises_like_dense_solve(self):
+        # "dead" has no outgoing edge and is not a class node, so I - Q is
+        # singular; the dense np.linalg.solve raised LinAlgError here too.
+        graph = nx.DiGraph()
+        graph.add_weighted_edges_from([("S", "c0", 1), ("S", "dead", 1)])
+
+        with pytest.raises(np.linalg.LinAlgError):
+            GraphMetrics.clustering(graph, {"c0": "Class 0"})
+
+
 class TestClustering:
     @pytest.fixture(scope="class")
     def clustering_results(self, iris_dpg):
@@ -345,8 +483,8 @@ class TestMetricsOnWine:
             feature_names=wine.feature_names,
             target_names=target_names,
         )
-        dot = dpg.fit(X_train)
-        dpg_graph, nodes_list = dpg.to_networkx(dot)
+        dpg.fit(X_train)
+        dpg_graph, nodes_list = dpg.to_networkx()
         return dpg_graph, nodes_list, target_names
 
     def test_node_metrics_shape(self, wine_dpg):
@@ -426,7 +564,8 @@ class TestExtractCommunitiesClassifierGuard:
         dpg = DecisionPredicateGraph(
             model, feature_names, dpg_config=_config_for_test()
         )
-        graph, nodes = dpg.to_networkx(dpg.fit(X))
+        dpg.fit(X)
+        graph, nodes = dpg.to_networkx()
 
         df_node_metrics = pd.DataFrame(
             {"Node": [nid for nid, _ in nodes], "Label": [lbl for _, lbl in nodes]}

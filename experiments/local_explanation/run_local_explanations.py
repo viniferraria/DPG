@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import itertools
 import os
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 from dpg import DPGExplainer
-
 
 SUPPORTED_DATASETS = {
     "iris": load_iris,
@@ -30,7 +30,7 @@ SUPPORTED_GRAPH_CONSTRUCTION_MODES = {
 }
 
 
-def load_builtin_dataset(name: str) -> Tuple[pd.DataFrame, pd.Series, List[str]]:
+def load_builtin_dataset(name: str) -> tuple[pd.DataFrame, pd.Series, list[str]]:
     if name not in SUPPORTED_DATASETS:
         raise ValueError(f"Unsupported dataset '{name}'. Supported: {sorted(SUPPORTED_DATASETS)}")
     dataset = SUPPORTED_DATASETS[name](as_frame=True)
@@ -67,7 +67,7 @@ def build_explainer(
     )
 
 
-def parse_csv_values(raw: str | Sequence[str], caster=str) -> List[Any]:
+def parse_csv_values(raw: str | Sequence[str], caster=str) -> list[Any]:
     if isinstance(raw, str):
         items = raw.split(",")
     else:
@@ -86,7 +86,7 @@ def parse_csv_values(raw: str | Sequence[str], caster=str) -> List[Any]:
     return parsed
 
 
-def parse_optional_int_values(raw: str | Sequence[str]) -> List[int | None]:
+def parse_optional_int_values(raw: str | Sequence[str]) -> list[int | None]:
     def _cast(value: str) -> int | None:
         if value == "None":
             return None
@@ -95,7 +95,7 @@ def parse_optional_int_values(raw: str | Sequence[str]) -> List[int | None]:
     return parse_csv_values(raw, caster=_cast)
 
 
-def parse_graph_mode_values(raw: str | Sequence[str]) -> List[str]:
+def parse_graph_mode_values(raw: str | Sequence[str]) -> list[str]:
     values = parse_csv_values(raw, caster=str)
     invalid = [value for value in values if value not in SUPPORTED_GRAPH_CONSTRUCTION_MODES]
     if invalid:
@@ -114,7 +114,7 @@ def iter_configs(
     decimal_threshold_values: Sequence[int],
     graph_construction_modes: Sequence[str],
     seed_values: Sequence[int],
-) -> Iterable[Dict[str, Any]]:
+) -> Iterable[dict[str, Any]]:
     for (
         dataset,
         n_estimators,
@@ -152,7 +152,7 @@ def run_single_dataset(
     graph_construction_mode: str,
     seed: int,
     max_test_samples: int,
-) -> Tuple[Dict[str, Any], pd.DataFrame]:
+) -> tuple[dict[str, Any], pd.DataFrame]:
     X, y, target_names = load_builtin_dataset(dataset_name)
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -182,7 +182,7 @@ def run_single_dataset(
     explainer.fit(X_train.values)
 
     max_samples = min(max_test_samples, len(X_test))
-    sample_rows: List[Dict[str, Any]] = []
+    sample_rows: list[dict[str, Any]] = []
     for sample_index, (idx, sample_row) in enumerate(X_test.iloc[:max_samples].iterrows()):
         true_label = str(y_test.loc[idx])
         model_pred = str(model.predict(sample_row.to_frame().T)[0])
@@ -216,8 +216,8 @@ def run_single_dataset(
     per_sample_df = pd.DataFrame(sample_rows)
     summary = {
         "dataset": dataset_name,
-        "n_train": int(len(X_train)),
-        "n_test_explained": int(len(per_sample_df)),
+        "n_train": len(X_train),
+        "n_test_explained": len(per_sample_df),
         "n_estimators": int(n_estimators),
         "max_depth": None if max_depth is None else int(max_depth),
         "perc_var": float(perc_var),
@@ -246,7 +246,7 @@ def run_local_explanation_experiments(
     graph_construction_mode: str | Sequence[str] = "execution_trace",
     seed: int | Sequence[int] = 42,
     max_test_samples: int = 10,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     os.makedirs(out_dir, exist_ok=True)
 
     if isinstance(n_estimators, (list, tuple)):
@@ -274,8 +274,8 @@ def run_local_explanation_experiments(
     else:
         seed_values = [int(seed)]
 
-    summaries: List[Dict[str, Any]] = []
-    per_sample_frames: List[pd.DataFrame] = []
+    summaries: list[dict[str, Any]] = []
+    per_sample_frames: list[pd.DataFrame] = []
     for config in iter_configs(
         datasets=list(datasets),
         n_estimators_values=n_estimators_values,

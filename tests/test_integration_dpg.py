@@ -9,9 +9,9 @@ from sklearn.ensemble import RandomForestClassifier
 
 from dpg.core import DecisionPredicateGraph
 from dpg.visualizer import plot_dpg, plot_dpg_communities
+from metrics.edges import EdgeMetrics
 from metrics.graph import GraphMetrics
 from metrics.nodes import NodeMetrics
-from metrics.edges import EdgeMetrics
 
 
 def _build_small_dpg():
@@ -34,8 +34,9 @@ def _build_small_dpg():
         feature_names=features.columns,
         target_names=target_names,
     )
-    graph_dot = dpg_builder.fit(features.values)
-    dpg_graph, dpg_nodes = dpg_builder.to_networkx(graph_dot)
+    dpg_builder.fit(features.values)
+    dpg_graph, dpg_nodes = dpg_builder.to_networkx()
+    graph_dot = dpg_builder.to_dot()
 
     class_boundaries = GraphMetrics.extract_class_boundaries(
         dpg_graph, dpg_nodes, target_names=target_names

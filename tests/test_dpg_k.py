@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,7 +7,7 @@ from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 
 from dpg.context_order import resolve_context_order
-from dpg.core import DPGError, DecisionPredicateGraph
+from dpg.core import DecisionPredicateGraph, DPGError
 
 
 def _forest():
@@ -50,7 +52,8 @@ def test_auto_context_has_one_sink_per_class_and_no_local_violations():
         target_names=["0", "1", "2"],
         dpg_config=_config(context_order="auto"),
     )
-    graph, nodes = dpg.to_networkx(dpg.fit(iris.data))
+    dpg.fit(iris.data)
+    graph, nodes = dpg.to_networkx()
 
     assert dpg.get_context_order() >= 1
     assert dpg.get_context_order_history()[dpg.get_context_order()] == 0
@@ -90,7 +93,7 @@ def test_execution_trace_graph_preserves_long_case_order():
     )
 
     assert dpg.discover_dfg(log) == {
-        (source, target): 1 for source, target in zip(labels, labels[1:])
+        (source, target): 1 for source, target in pairwise(labels)
     }
 
 

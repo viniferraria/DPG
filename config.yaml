@@ -1,11 +1,14 @@
 dpg:
   default:
-    perc_var: 0.000000001
-    decimal_threshold: 6
+    perc_var: 0.0001
+    decimal_threshold: 3
     n_jobs: -1
   graph_construction:
     mode: "aggregated_transitions"
     context_order: 1
+  metrics:
+    backend: "igraph"
+    graph_backend: networkx  # networkx | igraph | graph_tool
   visualization:
     graph_attrs:
       bgcolor: "white"
