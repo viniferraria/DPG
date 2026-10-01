@@ -174,6 +174,26 @@ def test_records_from_real_node_metrics_have_all_runner_columns():
 # --- write_records_to_csv ----------------------------------------------------
 
 
+@pytest.mark.parametrize(
+    ("drop_duplicates", "expected"),
+    [(False, ["F2", "F2", "F1"]), (True, ["F2", "F1", "F3"])],
+)
+def test_extract_top_k_features_duplicates(drop_duplicates, expected):
+    explanation = pd.DataFrame(
+        {
+            "Label": ["F2 <= 0.5", "F2 > 0.5", "F1 <= 1.0", "F3 > 2.0", "Class 0"],
+            "Percolation centrality": [0.9, 0.8, 0.7, 0.6, 1.0],
+        }
+    )
+    top = m.extract_top_k_features(
+        explanation,
+        top_k=3,
+        metric="Percolation centrality",
+        drop_duplicates=drop_duplicates,
+    )
+    assert top == expected
+
+
 def test_write_records_to_csv_roundtrip(tmp_path):
     records = [
         m.NodeMetricRecord(
@@ -252,6 +272,19 @@ def test_iter_splits_shapes_and_count():
 
 
 # --- module hygiene ----------------------------------------------------------
+
+
+def test_main_creates_results_and_states_dirs(tmp_path, monkeypatch):
+    # write_causal_accuracy_to_csv does not mkdir; main() must create results/.
+    monkeypatch.chdir(tmp_path)  # main() opens its log file in the CWD
+    monkeypatch.setattr(m, "STATES_DIR", tmp_path / "states")
+    monkeypatch.setattr(m, "OUTPUT_PATH", tmp_path / "results")
+    monkeypatch.setattr(m, "run_experiments_with_ground_truth", lambda *a: None)
+
+    m.main()
+
+    assert (tmp_path / "states").is_dir()
+    assert (tmp_path / "results").is_dir()
 
 
 def test_module_has_no_import_side_effects():

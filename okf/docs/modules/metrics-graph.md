@@ -35,7 +35,7 @@ are made on the class. It also carries one class constant,
 ## Dependency direction
 
 `metrics/` is imported by `dpg/` — never the reverse. This module imports only stdlib, `networkx`,
-`numpy`, `pandas`, and `joblib`; it has no `dpg` import at all (not even a lazy one, unlike
+`numpy`, and `pandas`; it has no `dpg` import at all (not even a lazy one, unlike
 `metrics/nodes.py`).
 
 # API
@@ -47,8 +47,8 @@ are made on the class. It also carries one class constant,
 | `extract_class_boundaries` | `(cls, dpg_model, nodes_list, target_names: Sequence[str]) -> dict` | `{"Class Bounds": {...}}` only | Community/cluster-based bounds via `clustering(...)` at `COMMUNITY_BOUNDARY_THRESHOLD`; returns `{"Class Bounds": {}}` when no `Class ` node exists |
 | `extract_communities` | `(cls, dpg_model, df_node_metrics: pd.DataFrame, nodes_list, threshold_clusters: float = 0.2) -> dict` | `{"Clusters", "Probability", "Confidence Interval"}` | Runs `clustering` then relabels ids through `df_node_metrics`'s `Node`→`Label` map. **Takes a node-metrics frame, not `target_names`.** Raises `ValueError` (not a `DPGError`) when `nodes_list` has no `"Class "` node — see Gotchas |
 | `clustering` | `(cls, dpg_model, class_nodes: dict[str,str], threshold: float \| None = None) -> tuple[dict[str,list[str]], dict[str,Any], dict[str,Any]]` | `(clusters, node_probs, confidence)` | Absorbing Markov chain — see Behavior |
-| `calculate_boundaries` | `(cls, class_dict: dict, class_names: Sequence[str]) -> dict` | `{class_key: [boundary strings]}` | Fans `calculate_class_boundaries` out over `joblib.Parallel(n_jobs=-1)` |
-| `calculate_class_boundaries` | `(key: str, nodes: list[str], class_names: list[str]) -> tuple` (`@staticmethod`) | `(str(key), boundaries)` | Per feature, tracks `min` of `>` thresholds and `max` of `<=` thresholds, emitting `f <= u`, `f > l`, or `l < f <= u` |
+| `calculate_boundaries` | `(cls, class_dict: dict, class_names: Sequence[str]) -> dict` | `{class_key: [boundary strings]}` | Calls `calculate_class_boundaries` once per class, sequentially. It used to fan out over a hard-coded `joblib.Parallel(n_jobs=-1)`, which ignored the configured `n_jobs` and started a loky process pool even at `n_jobs=1`; with one task per class, starting the pool cost ~500x the work |
+| `calculate_class_boundaries` | `(key: str, nodes: list[str], class_names: Sequence[str]) -> tuple` (`@staticmethod`) | `(str(key), boundaries)` | Per feature, tracks `min` of `>` thresholds and `max` of `<=` thresholds, emitting `f <= u`, `f > l`, or `l < f <= u` |
 | `extract_feature_intervals` | `(cls, decisions: Iterable[str]) -> tuple[dict[str,int], dict[str,dict[str,float]]]` | `(feature_count, feature_intervals)` | Regex `([a-zA-Z0-9_]+)\s*([<=\|>]+)\s*([-+]?[\d.]+)`; `>` raises `min`, `<=` lowers `max` |
 | `create_dataframes` | `(cls, data: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]` | `(feature_count_df, feature_intervals_df)` | Per-class counts, and a frame indexed `<feat>_min` / `<feat>_max` |
 | `communities_to_csv` | `(communities: dict, file_path: str) -> None` (`@staticmethod`) | `None` | Writes long-format CSV with columns `Section, Key, Value`, coercing `np.generic` to builtins first |

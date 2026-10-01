@@ -1,7 +1,7 @@
 ---
 type: Python Module
 title: dpg.cli — packaged command-line interface
-description: build_parser/main for the dpg command that trains a sklearn tree ensemble and exports its DPG metrics — and why the installed dpg console script does not reach it.
+description: build_parser/main for the dpg command that trains a sklearn tree ensemble and exports its DPG metrics; the installed dpg console script points here since 2026-09-30.
 resource: https://github.com/viniferraria/DPG/blob/main/dpg/cli.py
 tags: [python, module, cli, argparse, packaging, new-in-0.3.0]
 generated: { by: claude_code/claude-sonnet-5, at: 2026-09-18T00:00:00Z }
@@ -14,42 +14,25 @@ status: stable
 [`dpg.sklearn_dpg.test_dpg`](/modules/dpg-sklearn-dpg.md). It exports `build_parser` and `main`, and
 runs `raise SystemExit(main())` under `if __name__ == "__main__":`.
 
-**The installed `dpg` console script does not reach this module.** `pyproject.toml` declares the
-script twice, in two different tables, and they disagree:
-
-```toml
-[project]
-scripts = { "dpg" = "scripts.run_dpg_standard:main" }   # pyproject.toml:12
-
-[tool.poetry.scripts]
-dpg = "dpg.cli:main"                                     # pyproject.toml:127-128
-```
-
-PEP 621 `[project.scripts]` wins whenever both are present, and `pyproject.toml:12` points at a
-`scripts` package that does not exist in this repo. Verified directly:
+**The installed `dpg` console script reaches this module** (since 2026-09-30).
+`[project.scripts]` in `pyproject.toml:12` is `{ "dpg" = "dpg.cli:main" }`, matching the
+`[tool.poetry.scripts]` entry at `pyproject.toml:127-128`. Before that fix it pointed at a nonexistent
+`scripts.run_dpg_standard:main` and `uv run dpg` raised `ModuleNotFoundError: No module named
+'scripts'` — see [/side-effects/console-script-entrypoint.md](/side-effects/console-script-entrypoint.md).
+After changing the entry, `uv sync` regenerates `.venv/bin/dpg`. Verified:
 
 ```
-$ uv run dpg --help
-Traceback (most recent call last):
-  File ".../.venv/bin/dpg", line 4, in <module>
-    from scripts.run_dpg_standard import main
-ModuleNotFoundError: No module named 'scripts'
-```
-
-```
-$ uv run python -m dpg.cli --dataset iris --n_learners 3 --dir /tmp/dpgclitest/out
-... (trains, builds the DPG) ...
-$ ls /tmp/dpgclitest/out
+$ uv run dpg --ds iris --dir <out> --n_jobs 1
+DPG initialized with perc_var=1e-09, decimal_threshold=3, n_jobs=1, ...
+$ ls <out>
 iris_seed160898_dpg_metrics.txt
 iris_seed160898_edge_metrics.csv
 iris_seed160898_node_metrics.csv
 iris_seed160898_stats.txt
 ```
 
-Both commands run at HEAD (`276a503`). `uv run python -m dpg.cli ...` is the only way to invoke this
-module today. See
-[/side-effects/console-script-entrypoint.md](/side-effects/console-script-entrypoint.md) and, for the
-older `examples/run_dpg_standard.py --ds ...` invocation this module does **not** replace,
+`uv run python -m dpg.cli ...` still works too. For the older `examples/run_dpg_standard.py --ds ...`
+invocation this module does **not** replace, see
 [/workflows/cli-entrypoints.md](/workflows/cli-entrypoints.md).
 
 # API
@@ -73,18 +56,20 @@ older `examples/run_dpg_standard.py --ds ...` invocation this module does **not*
 | `--class_flag` | flag | `False` | |
 | `--seed` | int | `160898` | Unlike `examples/run_dpg_standard.py`'s `--seed` (no default), this one always has a value |
 | `--pv` | float | `1e-9` | Minimum path frequency proportion, forwarded as `perc_var` |
+| `--n_jobs` | int | `-1` | joblib workers for DPG tracing, forwarded as `n_jobs`; `1` = sequential |
 
 Note the two default divergences from `examples/run_dpg_standard.py`
 ([/workflows/cli-entrypoints.md](/workflows/cli-entrypoints.md)): that script's `--seed` has no
 default (`None`) and its `--t`/`--pv` default to `None` (falling through to `config.yaml`); this
 module's `--seed` defaults to `160898` and `--t`/`--pv` always have explicit values
 (`3`/`1e-9`, matching `DEFAULT_DPG_CONFIG`), so `test_dpg` here is never handed `None` for them.
-`n_jobs` is hardcoded to `-1` in `main()`, not exposed as a flag.
+Like every other setting here, `--n_jobs` does **not** read `config.yaml`; `n_jobs: 1` there has no
+effect on this command (it was hard-coded to `-1` in `main()` before 2026-09-30).
 
 ## `main(argv: Sequence[str] | None = None) -> int`
 
 1. Parses `argv` (or `sys.argv` when `None`), creates `--dir`.
-2. Calls `test_dpg(...)` with every parsed flag, `n_jobs=-1`, and
+2. Calls `test_dpg(...)` with every parsed flag (including `n_jobs=args.n_jobs`) and
    `file_name=str(output_dir / f"{Path(args.dataset).stem}_seed{args.seed}_stats.txt")`.
 3. `test_dpg` returns either `None`/a 2-tuple `(None, None)` (both signaled by `len(result) != 6`) or
    the full 6-tuple `(df, df_edges, graph_metrics, clusters, node_prob, confidence)`. `main` checks
@@ -127,5 +112,5 @@ module's `--seed` defaults to `160898` and `--t`/`--pv` always have explicit val
 # Example
 
 ```bash
-uv run python -m dpg.cli --dataset iris --n_learners 3 --dir results/iris_cli
+uv run dpg --dataset iris --n_learners 3 --dir results/iris_cli --n_jobs 1
 ```

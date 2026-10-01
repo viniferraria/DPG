@@ -1,7 +1,7 @@
 ---
 type: Playbook
 title: Running the DPG CLI entrypoints
-description: How to run examples/run_dpg_standard.py and examples/run_dpg_custom.py, what flags they accept, what they write to disk, and why the declared dpg console script does not work.
+description: How to run examples/run_dpg_standard.py and examples/run_dpg_custom.py, what flags they accept, what they write to disk, and how they relate to the packaged dpg console script.
 resource: https://github.com/viniferraria/DPG/blob/main/examples/run_dpg_standard.py
 tags: [cli, playbook, examples, argparse, packaging]
 generated: { by: claude_code/claude-opus-5, at: 2026-08-02T00:00:00Z }
@@ -17,9 +17,9 @@ notebook use go through `DPGExplainer` instead (`examples/quickstart.py`).
 
 **New in 0.3.0:** `dpg/cli.py` is a third, packaged entrypoint with its own real `main()` — see
 [/modules/dpg-cli.md](/modules/dpg-cli.md). It does not replace either script below: it has different
-flag defaults (a fixed `--seed 160898`, `--t 3`, `--pv 1e-9` rather than falling through to
-`config.yaml`) and a different output file-naming scheme. Run it with
-`uv run python -m dpg.cli`, not through the installed `dpg` command — see Gotchas.
+flag defaults (a fixed `--seed 160898`, `--t 3`, `--pv 1e-9`, `--n_jobs -1` rather than falling through to
+`config.yaml`) and a different output file-naming scheme. Run it with `uv run dpg` (or
+`uv run python -m dpg.cli`) — see Gotchas.
 
 Both scripts load `config.yaml` from the **repo root** (resolved from `__file__`, not the CWD) and
 read `dpg.default.perc_var`, `dpg.default.decimal_threshold`, `dpg.default.n_jobs`. A missing file
@@ -124,20 +124,14 @@ uv run python examples/local_explanation_iris.py
 
 # Gotchas
 
-- **The declared console script is broken — verified, and there are now two competing declarations.**
-  `pyproject.toml` is PEP 621-shaped as of 0.3.0: `[project] scripts = { "dpg" =
-  "scripts.run_dpg_standard:main" }` (`pyproject.toml:12`) still points at a `scripts/` package that
-  does not exist (`ls scripts` → *No such file or directory*; `[tool.poetry].packages` only includes
-  `dpg` and `metrics`, `pyproject.toml:85-90`). A second table, `[tool.poetry.scripts] dpg =
-  "dpg.cli:main"` (`pyproject.toml:127-128`), now points at the real `main()` in `dpg/cli.py`
-  ([/modules/dpg-cli.md](/modules/dpg-cli.md)) — but it's dead: PEP 621's `[project.scripts]` wins
-  whenever both tables are present, so the installed `dpg` command still resolves to the broken path.
-  Verified: `uv run dpg --help` raises `ModuleNotFoundError: No module named 'scripts'`. Separately,
-  `examples/run_dpg_standard.py` (the script the broken declaration points at) defines **no
-  `main()`** — all of its logic lives inline under `if __name__ == "__main__":`. Always invoke the
-  example scripts by path with `uv run python examples/...`, and `dpg/cli.py` as
-  `uv run python -m dpg.cli`; never rely on a `dpg` executable. See
-  [/side-effects/console-script-entrypoint.md](/side-effects/console-script-entrypoint.md).
+- **The `dpg` console script runs `dpg/cli.py`, not these scripts.** Since 2026-09-30
+  `[project.scripts]` (`pyproject.toml:12`) is `dpg = "dpg.cli:main"`; it used to point at a
+  nonexistent `scripts.run_dpg_standard:main` and crashed with `ModuleNotFoundError`
+  ([/side-effects/console-script-entrypoint.md](/side-effects/console-script-entrypoint.md)).
+  `examples/run_dpg_standard.py` still defines **no `main()`** — its logic lives inline under
+  `if __name__ == "__main__":` — so invoke the example scripts by path with `uv run python examples/...`.
+  The two differ on `n_jobs`: `run_dpg_standard.py` reads it from `config.yaml`, while `uv run dpg`
+  takes `--n_jobs` (default `-1`) and ignores `config.yaml` ([/modules/dpg-cli.md](/modules/dpg-cli.md)).
 - **`run_dpg_custom.py` currently crashes.** It does `df, df_dpg_metrics = test.test_dpg(...)` while
   `test_dpg` returns a 6-tuple. Reproduced end-to-end: the run trains, builds the graph, writes
   `*_stats.txt`, then dies with `ValueError: too many values to unpack (expected 2)` at line 47 —

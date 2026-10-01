@@ -1,5 +1,39 @@
 # Bundle Update Log
 
+## 2026-09-30
+
+* **Fix**: `main()` in `experiments/causal_synthetic_scenarios/run_dpg_causal_synthetic.py` now creates
+  `results/` (`OUTPUT_PATH.mkdir(exist_ok=True)`) alongside `states/`. `write_causal_accuracy_to_csv`
+  never created it, so with `results/` absent every split raised `FileNotFoundError`, was logged as
+  `Failed:` and lost its CSV rows (only the `states/` pickles were saved). New test
+  `test_main_creates_results_and_states_dirs`. Corrected the "created on demand" claim in
+  [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md).
+
+* **Fix**: `uv run dpg` works. `[project.scripts]` (`pyproject.toml:12`) now points at
+  `dpg.cli:main` instead of the nonexistent `scripts.run_dpg_standard:main`; `uv sync` regenerates
+  the launcher. `dpg/cli.py` gained `--n_jobs` (default `-1`, forwarded to `test_dpg`) in place of the
+  hard-coded `n_jobs=-1`; the CLI still does not read `config.yaml`. New test
+  `test_cli_forwards_n_jobs_to_test_dpg`. Marked
+  [console-script-entrypoint](/side-effects/console-script-entrypoint.md) `status: fixed` and moved it
+  under "Fixed regressions" in the side-effects index; updated [dpg.cli](/modules/dpg-cli.md),
+  [Running the DPG CLI entrypoints](/workflows/cli-entrypoints.md), the modules/workflows indexes, and
+  CLAUDE.md (module table, Known breakage).
+
+* **Fix**: `GraphMetrics.calculate_boundaries` (`metrics/graph.py`) no longer uses
+  `joblib.Parallel(n_jobs=-1)`; it runs sequentially. The hard-coded pool ignored `n_jobs` from
+  `config.yaml` and started a loky process pool (with its semaphores) even at `n_jobs: 1`, reached via
+  `dpg/sklearn_dpg.py::test_dpg` → `extract_graph_metrics_lpa`. Measured on scenario_3 (2 classes):
+  ~517 ms with the pool vs ~1 ms sequential, identical output. `calculate_class_boundaries`'s unused
+  `class_names` annotation widened to `Sequence[str]` (the `delayed` wrapper had hidden the mismatch
+  from mypy). `metrics/graph.py` no longer imports `joblib`. Updated
+  [metrics.graph](/modules/metrics-graph.md).
+
+* **Update**: `extract_top_k_features` in
+  `experiments/causal_synthetic_scenarios/run_dpg_causal_synthetic.py` gained
+  `drop_duplicates: bool = False`. The default keeps repeated features (`F2;F2;F2`) on purpose so new
+  runs stay comparable with the accumulated `results/` history; the runner does not pass it. Noted in
+  [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md) (Gotchas, Test coverage).
+
 ## 2026-09-29
 
 * **Update**: Both experiment runners now rank the new node metrics. `METRICS` in

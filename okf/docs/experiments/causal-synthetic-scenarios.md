@@ -85,7 +85,10 @@ cd experiments/causal_synthetic_scenarios && uv run python generator/scenario_3_
 
 # Outputs
 
-Written under `results/` and `states/`, both created on demand:
+Written under `results/` and `states/`, both created by `main()` before any experiment runs.
+`write_causal_accuracy_to_csv` does not create its folder, so a caller that bypasses `main()` must
+create `results/` itself; without it every split fails with `FileNotFoundError`, which the per-run
+`except Exception` logs as `Failed:` while the run carries on (that was the case before 2026-09-30):
 
 - `results/node_metrics_<timestamp>.csv` — one row per graph node per (scenario, model, split), columns
   from `NodeMetricRecord`: `experiment, split, node, degree, in_degree, out_degree,
@@ -113,7 +116,8 @@ grows monotonically because nothing is overwritten or cleaned.
 `timestamp` (fixed datetime + filesystem safety), `load_dataset` (last column is the target),
 `make_splitter` (reproducibility, `N_SPLITS`), `evaluate_accuracy`, `records_from_explanation` (column
 mapping, types, 4-dp rounding, empty frame), `write_records_to_csv` (roundtrip and no duplicate header),
-`save_pickle`, `mean_or_nan`, and `iter_splits`.
+`save_pickle`, `mean_or_nan`, `iter_splits`, and `extract_top_k_features` (with and without
+`drop_duplicates`).
 `test_records_from_real_node_metrics_have_all_runner_columns` runs the real
 `NodeMetrics.extract_node_metrics` on a tiny graph and checks every `METRICS` name and every
 `NodeMetricRecord` source column exists — a missing column would otherwise raise a `KeyError` that
@@ -121,8 +125,7 @@ the per-run `except Exception` swallows, silently dropping rows. Two hygiene tes
 side effects and that `MODEL_FACTORIES` yields fresh instances.
 
 `test_run_experiments_wiring_with_stubs` drives `run_experiments` end-to-end with `explain_split`
-monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with_ground_truth`,
-`extract_top_k_features`, `evaluate_causal_accuracy`, `write_causal_accuracy_to_csv`,
+monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with_ground_truth`, `evaluate_causal_accuracy`, `write_causal_accuracy_to_csv`,
 `_build_explanation`, the generator scripts, or `run_dpg_synthetic.py`.
 
 # Gotchas
@@ -131,9 +134,13 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
   `NodeMetrics.extract_node_metrics` without `ci_radius` and no config key sets it. It is
   integer-valued with many ties at `0`, so its top-k order among tied nodes is arbitrary. `Local
   clustering coefficient` is saved in the node CSV but deliberately not ranked (same tie problem).
-- **`extract_top_k_features` does not de-duplicate.** Several predicates on one feature can fill
-  the whole top-k (e.g. `F2;F2;F2`), which caps precision/recall for every metric. MONK's copy of the
-  function de-duplicates; this one does not.
+- **`extract_top_k_features` keeps repeated features by default — deliberately.** Several predicates
+  on one feature can fill the whole top-k (e.g. `F2;F2;F2`), which caps precision/recall for every
+  metric. Repeats are kept so new `causal_accuracy_*.csv` rows stay comparable with the accumulated
+  history in `results/`, all of which was produced this way. Pass `drop_duplicates=True` to keep only
+  each feature's best-ranked predicate; the runner's call in `save_feature_extraction_results` does
+  not pass it, so a default run still writes repeats. Don't compare a de-duplicated run against the
+  history without saying so. MONK's copy of the function always de-duplicates.
 - **Generators do not write where the runner reads.** All four `scenario_*_generator.py` scripts write
   to `test_datasets/` (CWD-relative for scenarios 1 and 3, `<suite>/test_datasets/` for 2 and 5) while
   the runner reads `datasets/`, and `test_datasets/` does not exist in the tree. Regenerating a

@@ -9,7 +9,7 @@ authors = [
 license = "MIT"
 readme = "README.md"
 keywords = ["decision graph", "ensemble learning", "explainable ai", "explainability", "global explanations"]
-scripts = { "dpg" = "scripts.run_dpg_standard:main" }
+scripts = { "dpg" = "dpg.cli:main" }
 classifiers = [
     "Programming Language :: Python :: 3"
 ]

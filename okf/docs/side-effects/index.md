@@ -5,12 +5,9 @@ release (merge `f16a977`), verified against branch `feature/first_runs` HEAD `27
 otherwise. Each page traces its claim to source at an exact revision and includes a runnable example
 that was actually executed.
 
-## Crashes at HEAD
-
-* [console-script-entrypoint](console-script-entrypoint.md) - The installed `dpg` console script points at a nonexistent module; `[project.scripts]` silently wins over `[tool.poetry.scripts]`.
-
 ## Fixed regressions (on `feature/first_runs`, after `276a503`)
 
+* [console-script-entrypoint](console-script-entrypoint.md) - The installed `dpg` console script pointed at a nonexistent module because `[project.scripts]` silently wins over `[tool.poetry.scripts]`. Fixed by pointing `[project.scripts]` at `dpg.cli:main`.
 * [explain-local-node-lookup-crash](explain-local-node-lookup-crash.md) - `DPGExplainer.explain_local` raised `TypeError` for every model; a ruff cleanup commented out `node_lookup` but left `_trace_tree_path` requiring it. Fixed by deleting the now-unused parameter.
 * [context-order-pairwise-crash](context-order-pairwise-crash.md) - `discover_dfg_context` raised `TypeError` for every `context_order > 1` fit; a "ruff fixes" commit called `itertools.pairwise` with two arguments instead of one. Fixed by dropping the second argument.
 

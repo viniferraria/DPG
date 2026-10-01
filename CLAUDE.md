@@ -209,7 +209,7 @@ Per-module API detail lives in `okf/docs/modules/`.
 | --- | --- |
 | `core.py` | `DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`. Graph construction and config resolution. |
 | `context_order.py` | `path_violations`, `resolve_context_order` — trie-based resolution of the smallest DPG-k context order with no pooled-graph path recombination, without enumerating simple paths. |
-| `cli.py` | `build_parser`, `main` for the packaged `dpg` command. Not actually reachable as the installed console script — see Known breakage. |
+| `cli.py` | `build_parser`, `main` for the packaged `dpg` command (`uv run dpg`). Takes `--n_jobs` (default `-1`); does not read `config.yaml`. |
 | `sklearn_normalizer.py` | `SklearnEnsembleNormalizer`. **Only GradientBoosting is normalized** (`GB_MODELS`), flattening the per-class-column layout and handling the binary sign-of-leaf-score case. Every other ensemble is an identity pass-through. |
 | `explainer.py` | `DPGExplainer` plus the `DPGExplanation` / `DPGLocalExplanation` / `DPGTreePathExplanation` dataclasses, local tracing, sample confidence, and `evaluate_faithfulness`. Keeps `_original_model` so `predict()` still goes through sklearn's own path — the builder's normalized copy flattens `GradientBoostingClassifier.estimators_` and would break its internal indexing. |
 | `visualizer.py` | Every plot function; `DPGExplainer.plot*` are thin wrappers. Largest module. |
@@ -315,12 +315,7 @@ intended, not a tracing bug.
 Verified against the source. Mention these rather than tripping over them.
 
 - `examples/run_dpg_custom.py` crashes — it unpacks 2 values from `test_dpg`'s 6-tuple.
-- `pyproject.toml` still declares the installed `dpg` console script via `[project.scripts]` as
-  `scripts.run_dpg_standard:main`, and no `scripts/` package exists — `uv run dpg` fails with
-  `ModuleNotFoundError: No module named 'scripts'`. `dpg/cli.py` now has a real `main()` and is wired up
-  under `[tool.poetry.scripts]`, but that table is dead: PEP 621 `[project.scripts]` wins whenever both
-  are present. Run it directly with `uv run python -m dpg.cli`. `examples/run_dpg_standard.py` still has
-  no `main()` either.
+- `examples/run_dpg_standard.py` has no `main()`; run it by path.
 - `.readthedocs.yaml` installs `docs/requirements.txt`, which does not exist — RTD builds fail at install.
 - `test_datasets/` does not exist, but all four `scenario_*_generator.py` scripts write there while
   `run_dpg_causal_synthetic.py` reads from `datasets/`. Regenerating a scenario has no effect on the runner.

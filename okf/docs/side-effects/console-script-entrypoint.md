@@ -1,12 +1,19 @@
 ---
 type: Side Effect
-title: The installed dpg console script is dead
-description: pyproject.toml declares the same console-script name twice, under [project.scripts] and [tool.poetry.scripts]; the PEP 621 [project] table wins during a uv/pip build, so the installed `dpg` command points at a module that doesn't exist and crashes on invocation.
+title: The installed dpg console script was dead (fixed)
+description: pyproject.toml declares the same console-script name twice, under [project.scripts] and [tool.poetry.scripts]; the PEP 621 [project] table wins during a uv/pip build, so the installed `dpg` command pointed at a module that doesn't exist and crashed on invocation. fixed on `feature/first_runs` (2026-09-30) by pointing [project.scripts] at dpg.cli:main.
 resource: https://github.com/viniferraria/DPG/blob/main/pyproject.toml
-tags: [packaging, cli, entry-points, pyproject, regression]
+tags: [packaging, cli, entry-points, pyproject, regression, fixed]
 generated: { by: claude_code/claude-sonnet-5, at: 2026-09-18T00:00:00Z }
-status: stable
+status: fixed
 ---
+
+# Fix (2026-09-30)
+
+`pyproject.toml:12` now reads `scripts = { "dpg" = "dpg.cli:main" }`, so both tables agree. After
+`uv sync`, the installed `entry_points.txt` reads `dpg=dpg.cli:main` and `uv run dpg --ds iris --dir
+<out>` runs end to end. The same change added a `--n_jobs` flag to `dpg/cli.py` (previously hard-coded
+to `-1`). Everything below describes the state before the fix.
 
 # What changed
 

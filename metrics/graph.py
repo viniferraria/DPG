@@ -10,7 +10,6 @@ from typing import (
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 
 
 class GraphMetrics:
@@ -21,7 +20,7 @@ class GraphMetrics:
         self.target_names = target_names
 
     @staticmethod
-    def calculate_class_boundaries(key: str, nodes: list[str], class_names: list[str]) -> tuple:
+    def calculate_class_boundaries(key: str, nodes: list[str], class_names: Sequence[str]) -> tuple:
         """Static method for boundary calculation"""
         feature_bounds = {}
         boundaries = []
@@ -55,12 +54,15 @@ class GraphMetrics:
 
     @classmethod
     def calculate_boundaries(cls, class_dict: dict, class_names: Sequence[str]) -> dict:
-        """Parallel boundary calculation"""
-        results = Parallel(n_jobs=-1)(
-            delayed(cls.calculate_class_boundaries)(key, nodes, class_names) 
+        """Boundary calculation per class.
+
+        Sequential on purpose: there is one task per class, so a process pool
+        cost ~500x the work and ignored the configured ``n_jobs``.
+        """
+        return dict(
+            cls.calculate_class_boundaries(key, nodes, class_names)
             for key, nodes in class_dict.items()
         )
-        return dict(results)
 
     @staticmethod
     def _parse_predicate(label: str) -> tuple[str, str, float] | None:
