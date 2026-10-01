@@ -35,7 +35,7 @@ are made on the class. It also carries one class constant,
 ## Dependency direction
 
 `metrics/` is imported by `dpg/` — never the reverse. This module imports only stdlib, `networkx`,
-`numpy`, and `pandas`; it has no `dpg` import at all (not even a lazy one, unlike
+`numpy`, `pandas`, and `scipy.sparse`; it has no `dpg` import at all (not even a lazy one, unlike
 `metrics/nodes.py`).
 
 # API
@@ -77,11 +77,13 @@ whole label), and `extract_feature_intervals` uses a `[a-zA-Z0-9_]+` feature reg
 
 ## `clustering` — absorbing Markov chain
 
-Builds a row-stochastic transition matrix `P` over `dpg_model.nodes()`: class nodes are absorbing
-(`P[i,i] = 1.0`), every other node distributes probability over its out-edges proportional to
-`weight` (default `1`), and a node with zero outgoing weight becomes self-absorbing. Nodes are
-permuted into `transient + absorbing`, giving `Q` and `R`; the fundamental matrix is
-`N = np.linalg.solve(I - Q, I)` and absorption probabilities are `B = N @ R`. Per-class
+Orders nodes as `transient + absorbing` (class nodes last) and builds only the transient rows of
+the row-stochastic transition matrix `P` as a `scipy.sparse.csr_matrix`: every non-class node
+distributes probability over its out-edges proportional to `weight` (default `1`), and a non-class
+node with zero outgoing weight gets a self-loop of `1.0`. Splitting the columns gives `Q`
+(transient → transient) and `R` (transient → class). Absorption probabilities come from one sparse
+solve, `B = spsolve(I - Q, R)` — the fundamental matrix `N = (I - Q)^-1` is never formed, and
+neither is a dense `n × n` `P`. Class nodes get probability `1.0` for their own class. Per-class
 probabilities are the column sums of `B`, `np.round(...)` to 2 decimals. Each node is assigned to
 its argmax class; `confidence` is the rounded margin between top and second-best probability.
 When `threshold` is not `None`, an `"Ambiguous"` bucket is created and nodes whose top probability
@@ -133,9 +135,14 @@ it, with any leftovers appended in sorted order.
   node. Both build their maps with `if "->" not in node[0]` to exclude edge-shaped entries.
 - **LPA is non-deterministic.** `asyn_lpa_communities` is a randomized algorithm; community counts
   and memberships can shift between runs even on a fixed-seed model.
-- **`clustering` is dense O(n²) memory** and calls `np.linalg.solve` on a `t × t` matrix — it is
-  the scaling limit of this module on large graphs, and it will raise `LinAlgError` if `I - Q` is
-  singular.
+- **`clustering` memory follows the edge count** (sparse `P`, one `spsolve` for `B`). Until
+  2026-10-01 it built a dense `n × n` `P` and the full `N = np.linalg.solve(I - Q, I)`: on a
+  6,793-node graph that peaked at ~2.2 GB and took ~22 s per call (vs ~0.2 s now, identical
+  output), and `explain_global(communities=True)` calls it twice per split
+  (`extract_class_boundaries` and `extract_communities`, both at threshold `0.2` by default), which
+  got the causal runner killed by the OOM killer on a 7 GB machine. A singular `I - Q` (a non-class
+  node with no out-edges) still raises `np.linalg.LinAlgError`, checked explicitly because
+  `spsolve` returns NaNs with a `MatrixRankWarning` instead of raising.
 - **Rounding to 2 decimals happens before assignment,** so class probabilities need not sum to
   exactly `1.0` (the tests allow `abs=0.05` drift) and ties are resolved by `classes` iteration
   order.

@@ -10,6 +10,8 @@ from typing import (
 import networkx as nx
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
+from scipy.sparse.linalg import spsolve
 
 
 class GraphMetrics:
@@ -317,56 +319,40 @@ class GraphMetrics:
         nodes = list(dpg_model.nodes())
         n = len(nodes)
         
-        idx = {idx_node : node for node, idx_node in enumerate(nodes)}
-        
-        # P
-        P = np.zeros((n, n), dtype = float)
-        for node in nodes:
-            i = idx[node]
-            if node in class_set:
-                P[i, i] = 1.0
-                continue
-
-            out_edges = list(dpg_model.out_edges(node, data=True))
-            
-            weight_sum = 0
-
-            for out_node, in_node, weight in out_edges:
-                weight_sum += weight.get('weight', 1)
-
-            if weight_sum > 0:
-                for out_node, in_node, weight in out_edges:
-                    j = idx[in_node]
-                    P[i, j] = weight.get('weight', 1) / weight_sum
-            else:
-                P[i, i] = 1.0
-        
-        # Order to obtain Q and R
-        transient = []
-        absorbing = []
-        for node in nodes:
-            if node not in class_set:
-                transient.append(node)
-            elif node in class_set:
-                absorbing.append(node)
-
+        # Transient (predicate) nodes first, absorbing (class) nodes last.
+        transient = [node for node in nodes if node not in class_set]
+        absorbing = [node for node in nodes if node in class_set]
         t = len(transient)
+        pos = {node: i for i, node in enumerate(transient + absorbing)}
 
-        perm = transient + absorbing
-        
-        perm_idx = [idx[node] for node in perm]
-        
-        Pp = P[perm_idx][:, perm_idx]
+        # Transient rows of the transition matrix P, stored sparse: only edges
+        # are kept, so memory follows the edge count rather than n * n.
+        rows: list[int] = []
+        cols: list[int] = []
+        vals: list[float] = []
+        for node in transient:
+            out_edges = list(dpg_model.out_edges(node, data=True))
+            weight_sum = sum(data.get('weight', 1) for _, _, data in out_edges)
+            if weight_sum > 0:
+                for _, in_node, data in out_edges:
+                    rows.append(pos[node])
+                    cols.append(pos[in_node])
+                    vals.append(data.get('weight', 1) / weight_sum)
+            else:
+                rows.append(pos[node])
+                cols.append(pos[node])
+                vals.append(1.0)
+        P = sp.csr_matrix((vals, (rows, cols)), shape=(t, n))
+        Q = P[:, :t]
+        R = P[:, t:]
 
-        Q = Pp[:t, :t]
-        R = Pp[:t, t:]
-
-        # N
-        identity_matrix = np.eye(t)
-        N = np.linalg.solve(identity_matrix - Q, identity_matrix)
-
-        # Absorbing probability for each node
-        B = N @ R
+        # Absorbing probability for each node: solve (I - Q) B = R for B
+        # directly. Forming N = (I - Q)^-1 first is a dense t x t matrix.
+        B = spsolve((sp.identity(t, format="csc") - Q).tocsc(), R.toarray())
+        B = np.asarray(B).reshape(t, len(absorbing))
+        if not np.isfinite(B).all():
+            # Same failure the dense np.linalg.solve raised for a singular I - Q.
+            raise np.linalg.LinAlgError("Singular matrix")
 
         # ----- #
         class_labels = [class_by_node[node] for node in absorbing]

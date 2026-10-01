@@ -7,6 +7,7 @@ values are deterministic and reproducible.
 
 import re
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
@@ -348,6 +349,43 @@ class TestClassBoundaries:
 # ---------------------------------------------------------------------------
 # Clustering (absorbing Markov chain)
 # ---------------------------------------------------------------------------
+
+
+class TestClusteringAbsorption:
+    """Absorption probabilities on small graphs with known answers."""
+
+    def test_loop_graph_matches_hand_computation(self):
+        # S -> A 0.6, S -> B 0.4; A <-> B loop (A -> B 0.5, B -> A 0.25);
+        # A -> Class 0 0.5, B -> Class 1 0.75. Chance of reaching Class 0:
+        # a = 0.5 + 0.5 * b and b = 0.25 * a, so a = 4/7 and b = 1/7;
+        # s = 0.6 * a + 0.4 * b = 0.4.
+        graph = nx.DiGraph()
+        graph.add_weighted_edges_from(
+            [
+                ("S", "A", 6), ("S", "B", 4),
+                ("A", "B", 2), ("A", "c0", 2),
+                ("B", "A", 1), ("B", "c1", 3),
+            ]
+        )
+        class_nodes = {"c0": "Class 0", "c1": "Class 1"}
+
+        clusters, node_prob, confidence = GraphMetrics.clustering(graph, class_nodes)
+
+        assert node_prob["S"] == {"Class 0": 0.4, "Class 1": 0.6}
+        assert node_prob["A"] == {"Class 0": 0.57, "Class 1": 0.43}
+        assert node_prob["B"] == {"Class 0": 0.14, "Class 1": 0.86}
+        assert node_prob["c0"] == {"Class 0": 1.0, "Class 1": 0.0}
+        assert sorted(clusters["Class 1"]) == ["B", "S", "c1"]
+        assert confidence["S"] == 0.2
+
+    def test_non_class_sink_raises_like_dense_solve(self):
+        # "dead" has no outgoing edge and is not a class node, so I - Q is
+        # singular; the dense np.linalg.solve raised LinAlgError here too.
+        graph = nx.DiGraph()
+        graph.add_weighted_edges_from([("S", "c0", 1), ("S", "dead", 1)])
+
+        with pytest.raises(np.linalg.LinAlgError):
+            GraphMetrics.clustering(graph, {"c0": "Class 0"})
 
 
 class TestClustering:

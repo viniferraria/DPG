@@ -1,5 +1,18 @@
 # Bundle Update Log
 
+## 2026-10-01
+
+* **Fix**: `GraphMetrics.clustering` (`metrics/graph.py`) solves `(I - Q) B = R` with
+  `scipy.sparse.linalg.spsolve` on a sparse `P` instead of building a dense `n × n` `P` and the full
+  inverse `N = np.linalg.solve(I - Q, I)`. On scenario_3 ExtraTrees split 0 (6,793 nodes): ~22–25 s
+  and ~2.2 GB peak → ~0.2 s and ~315 MB (≈ the loaded graph), identical clusters / probabilities /
+  confidence; also identical on the four ground-truth scenario graphs. The dense version is what got
+  `run_dpg_causal_synthetic.py` killed by `earlyoom` during `explain_global` (the loky "leaked
+  semlock" warnings were cleanup after that kill). A singular `I - Q` still raises
+  `np.linalg.LinAlgError`. New tests `TestClusteringAbsorption` in `tests/test_metrics.py`.
+  `explain_global` still calls `clustering` twice per split; left as is. Updated
+  [metrics.graph](/modules/metrics-graph.md).
+
 ## 2026-09-30
 
 * **Fix**: `main()` in `experiments/causal_synthetic_scenarios/run_dpg_causal_synthetic.py` now creates
