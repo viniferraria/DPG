@@ -8,6 +8,7 @@ dpg:
     context_order: 1
   metrics:
     backend: "igraph"
+    graph_backend: networkx  # networkx | igraph | graph_tool
   visualization:
     graph_attrs:
       bgcolor: "white"

@@ -6,18 +6,13 @@ from typing import Any
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import (
-    AdaBoostRegressor,
-    ExtraTreesRegressor,
-    GradientBoostingClassifier,
-    RandomForestRegressor,
-)
+from sklearn.ensemble import GradientBoostingClassifier
 
 from metrics.edges import EdgeMetrics
 from metrics.graph import GraphMetrics
 from metrics.nodes import NodeMetrics
 
-from .core import DecisionPredicateGraph
+from .core import DecisionPredicateGraph, is_regression_model
 from .exceptions import DPGExplanationError, DPGNotFittedError, DPGValidationError
 from .sklearn_normalizer import SklearnEnsembleNormalizer
 from .visualizer import (
@@ -651,10 +646,7 @@ class DPGExplainer:
         node_metrics_lookup: dict[str, dict[str, Any]],
         validate_graph: bool,
     ) -> DPGTreePathExplanation:
-        is_regressor = isinstance(
-            self._builder.model,
-            (RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor),
-        )
+        is_regressor = is_regression_model(self._builder.model)
         tree_ = tree.tree_
         sample_array = np.asarray(sample).reshape(1, -1)
         indicator = tree.decision_path(sample_array)
@@ -1025,10 +1017,7 @@ class DPGExplainer:
         sample: np.ndarray,
         tree_index: int | None = None,
     ) -> list[str]:
-        is_regressor = isinstance(
-            self._builder.model,
-            (RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor),
-        )
+        is_regressor = is_regression_model(self._builder.model)
         tree_ = tree.tree_
         sample_array = np.asarray(sample).reshape(1, -1)
         indicator = tree.decision_path(sample_array)

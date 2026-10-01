@@ -46,6 +46,7 @@ repository = "https://github.com/Meta-Group/DPG"
 
 [dependency-groups]
 dev = [
+    "econml>=0.17",
     "ipython>=8.39.0",
     # NOTE: do not add matplotlib-stubs here. matplotlib ships its own complete
     # inline types (py.typed); a stub-only package shadows them and regresses
@@ -81,6 +82,9 @@ docs = [
     "sphinx-design>=0.6",
     "sphinx-copybutton>=0.5",
 ]
+causal = [
+    "econml>=0.17",
+]
 
 [tool.poetry]
 packages = [
@@ -100,15 +104,17 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = [
+    "econml.*",
     "graphviz.*",
-    "networkx.*",
-    "sklearn.*",
+    "graph_tool.*",
+    "igraph.*",
     "joblib.*",
-    "tqdm.*",
-    "scipy.*",
+    "networkx.*",
     "omegaconf.*",
     "PIL.*",
-    "igraph.*",
+    "sklearn.*",
+    "scipy.*",
+    "tqdm.*",
     "graph_tool.*",
 ]
 ignore_missing_imports = true

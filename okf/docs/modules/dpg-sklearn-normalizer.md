@@ -64,6 +64,7 @@ After `normalize`, every model DPG consumes satisfies:
 | `GradientBoostingClassifier` (multiclass) | 2D `(n_estimators, n_classes)` | flatten row-major; record column index as the class slot | `core._leaf_class_label` uses the recorded slot as the predicted class, ignoring `tree_.value` |
 | `GradientBoostingClassifier` (binary) | 2D `(n_estimators, 1)` | flatten; slot recorded as `None` because `len(row) == 1` | sign-of-leaf-score rule: `1 if float(tree_.value[node][0][0]) > 0 else 0` |
 | `GradientBoostingRegressor` | 2D `(n_estimators, 1)` | flatten; slots all `None` | regressor branch → `Pred` leaves in `core.py` |
+| `econml.grf.CausalForest` (single treatment, single outcome) | 1D `list` of `GRFTree` | pass-through | listed in `core.py`'s `REGRESSOR_MODELS` (when `econml` is importable) → regressor branch → `Pred` leaves = the leaf's CATE estimate, not a mean target value |
 
 The two GB cases are the whole reason the module exists. A multiclass GB classifier trains one
 regression tree *per class per boosting round*; each such tree's leaf values are gradient residuals,
@@ -107,11 +108,11 @@ validation and then fails later with an `AttributeError` during tracing.
   and `dpg/explainer.py` (local re-tracing). Any change to the GB class-resolution rule must be
   applied to both or global and local explanations will disagree on `"Class …"` strings — and node
   identity is the label text, see `/conventions/label-contract.md`.
-- **`GradientBoostingRegressor` is missing from the explainer's regressor tuple.**
-  `dpg/core.py` tests against `(RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor,
-  GradientBoostingRegressor)`, but `dpg/explainer.py` uses only the first three. Local explanation
-  of a GB regressor therefore takes the classifier branch and emits `"Class <target_names[0]>"`
-  where the graph holds `"Pred <value>"` nodes, so lookups miss.
+- **The regressor tuple is now a single shared constant.** Both `dpg/core.py`'s global tracing and
+  `dpg/explainer.py`'s local tracing test against the same `REGRESSOR_MODELS` tuple exported from
+  `dpg/core.py`, so a GB regressor (and now `econml.grf.CausalForest`) takes the regressor branch
+  and emits `"Pred <value>"` consistently in both places. See
+  [regressor detection](/conventions/regressor-detection.md) for the previous mismatch this closed.
 - **Private attributes are part of the contract.** `_dpg_tree_class_indices`,
   `_normalized_for_dpg` and `_original_estimators_shape` are read by other DPG modules despite the
   underscore. They also travel with pickled explainer state.

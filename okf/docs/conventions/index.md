@@ -5,6 +5,7 @@ Cross-module contracts. Breaking one of these breaks modules that never import e
 * [Event label contract](label-contract.md) - The exact string formats DPG uses for graph node labels, and every module that parses them.
 * [DPG config resolution order](config-resolution.md) - How DecisionPredicateGraph.__init__ picks configuration — explicit dpg_config, then config.yaml relative to the CWD, then DEFAULT_DPG_CONFIG — and where those sources disagree.
 * [Graph construction modes](graph-construction-modes.md) - The two supported dpg.graph_construction.mode values — aggregated_transitions (variant-level filtering) and execution_trace (edge-level filtering) — their thresholds, failure mode, and effect on local-explanation validity flags.
+* [Regressor detection](regressor-detection.md) - REGRESSOR_MODELS as the single isinstance check that routes tracing into Pred leaves instead of Class leaves, shared by dpg/core.py and dpg/explainer.py.
 
 ## See also
 

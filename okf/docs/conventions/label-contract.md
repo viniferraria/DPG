@@ -32,7 +32,7 @@ formats below are a cross-module contract, not an implementation detail.
 | Split, left branch | `<feature> <= <threshold>` | `dpg/core.py` (`tracing_ensemble`, `tracing_ensemble_parallel`) | `threshold = round(tree_.threshold[i], decimal_threshold)` |
 | Split, right branch | `<feature> > <threshold>` | same | same rounding |
 | Classifier leaf | `Class <name>` | `dpg/core.py:_leaf_class_label` | `<name>` is `target_names[k]` if given, else `model.classes_[k]`, else the raw index |
-| Regressor leaf | `Pred <value>` | `dpg/core.py` tracing | `value = round(tree_.value[i][0][0], 2)` |
+| Regressor leaf | `Pred <value>` | `dpg/core.py` tracing | `value = round(tree_.value[i][0][0], 2)`; for `econml.grf.CausalForest` this is the leaf's CATE estimate, still rounded to 2 decimals the same way |
 | Trace case id | `sample<case_id>_dt<tree_index>` | `dpg/core.py` tracing | one case per (sample, tree) |
 
 The trace log is a `DataFrame` with exactly two columns, using PM4Py-style names:

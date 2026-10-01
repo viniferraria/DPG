@@ -11,12 +11,18 @@ status: stable
 # Responsibility
 
 `dpg/core.py` owns graph construction and config resolution. It exports
-`DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`, and re-exports `DPGError`
-(`__all__ = ["DPGError", "DecisionPredicateGraph"]`). It does not walk trees into a graph directly —
+`REGRESSOR_MODELS`, `DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`, and re-exports `DPGError`
+(`__all__ = ["REGRESSOR_MODELS", "DPGError", "DecisionPredicateGraph"]`). It does not walk trees into a graph directly —
 it produces a process-mining event log and mines a directly-follows graph from it. See
 [/pipeline.md](/pipeline.md).
 
 # API
+
+## Module-level
+
+| Name | Type | Purpose |
+|---|---|---|
+| `REGRESSOR_MODELS` | `tuple[type, ...]` | `isinstance` target that selects the regressor branch (`Pred <value>` leaves) over the classifier branch (`Class <name>` leaves) in `tracing_ensemble` / `tracing_ensemble_parallel`. Always `(RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor, GradientBoostingRegressor)`, plus `econml.grf.CausalForest` when `econml` imports successfully. See [regressor detection](/conventions/regressor-detection.md). |
 
 ## Constructor
 
@@ -36,6 +42,11 @@ Resolved attributes: `perc_var`, `decimal_threshold`, `n_jobs`, `graph_construct
 being stored — see [/modules/dpg-sklearn-normalizer.md](/modules/dpg-sklearn-normalizer.md).
 Details in [/conventions/config-resolution.md](/conventions/config-resolution.md).
 
+Before normalization, if `model` is an `econml.grf.CausalForest` (only checked when `econml` is
+importable), `__init__` reads `model.n_relevant_outputs_` and raises
+`DPGModelError.multi_output_causal_forest(n)` unless it equals `1`. See
+[causal forest support](/concepts/causal-forest-support.md).
+
 **New in 0.3.0**, both read from `dpg_config["dpg"]["graph_construction"]`:
 
 - `context_order` (default `1`) — DPG-k. `1` is the pre-0.3.0 graph. An explicit `int > 1` or the
@@ -49,6 +60,11 @@ Details in [/conventions/config-resolution.md](/conventions/config-resolution.md
 - `decimal_threshold` also now accepts the literal string `"auto"` (in addition to a non-negative
   `int`); anything else raises `DPGError("decimal_threshold must be a non-negative integer or 'auto'")`.
   See "`decimal_threshold="auto"`" under Behavior.
+
+  Before normalization, if `model` is an `econml.grf.CausalForest` (only checked when `econml` is
+importable), `__init__` reads `model.n_relevant_outputs_` and raises
+`DPGModelError.multi_output_causal_forest(n)` unless it equals `1`. See
+[causal forest support](/concepts/causal-forest-support.md).
 
 ## Public methods
 
@@ -181,8 +197,13 @@ bare leading digit is not.
 
 Labels are escaped for DOT via a local `_escape_dot_label`, which replaces `\`, `"`, `[`, and `]`.
 
-Regressor detection is an `isinstance` check against `RandomForestRegressor`,
-`ExtraTreesRegressor`, `AdaBoostRegressor`, `GradientBoostingRegressor`.
+Regressor detection is an `isinstance` check against `REGRESSOR_MODELS`
+(`RandomForestRegressor`, `ExtraTreesRegressor`, `AdaBoostRegressor`, `GradientBoostingRegressor`,
+plus `econml.grf.CausalForest` when `econml` is importable). For a `CausalForest`, the leaf `Pred`
+value (`round(tree_.value[node_index][0][0], 2)`) is the tree's local CATE estimate rather than a
+mean target value — same code path, different quantity. See
+[regressor detection](/conventions/regressor-detection.md) and
+[causal forest support](/concepts/causal-forest-support.md).
 
 # Gotchas
 
@@ -239,7 +260,8 @@ graph, nodes_list = dpg.to_networkx()
 ```
 
 Exceptions raised by this module all live in `dpg/exceptions.py` and derive from `DPGError`:
-`DPGModelError.invalid_ensemble`, `DPGValidationError.empty_feature_names`,
+`DPGModelError.invalid_ensemble`, `DPGModelError.multi_output_causal_forest`,
+`DPGValidationError.empty_feature_names`,
 `DPGConfigurationError.missing_perc_var` / `.missing_decimal_threshold` / `.missing_n_jobs` /
 `.unsupported_graph_mode`, `DPGGraphError.no_paths`, and `DPGNotFittedError.for_builder` (raised by
 `to_dot()`/`to_networkx()` before `fit`).

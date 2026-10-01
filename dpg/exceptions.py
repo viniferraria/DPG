@@ -128,6 +128,14 @@ class DPGModelError(DPGValidationError):
         available = ", ".join(available_models)
         return cls(f"Unsupported model '{model_name}'. Available models: {available}.")
 
+    @classmethod
+    def multi_output_causal_forest(cls, n_relevant_outputs: int) -> "DPGModelError":
+        return cls(
+            "CausalForest models are supported only with a single treatment and a single "
+            f"outcome (n_relevant_outputs_ == 1); got n_relevant_outputs_={n_relevant_outputs}. "
+            "Fit one CausalForest per treatment/outcome and build a DPG for each."
+        )
+
 
 class DPGConfigurationError(DPGValidationError):
     """Raised when DPG configuration or theme settings are invalid."""

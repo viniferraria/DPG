@@ -1,5 +1,5 @@
 1. **MONK's-1 and MONK-3** (classification, categorical, explicit distractors) — near-zero prep.
-2. **Madelon 10-column subset** (5 informative + 5 probes) — high-value false-positive test at scenario scale.
+<!-- 2. **Madelon 10-column subset** (5 informative + 5 probes) — high-value false-positive test at scenario scale. -->
 3. **IHDP** (regression counterpart) and **Energy Efficiency** (real-world regression, weak-distractor X6) once the pipeline supports regression targets — note `main.py` currently uses classifiers + `StratifiedShuffleSplit`, so Tier 3/4 regression datasets need a regressor branch first.
 4. **bnlearn networks via pgmpy** — ASIA (8 nodes), INSURANCE (27), ALARM (37); DAGs published at https://www.bnlearn.com/bnrepository/
    ```python

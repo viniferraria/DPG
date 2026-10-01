@@ -40,6 +40,22 @@ try:
 except ImportError:
     HAS_OMEGACONF = False
 
+try:
+    from econml.grf import CausalForest
+
+    _CAUSAL_FOREST_MODELS: tuple[type, ...] = (CausalForest,)
+except ImportError:
+    _CAUSAL_FOREST_MODELS = ()
+
+
+def is_regression_model(model: Any) -> bool:
+    """Return True if ``model`` should be traced into ``Pred`` leaves.
+
+    sklearn's ``is_regressor`` covers every sklearn regressor; econml's
+    ``CausalForest`` sets no ``_estimator_type``, so it is checked explicitly.
+    """
+    return is_regressor(model) or isinstance(model, _CAUSAL_FOREST_MODELS)
+
 pd.set_option("display.max_colwidth", 255)
 
 
@@ -63,7 +79,7 @@ DEFAULT_DPG_CONFIG: dict[str, Any] = {
     }
 }
 
-__all__ = ["DPGError", "DecisionPredicateGraph"]
+__all__ = ["DPGError", "DecisionPredicateGraph", "is_regression_model"]
 
 
 @dataclass(frozen=True)
@@ -139,6 +155,10 @@ class DecisionPredicateGraph:
         # Input validation
         if not hasattr(model, 'estimators_'):
             raise DPGModelError.invalid_ensemble()
+        if _CAUSAL_FOREST_MODELS and isinstance(model, _CAUSAL_FOREST_MODELS):
+            n_relevant_outputs = int(getattr(model, "n_relevant_outputs_", 1))
+            if n_relevant_outputs != 1:
+                raise DPGModelError.multi_output_causal_forest(n_relevant_outputs)
         if len(feature_names) == 0:
             raise DPGValidationError.empty_feature_names()
 
@@ -509,7 +529,7 @@ class DecisionPredicateGraph:
             left = int(tree_.children_left[node_index])
             right = int(tree_.children_right[node_index])
             if left == right:
-                if is_regressor(self.model):
+                if is_regression_model(self.model):
                     pred = round(float(tree_.value[node_index][0][0]), 2)
                     labels.append(f"Pred {pred}")
                 else:
@@ -550,7 +570,7 @@ class DecisionPredicateGraph:
             operator = "<=" if went_left else ">"
             labels.append(f"{self.feature_names[feature_index]} {operator} {threshold}")
 
-        if is_regressor(self.model):
+        if is_regression_model(self.model):
             pred = round(float(tree_.value[leaf_id][0][0]), 2)
             labels.append(f"Pred {pred}")
         else:
