@@ -16,6 +16,13 @@ def test_cli_parser_matches_documented_defaults():
     assert args.model_name == "RandomForestClassifier"
     assert args.seed == 160898
     assert args.pv == 1e-9
+    assert args.n_jobs == -1
+
+
+def test_cli_forwards_n_jobs_to_test_dpg(tmp_path):
+    with patch("dpg.cli.test_dpg", return_value=(None, None)) as test_dpg:
+        main(["--dataset", "iris", "--dir", str(tmp_path), "--n_jobs", "1"])
+    assert test_dpg.call_args.kwargs["n_jobs"] == 1
 
 
 def test_cli_reports_failure_on_insufficient_nodes(tmp_path):

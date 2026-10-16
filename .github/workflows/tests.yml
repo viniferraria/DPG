@@ -1,0 +1,37 @@
+# # name: CI
+
+# on:
+#   pull_request:
+#     paths-ignore:
+#       - pyproject.toml
+
+# concurrency:
+#   group: tests
+#   cancel-in-progress: true
+
+# jobs:
+#   test:
+#     name: Tests (Python ${{ matrix.python-version }})
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         python-version: ["3.10", "3.11", "3.12"]
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: ${{ matrix.python-version }}
+#           cache: 'pip'
+
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r requirements.txt
+#           pip install pytest
+
+#       - name: Run tests
+#         run: |
+#           pytest -q

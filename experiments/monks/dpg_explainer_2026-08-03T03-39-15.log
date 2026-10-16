@@ -1,0 +1,28 @@
+2026-08-03 00:39:15,165 - __main__ - INFO - Starting DPG explainer experiments...
+2026-08-03 00:39:15,165 - __main__ - INFO - Processing datasets/monks-1.train -> datasets/monks-1.test...
+2026-08-03 00:39:20,586 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-1_RandomForest_split0_dpg_explainer_2026-08-03T03-39-20.pkl
+2026-08-03 00:39:20,588 - __main__ - INFO - Generating global explanation for monks-1_RandomForest split=0...
+2026-08-03 00:39:20,607 - __main__ - INFO - Global explanation generated in 0.02s
+2026-08-03 00:39:20,607 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-1_RandomForest_split0_explanation_2026-08-03T03-39-20.pkl
+2026-08-03 00:39:20,609 - __main__ - INFO - Collected 36 node records for monks-1_RandomForest split=0
+2026-08-03 00:39:20,615 - __main__ - INFO - [monks-1_RandomForest] accuracy on monks-1.test (432 rows): 0.9630
+2026-08-03 00:39:22,289 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-1_ExtraTrees_split0_dpg_explainer_2026-08-03T03-39-22.pkl
+2026-08-03 00:39:22,306 - __main__ - INFO - Generating global explanation for monks-1_ExtraTrees split=0...
+2026-08-03 00:39:46,719 - __main__ - INFO - Global explanation generated in 24.41s
+2026-08-03 00:39:46,720 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-1_ExtraTrees_split0_explanation_2026-08-03T03-39-22.pkl
+2026-08-03 00:39:46,755 - __main__ - INFO - Collected 4832 node records for monks-1_ExtraTrees split=0
+2026-08-03 00:39:46,953 - __main__ - INFO - [monks-1_ExtraTrees] accuracy on monks-1.test (432 rows): 0.9676
+2026-08-03 00:39:46,953 - __main__ - INFO - Processing datasets/monks-3.train -> datasets/monks-3.test...
+2026-08-03 00:39:48,409 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-3_RandomForest_split0_dpg_explainer_2026-08-03T03-39-48.pkl
+2026-08-03 00:39:48,412 - __main__ - INFO - Generating global explanation for monks-3_RandomForest split=0...
+2026-08-03 00:39:48,426 - __main__ - INFO - Global explanation generated in 0.01s
+2026-08-03 00:39:48,426 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-3_RandomForest_split0_explanation_2026-08-03T03-39-48.pkl
+2026-08-03 00:39:48,428 - __main__ - INFO - Collected 36 node records for monks-3_RandomForest split=0
+2026-08-03 00:39:48,440 - __main__ - INFO - [monks-3_RandomForest] accuracy on monks-3.test (432 rows): 0.9606
+2026-08-03 00:39:49,929 - __main__ - INFO - Saving DPGExplainer → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-3_ExtraTrees_split0_dpg_explainer_2026-08-03T03-39-49.pkl
+2026-08-03 00:39:49,938 - __main__ - INFO - Generating global explanation for monks-3_ExtraTrees split=0...
+2026-08-03 00:40:05,654 - __main__ - INFO - Global explanation generated in 15.72s
+2026-08-03 00:40:05,655 - __main__ - INFO - Saving explanation → /Users/vinicius/Projects/DPG/experiments/monks/states/monks-3_ExtraTrees_split0_explanation_2026-08-03T03-39-49.pkl
+2026-08-03 00:40:05,686 - __main__ - INFO - Collected 4057 node records for monks-3_ExtraTrees split=0
+2026-08-03 00:40:05,804 - __main__ - INFO - [monks-3_ExtraTrees] accuracy on monks-3.test (432 rows): 0.9537
+2026-08-03 00:40:05,806 - __main__ - INFO - All experiments completed.

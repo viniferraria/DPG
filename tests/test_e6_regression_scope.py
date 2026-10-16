@@ -49,7 +49,8 @@ def test_regressor_execution_trace_builds_without_crashing(context_order):
     X, y, feature_names = _diabetes()
     model = RandomForestRegressor(n_estimators=5, max_depth=3, random_state=0, n_jobs=1).fit(X, y)
     dpg = DecisionPredicateGraph(model, feature_names, dpg_config=_config(context_order))
-    graph, nodes = dpg.to_networkx(dpg.fit(X))
+    dpg.fit(X)
+    graph, nodes = dpg.to_networkx()
 
     assert graph.number_of_nodes() > 0
     leaf_labels = [label for _, label in nodes if str(label).startswith("Pred ")]
@@ -74,7 +75,8 @@ def test_regressor_sink_count_is_not_a_fixed_output_count():
     X, y, feature_names = _diabetes()
     model = RandomForestRegressor(n_estimators=10, random_state=0, n_jobs=1).fit(X, y)
     dpg = DecisionPredicateGraph(model, feature_names, dpg_config=_config(1))
-    _, nodes = dpg.to_networkx(dpg.fit(X))
+    dpg.fit(X)
+    _, nodes = dpg.to_networkx()
 
     distinct_sinks = {label for _, label in nodes if str(label).startswith("Pred ")}
     total_leaves = sum(int(tree.tree_.n_leaves) for tree in model.estimators_)
