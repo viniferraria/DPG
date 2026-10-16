@@ -11,8 +11,8 @@ status: stable
 # Responsibility
 
 `dpg/core.py` owns graph construction and config resolution. It exports
-`REGRESSOR_MODELS`, `DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`, and re-exports `DPGError`
-(`__all__ = ["REGRESSOR_MODELS", "DPGError", "DecisionPredicateGraph"]`). It does not walk trees into a graph directly —
+`is_regression_model`, `DecisionPredicateGraph`, `DEFAULT_DPG_CONFIG`, and re-exports `DPGError`
+(`__all__ = ["DPGError", "DecisionPredicateGraph", "is_regression_model"]`). It does not walk trees into a graph directly —
 it produces a process-mining event log and mines a directly-follows graph from it. See
 [/pipeline.md](/pipeline.md).
 
@@ -22,7 +22,7 @@ it produces a process-mining event log and mines a directly-follows graph from i
 
 | Name | Type | Purpose |
 |---|---|---|
-| `REGRESSOR_MODELS` | `tuple[type, ...]` | `isinstance` target that selects the regressor branch (`Pred <value>` leaves) over the classifier branch (`Class <name>` leaves) in `tracing_ensemble` / `tracing_ensemble_parallel`. Always `(RandomForestRegressor, ExtraTreesRegressor, AdaBoostRegressor, GradientBoostingRegressor)`, plus `econml.grf.CausalForest` when `econml` imports successfully. See [regressor detection](/conventions/regressor-detection.md). |
+| `is_regression_model` | `(model) -> bool` | Predicate that selects the regressor branch (`Pred <value>` leaves) over the classifier branch (`Class <name>` leaves) in the tree-tracing methods. `sklearn.base.is_regressor(model)` or an `econml.grf.CausalForest` instance (when `econml` imports successfully). See [regressor detection](/conventions/regressor-detection.md). |
 
 ## Constructor
 
@@ -197,8 +197,7 @@ bare leading digit is not.
 
 Labels are escaped for DOT via a local `_escape_dot_label`, which replaces `\`, `"`, `[`, and `]`.
 
-Regressor detection is an `isinstance` check against `REGRESSOR_MODELS`
-(`RandomForestRegressor`, `ExtraTreesRegressor`, `AdaBoostRegressor`, `GradientBoostingRegressor`,
+Regressor detection is a call to `is_regression_model` (sklearn's `is_regressor`
 plus `econml.grf.CausalForest` when `econml` is importable). For a `CausalForest`, the leaf `Pred`
 value (`round(tree_.value[node_index][0][0], 2)`) is the tree's local CATE estimate rather than a
 mean target value — same code path, different quantity. See

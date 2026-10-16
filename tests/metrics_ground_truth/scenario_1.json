@@ -104,7 +104,7 @@
       "Closeness centrality": 0.00021502593252565878,
       "Collective influence": 0.0,
       "Degree": 3,
-      "Harmonic centrality": 0.0075884244372990345,
+      "Harmonic centrality": 0.007588424437299035,
       "In degree nodes": 1,
       "Local clustering coefficient": 0,
       "Local reaching centrality": 0.013030969707226265,
@@ -112,7 +112,7 @@
       "Percolation centrality": 0.012188683932674988
     },
     "F2 <= -0.814": {
-      "Betweenness centrality": 0.0,
+      "Betweenness centrality": 0.008771929824561403,
       "Closeness centrality": 0.00024369605686241322,
       "Collective influence": 0.0,
       "Degree": 2,
@@ -121,7 +121,7 @@
       "Local clustering coefficient": 0,
       "Local reaching centrality": 0.006092401421560332,
       "Out degree nodes": 1,
-      "Percolation centrality": 0.0
+      "Percolation centrality": 0.004273106331026062
     },
     "F2 <= -1.163": {
       "Betweenness centrality": 0.005847953216374269,
@@ -172,7 +172,7 @@
       "Percolation centrality": 0.012528328385840592
     },
     "F2 > -0.814": {
-      "Betweenness centrality": 0.008771929824561403,
+      "Betweenness centrality": 0.0,
       "Closeness centrality": 3.384667456422407e-05,
       "Collective influence": 0.0,
       "Degree": 2,
@@ -181,7 +181,7 @@
       "Local clustering coefficient": 0,
       "Local reaching centrality": 0.0008461668641056016,
       "Out degree nodes": 1,
-      "Percolation centrality": 0.004260806767770555
+      "Percolation centrality": 0.0
     },
     "F2 > -1.163": {
       "Betweenness centrality": 0.023391812865497075,

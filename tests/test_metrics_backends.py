@@ -5,13 +5,14 @@ truth fixtures in ``tests/metrics_ground_truth/`` within abs tolerance 1e-3.
 import json
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 import pytest
 from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
 
 from dpg.core import DecisionPredicateGraph, DPGError
-from metrics.backends import BACKEND_NAMES
+from metrics.backends import BACKEND_NAMES, get_backend
 from metrics.nodes import NodeMetrics
 from tests.metrics_ground_truth.scenarios import SCENARIOS, build_scenario_graph
 
@@ -106,3 +107,24 @@ def test_default_metrics_backend_is_igraph():
         },
     )
     assert dpg.get_metrics_backend() == "igraph"
+
+
+@pytest.mark.parametrize("backend_name", BACKEND_NAMES)
+def test_frequent_path_outscores_rare_path_on_betweenness_and_percolation(
+    backend_name,
+):
+    """Edge weight is a frequency: shortest paths must follow the frequent route."""
+    if backend_name == "graph_tool":
+        pytest.importorskip("graph_tool")
+    graph = nx.DiGraph()
+    graph.add_weighted_edges_from(
+        [
+            ("root", "frequent", 100),
+            ("root", "rare", 1),
+            ("frequent", "Class 1", 100),
+            ("rare", "Class 1", 1),
+        ]
+    )
+    result = get_backend(backend_name).node_centralities(graph)
+    assert result.betweenness["frequent"] > result.betweenness["rare"]
+    assert result.percolation["frequent"] > result.percolation["rare"]

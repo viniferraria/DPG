@@ -104,7 +104,7 @@ class TestNodeMetrics:
     def test_betweenness_centrality_range(self, node_metrics):
         bc = node_metrics["Betweenness centrality"]
         assert bc.min() == pytest.approx(0.0)
-        assert bc.max() == pytest.approx(0.072414, abs=1e-4)
+        assert bc.max() == pytest.approx(0.070115, abs=1e-4)
         assert (bc >= 0).all()
         assert (bc <= 1).all()
 

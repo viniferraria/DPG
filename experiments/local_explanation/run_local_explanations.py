@@ -6,6 +6,7 @@ import argparse
 import itertools
 import os
 from collections.abc import Iterable, Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -317,7 +318,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default="iris",
         help="Built-in sklearn datasets to run, comma-separated.",
     )
-    parser.add_argument("--out_dir", default="experiments/local_explanation/results", help="Output directory for CSV files.")
+    parser.add_argument("--out_dir", default=str(Path(__file__).parent / "results"), help="Output directory for CSV files.")
     parser.add_argument("--n_estimators", default="5", help="RandomForest n_estimators, comma-separated.")
     parser.add_argument("--max_depth", default="None", help="RandomForest max_depth, comma-separated; supports None.")
     parser.add_argument("--perc_var", default="1e-9", help="DPG perc_var, comma-separated.")

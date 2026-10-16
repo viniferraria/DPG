@@ -9,6 +9,7 @@ __pycache__/
 # Virtual environments
 .env
 .venv/
+**/.venv
 venv/
 ENV/
 
@@ -66,3 +67,6 @@ wandb/
 **/*.log
 # pixi environment (graph-tool test env)
 .pixi/
+*.log
+**/*.csv
+experiments/**

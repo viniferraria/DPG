@@ -49,7 +49,8 @@ def calc_betweenness_centrality(ig_graph: ig.Graph) -> dict[int, float]:
     """Compute betweenness centrality for an igraph graph."""
     n = ig_graph.vcount()
     # Betweenness centrality (igraph returns unnormalised values).
-    ig_bc = ig_graph.betweenness(directed=True, normalized=False, weights="weight")
+    # Edge weight is a frequency, so shortest paths run on the inverted distance.
+    ig_bc = ig_graph.betweenness(directed=True, normalized=False, weights="distance")
     # Normalise to match NetworkX convention: bc / ((n-1)*(n-2))
     norm = (n - 1) * (n - 2) if n > 2 else 1.0
     betweenness_centrality = {i: ig_bc[i] / norm for i in range(n)}
@@ -220,7 +221,7 @@ def calc_percolation_centrality(
     x = [states[node_id] for node_id in node_ids]
     total = sum(x)
     # sum_s x_s * delta_s(v): igraph's subset betweenness with only ``sources``
-    # given is sum_{s in sources} delta_s(v) on the raw weights, so sources that
+    # given is sum_{s in sources} delta_s(v) on the distances, so sources that
     # share a state value are handled in one call and scaled by that value.
     sources_by_state: dict[float, list[int]] = {}
     for i, value in enumerate(x):
@@ -229,7 +230,7 @@ def calc_percolation_centrality(
     weighted_dependency = np.zeros(n)
     for value, sources in sources_by_state.items():
         weighted_dependency += value * np.asarray(
-            ig_graph.betweenness(directed=True, weights="weight", sources=sources)
+            ig_graph.betweenness(directed=True, weights="distance", sources=sources)
         )
     return {
         node_ids[i]: float(weighted_dependency[i] / (total - x[i]) / (n - 2))

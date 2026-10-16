@@ -57,14 +57,14 @@ After `normalize`, every model DPG consumes satisfies:
 | `RandomForestClassifier` | 1D list of trees | pass-through | leaf class = `argmax(tree_.value[node])` |
 | `RandomForestRegressor` | 1D list of trees | pass-through | regressor branch in `tracing_ensemble`; leaf = `Pred <round(value,2)>` |
 | `ExtraTreesClassifier` | 1D list of trees | pass-through | same as RandomForest classifier |
-| `ExtraTreesRegressor` | 1D list of trees | pass-through | listed in `core.py`'s regressor tuple → `Pred` leaves |
+| `ExtraTreesRegressor` | 1D list of trees | pass-through | accepted by `is_regression_model` → `Pred` leaves |
 | `AdaBoostClassifier` | 1D list of trees | pass-through | same as RandomForest classifier |
-| `AdaBoostRegressor` | 1D list of trees | pass-through | listed in `core.py`'s regressor tuple → `Pred` leaves |
+| `AdaBoostRegressor` | 1D list of trees | pass-through | accepted by `is_regression_model` → `Pred` leaves |
 | `BaggingClassifier` | 1D list of trees | pass-through | offered by `dpg/sklearn_dpg.py`'s model registry; no normalizer code path |
 | `GradientBoostingClassifier` (multiclass) | 2D `(n_estimators, n_classes)` | flatten row-major; record column index as the class slot | `core._leaf_class_label` uses the recorded slot as the predicted class, ignoring `tree_.value` |
 | `GradientBoostingClassifier` (binary) | 2D `(n_estimators, 1)` | flatten; slot recorded as `None` because `len(row) == 1` | sign-of-leaf-score rule: `1 if float(tree_.value[node][0][0]) > 0 else 0` |
 | `GradientBoostingRegressor` | 2D `(n_estimators, 1)` | flatten; slots all `None` | regressor branch → `Pred` leaves in `core.py` |
-| `econml.grf.CausalForest` (single treatment, single outcome) | 1D `list` of `GRFTree` | pass-through | listed in `core.py`'s `REGRESSOR_MODELS` (when `econml` is importable) → regressor branch → `Pred` leaves = the leaf's CATE estimate, not a mean target value |
+| `econml.grf.CausalForest` (single treatment, single outcome) | 1D `list` of `GRFTree` | pass-through | accepted by `core.py`'s `is_regression_model` (when `econml` is importable) → regressor branch → `Pred` leaves = the leaf's CATE estimate, not a mean target value |
 
 The two GB cases are the whole reason the module exists. A multiclass GB classifier trains one
 regression tree *per class per boosting round*; each such tree's leaf values are gradient residuals,
@@ -108,8 +108,8 @@ validation and then fails later with an `AttributeError` during tracing.
   and `dpg/explainer.py` (local re-tracing). Any change to the GB class-resolution rule must be
   applied to both or global and local explanations will disagree on `"Class …"` strings — and node
   identity is the label text, see `/conventions/label-contract.md`.
-- **The regressor tuple is now a single shared constant.** Both `dpg/core.py`'s global tracing and
-  `dpg/explainer.py`'s local tracing test against the same `REGRESSOR_MODELS` tuple exported from
+- **Regressor detection is now a single shared function.** Both `dpg/core.py`'s global tracing and
+  `dpg/explainer.py`'s local tracing test through the same `is_regression_model` function exported from
   `dpg/core.py`, so a GB regressor (and now `econml.grf.CausalForest`) takes the regressor branch
   and emits `"Pred <value>"` consistently in both places. See
   [regressor detection](/conventions/regressor-detection.md) for the previous mismatch this closed.

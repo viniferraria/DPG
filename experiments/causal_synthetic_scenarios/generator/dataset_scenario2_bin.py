@@ -39,6 +39,8 @@ Dependencies:
 """
 
 # ── 1. Imports & config ────────────────────────────────────────────────────────
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -273,7 +275,7 @@ print("\n[PASS] F1 is top-ranked by both MDI and permutation importance.")
 
 # ── 9. Export  (drop latent diagnostics cols from final CSV) ───────────────────
 out_cols = feature_cols + ["Y"]
-out_path = "scenario_02b_binary_y.csv"
+out_path = Path(__file__).parent / "scenario_02b_binary_y.csv"
 df[out_cols].to_csv(out_path, index=False)
 print(f"[Saved] {out_path}  ({N} rows × {len(out_cols)} cols)")
 print(SEP)

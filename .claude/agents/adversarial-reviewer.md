@@ -70,6 +70,11 @@ train/test leakage, index vs. label confusion.
   several live interpretations?
 - *Goal-driven execution* — is there a verifiable success criterion, and was it
   actually verified? "Should work" is a finding.
+- *Experiment protocol* — does every experiment runner score exactly like the
+  reference `run_dpg_causal_synthetic.py` (top-k node labels → feature set →
+  precision/recall)? Any other aggregation (sum/mean/max per feature), extra
+  score column, or new metric in a runner or report is a finding unless the
+  suite's OKF page names it as a data-forced deviation or the user approved it.
 
 **(C) Architectural drift.** Does the change respect the existing layering,
 directionality, and documented contracts, or quietly bend them? Look for: a

@@ -44,6 +44,26 @@ Test: every changed line traces directly to the request.
 - For multi-step work, state the plan as steps with a verification per step.
 - Strong success criteria let you loop independently; "make it work" does not.
 
+### Experiment protocol
+
+Results are only useful if every suite scores the same way. Follow the reference protocol strictly.
+
+- **The reference is `experiments/causal_synthetic_scenarios/run_dpg_causal_synthetic.py`.** Every suite reuses
+  its scoring as is: rank predicate nodes by each metric in `METRICS`, take the top `TOP_K` node labels, map
+  each to its feature name, then compute precision and recall on that set (`extract_top_k_features`,
+  `evaluate_causal_accuracy`). Keep the same output columns.
+- **Deviate only where the data forces it.** Mapping one-hot columns back to their source attribute is an
+  example. Name every deviation in the suite's OKF page. MONK's de-duplicates features before taking the top
+  `TOP_K`, which is an existing deviation from the reference.
+- **Untested ideas never go into a runner or a report.** This covers other ways of turning node scores into
+  feature scores (summing, mean, max), new score columns (rank, AP), and new metrics. Record each as an
+  opportunity page under `okf/docs/opportunities/`. Test it separately (scratchpad or a separate analysis
+  script) against the reference protocol on the same runs, and report the result. Adopt it into the runners
+  only after the user approves.
+- **Don't promote conversation conventions.** A scoring choice used in an ad-hoc analysis is not a
+  convention. When briefing a worker to build or change a suite, point it at the reference functions rather
+  than describing a scoring method.
+
 ### Orchestrator pattern
 
 **Opus 5.5 plans and drives. Sonnet 5.5 workers execute in parallel.**
@@ -134,6 +154,9 @@ uv run mypy dpg/ metrics/
 
 # Docs
 uv run sphinx-build -b html docs/ docs/_build/html
+
+# All experiment suites, default arguments (see okf/docs/workflows/run-all-experiments.md)
+./experiments/run_all.sh
 
 # CLI entrypoint (see "Known breakage" before using run_dpg_custom.py)
 uv run python examples/run_dpg_standard.py --ds iris --l 3 --seed 42
@@ -317,13 +340,11 @@ Verified against the source. Mention these rather than tripping over them.
 - `examples/run_dpg_custom.py` crashes — it unpacks 2 values from `test_dpg`'s 6-tuple.
 - `examples/run_dpg_standard.py` has no `main()`; run it by path.
 - `.readthedocs.yaml` installs `docs/requirements.txt`, which does not exist — RTD builds fail at install.
-- `test_datasets/` does not exist, but all four `scenario_*_generator.py` scripts write there while
-  `run_dpg_causal_synthetic.py` reads from `datasets/`. Regenerating a scenario has no effect on the runner.
-- `experiments/causal_synthetic_scenarios/run_dpg_synthetic.py` cannot run: no `main()` guard, and its only
-  uncommented input path is missing.
-- `dpg/explainer.py` omits `GradientBoostingRegressor` from the regressor tuples it checks with
-  `isinstance` (`_trace_tree_path`, `_trace_execution_labels_for_tree`), while `dpg/core.py` detects
-  regressors generically via sklearn's `is_regressor()`, which does include it. Local explanations of a GB
-  regressor therefore emit `Class …` labels the graph cannot match.
+- All four `scenario_*_generator.py` scripts write to `experiments/causal_synthetic_scenarios/test_datasets/`
+  while `run_dpg_causal_synthetic.py` reads from `datasets/`. Regenerating a scenario has no effect on the
+  runner. `run_dpg_synthetic.py` is the one that reads `test_datasets/`.
+- DPG `Pred` leaf values are per-tree `tree_.value`, which is not the ensemble `predict` for
+  `GradientBoosting*` (init estimator plus learning-rate-scaled sum) or `econml` `CausalForest` (the mean of
+  leaf values equals `predict_tree_average`, not `predict`). See `okf/docs/concepts/causal-forest-support.md`.
 - `evaluate_faithfulness` reports `mean_path_purity`, `mean_competitor_exposure`, and
   `mean_explanation_confidence` as permanently `0.0` — `_compute_sample_confidence` never writes those keys.

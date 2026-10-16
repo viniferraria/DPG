@@ -63,7 +63,7 @@ STATES_DIR = Path(__file__).parent / "states"
 STATES_DIR.mkdir(exist_ok=True)
 
 current_time = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-logger = get_logger(__name__, log_file=f"dpg_explainer_{current_time}.log")
+logger = get_logger(__name__, log_file=str(Path(__file__).parent / f"dpg_explainer_{current_time}.log"))
 
 
 @dataclass
@@ -87,14 +87,14 @@ if __name__ == "__main__":
     all_records: list[NodeMetricRecord] = []
 
     scenarios_files = [
-        # "test_datasets/scenario_01_sanity_check.csv",
-        # "test_datasets/scenario_02_moderate_noise_weak_corr.csv",
-        # "test_datasets/scenario_01b_binary_y.csv",
-        # "test_datasets/scenario_02b_binary_y.csv",
-        # "test_datasets/scenario_1.csv",
-        "test_datasets/scenario_2.csv",
-        # "test_datasets/scenario_3.csv",
-        # "test_datasets/scenario_5.csv",
+        # str(Path(__file__).parent / "test_datasets/scenario_01_sanity_check.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_02_moderate_noise_weak_corr.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_01b_binary_y.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_02b_binary_y.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_1.csv"),
+        str(Path(__file__).parent / "test_datasets/scenario_2_updated.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_3.csv"),
+        # str(Path(__file__).parent / "test_datasets/scenario_5.csv"),
     ]
 
     for each in scenarios_files:
@@ -186,7 +186,7 @@ if __name__ == "__main__":
                     )
 
                     # Incremental save — all runs collected so far
-                    output_path = Path("datasets") / "node_metrics_3.csv"
+                    output_path = Path(__file__).parent / "datasets" / "node_metrics_3.csv"
                     output_path.parent.mkdir(parents=True, exist_ok=True)
                     fieldnames = [f.name for f in fields(NodeMetricRecord)]
                     with open(output_path, "w+", newline="") as csvfile:

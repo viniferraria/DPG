@@ -11,6 +11,7 @@ import csv
 import datetime
 import logging
 import pickle
+import sys
 import time
 import traceback
 from collections.abc import Callable, Iterator
@@ -20,6 +21,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import yaml
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -70,16 +72,18 @@ N_SPLITS = 2
 TEST_SIZE = 0.2
 TOP_K = 3
 
-STATES_DIR = Path(__file__).parent / "states"
-OUTPUT_PATH = Path(__file__).parent / "results"
+SUITE_DIR = Path(__file__).parent
+STATES_DIR = SUITE_DIR / "states"
+OUTPUT_PATH = SUITE_DIR / "results"
 
 SCENARIO_GROUND_TRUTH: dict[str, list[str]] = {
-    "datasets/scenario_1.csv": ["F1"],
-    "datasets/scenario_2_updated.csv": ["F1"],
-    "datasets/scenario_3.csv": ["F1", "F2"],
-    "datasets/scenario_5.csv": ["F1", "F2"],
+    str(SUITE_DIR / "datasets/scenario_1.csv"): ["F1"],
+    str(SUITE_DIR / "datasets/scenario_2_updated.csv"): ["F1"],
+    str(SUITE_DIR / "datasets/scenario_3.csv"): ["F1", "F2"],
+    str(SUITE_DIR / "datasets/scenario_5.csv"): ["F1", "F2"],
 }
 SCENARIOS_WITH_GT: list[str] = list(SCENARIO_GROUND_TRUTH)
+SCM_ROOT = SUITE_DIR / "datasets/scm"  # <scenario>/seed_<n>/{X.csv,y.csv,ground_truth.yaml}
 
 METRICS = [
     "Local reaching centrality",
@@ -140,9 +144,27 @@ def load_dataset(path: str | Path) -> tuple[pd.DataFrame, pd.Series]:
     """Load a CSV scenario into a feature frame ``X`` and target series ``y``.
 
     The last column is treated as the target, all preceding columns as features.
+    A directory is read as the generator layout instead: ``X.csv`` and ``y.csv``.
     """
+    if Path(path).is_dir():
+        return pd.read_csv(Path(path) / "X.csv"), pd.read_csv(Path(path) / "y.csv").iloc[:, 0]
     df = pd.read_csv(path)
     return df.iloc[:, :-1], df.iloc[:, -1]
+
+
+def scm_ground_truth(
+    root: Path = SCM_ROOT,
+    scenarios: list[str] | None = None,
+    seeds: list[int] | None = None,
+) -> dict[str, list[str]]:
+    """Map each ``<root>/<scenario>/seed_<n>`` dir to its ``causal_features``."""
+    return {
+        str(d): yaml.safe_load((d / "ground_truth.yaml").read_text())["causal_features"]
+        for sc in sorted(root.iterdir())
+        if scenarios is None or sc.name in scenarios
+        for d in sorted(sc.glob("seed_*"))
+        if seeds is None or int(d.name.split("_")[1]) in seeds
+    }
 
 
 def evaluate_accuracy(model: Any, X_test: Any, y_test: Any) -> float:
@@ -264,9 +286,9 @@ def write_causal_accuracy_to_csv(
     intersection: set[str],
     precision: float,
     recall: float,
-    output_path: Path,
+    file_path: Path,
 ) -> None:
-    """Append a row with causal accuracy metrics to a CSV at ``output_path``."""
+    """Append a row with causal accuracy metrics to the CSV at ``file_path``."""
     fieldnames = [
         "experiment",
         "split",
@@ -278,8 +300,6 @@ def write_causal_accuracy_to_csv(
         "precision",
         "recall",
     ]
-    ts = timestamp()
-    file_path = output_path / f"causal_accuracy_{ts}.csv"
     file_exists = file_path.exists()
     with open(file_path, "a+", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -306,9 +326,9 @@ def save_feature_extraction_results(
     run_key: str,
     split_idx: int,
     metric_name: str,
-    output_path: Path,
+    file_path: Path,
 ) -> None:
-    """Save the results of feature extraction to a CSV file."""
+    """Save the results of feature extraction to the CSV at ``file_path``."""
     explanation_top_features_lrc = extract_top_k_features(
         explanation=explanation,
         top_k=TOP_K,
@@ -328,7 +348,7 @@ def save_feature_extraction_results(
         intersection=intersection,
         precision=precision,
         recall=recall,
-        output_path=output_path,
+        file_path=file_path,
     )
 
 
@@ -482,15 +502,18 @@ def run_experiments_with_ground_truth(
     """Run experiments per scenario, additionally tracking causal accuracy against
     each scenario's ground-truth causal features.
 
-    Node-metric records are persisted to a timestamped CSV under ``output_dir``;
-    causal-accuracy rows are appended to ``output_dir / "causal_accuracy_2.csv"``.
+    Node-metric records and causal-accuracy rows each go to one CSV per run
+    under ``output_dir``, sharing the run's timestamp.
     """
     all_records: list[NodeMetricRecord] = []
     splitter = make_splitter()
+    ts = timestamp()
+    accuracy_path = output_dir / f"causal_accuracy_{ts}.csv"
 
     for scenario_file, gt_features in scenarios_with_gt.items():
         logger.info(f"Processing {scenario_file}...")
-        scenario_name = Path(scenario_file).stem
+        p = Path(scenario_file)
+        scenario_name = f"{p.parent.name}_{p.name}" if p.is_dir() else p.stem
         X, y = load_dataset(scenario_file)
 
         for model_name, model_factory in MODEL_FACTORIES.items():
@@ -528,7 +551,7 @@ def run_experiments_with_ground_truth(
                             run_key=run_key,
                             split_idx=split_idx,
                             metric_name=metric_name,
-                            output_path=output_dir,
+                            file_path=accuracy_path,
                         )
 
                 except Exception as exc:  # noqa: BLE001 - keep batch resilient
@@ -541,20 +564,24 @@ def run_experiments_with_ground_truth(
                 f"{mean_accuracy:.4f}"
             )
 
-    write_records_to_csv(all_records, output_dir / f"node_metrics_{timestamp()}.csv")
+    write_records_to_csv(all_records, output_dir / f"node_metrics_{ts}.csv")
     return all_records
 
 
-def main() -> None:
-    """Entry point: configure logging and run all experiments."""
+def main(include_scm: bool = True) -> None:
+    """Entry point: configure logging and run all experiments.
+
+    ``include_scm`` (``--scm`` on the command line) adds every dataset under ``SCM_ROOT``.
+    """
     STATES_DIR.mkdir(exist_ok=True)
     OUTPUT_PATH.mkdir(exist_ok=True)
-    logger = get_logger(__name__, log_file=f"dpg_explainer_{timestamp()}.log")
+    logger = get_logger(__name__, log_file=str(SUITE_DIR / f"dpg_explainer_{timestamp()}.log"))
 
     logger.info("Starting DPG explainer experiments...")
-    run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH, OUTPUT_PATH, logger)
+    scenarios = {**SCENARIO_GROUND_TRUTH, **(scm_ground_truth() if include_scm else {})}
+    run_experiments_with_ground_truth(scenarios, OUTPUT_PATH, logger)
     logger.info("All experiments completed.")
 
 
 if __name__ == "__main__":
-    main()
+    main(include_scm="--scm" in sys.argv[1:])

@@ -63,8 +63,9 @@ def get_logger(name, log_file=None):
 RANDOM_STATE = 42
 TOP_K = 3
 
-STATES_DIR = Path(__file__).parent / "states"
-OUTPUT_PATH = Path(__file__).parent / "results"
+SUITE_DIR = Path(__file__).parent
+STATES_DIR = SUITE_DIR / "states"
+OUTPUT_PATH = SUITE_DIR / "results"
 
 # The nominal attributes shared by every MONK's problem.
 ATTRIBUTES = ["a1", "a2", "a3", "a4", "a5", "a6"]
@@ -77,9 +78,9 @@ ATTRIBUTES = ["a1", "a2", "a3", "a4", "a5", "a6"]
 # monks-3 design, where ~5% label noise sits in .train only and .test is clean.
 SCENARIO_GROUND_TRUTH: list[tuple[str, str, list[str]]] = [
     # a1 = a2 OR a5 = 1
-    ("datasets/monks-1.train", "datasets/monks-1.test", ["a1", "a2", "a5"]),
+    (str(SUITE_DIR / "datasets/monks-1.train"), str(SUITE_DIR / "datasets/monks-1.test"), ["a1", "a2", "a5"]),
     # (a5 = 3 AND a4 = 1) OR (a5 != 4 AND a2 != 3)
-    ("datasets/monks-3.train", "datasets/monks-3.test", ["a5", "a4", "a2"]),
+    (str(SUITE_DIR / "datasets/monks-3.train"), str(SUITE_DIR / "datasets/monks-3.test"), ["a5", "a4", "a2"]),
 ]
 SCENARIOS_WITH_GT: list[str] = [train for train, _, _ in SCENARIO_GROUND_TRUTH]
 
@@ -123,7 +124,7 @@ def timestamp(now: datetime.datetime | None = None) -> str:
 
 # Defined after timestamp() so the log filename reuses that helper rather than
 # duplicating its format (and its timezone handling).
-logger = get_logger(__name__, log_file=f"dpg_explainer_{timestamp()}.log")
+logger = get_logger(__name__, log_file=str(SUITE_DIR / f"dpg_explainer_{timestamp()}.log"))
 
 
 def load_dataset(path: str | Path) -> tuple[pd.DataFrame, pd.Series]:
@@ -290,9 +291,9 @@ def write_causal_accuracy_to_csv(
     intersection: set[str],
     precision: float,
     recall: float,
-    output_path: Path,
+    file_path: Path,
 ) -> None:
-    """Append a row with causal accuracy metrics to a CSV at ``output_path``."""
+    """Append a row with causal accuracy metrics to the CSV at ``file_path``."""
     fieldnames = [
         "experiment",
         "split",
@@ -304,8 +305,6 @@ def write_causal_accuracy_to_csv(
         "precision",
         "recall",
     ]
-    ts = timestamp()
-    file_path = output_path / f"causal_accuracy_{ts}.csv"
     file_exists = file_path.exists()
     with open(file_path, "a+", newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -350,9 +349,9 @@ def extract_causal_accuracy_to_file(
     run_key: str,
     split_idx: int,
     metric_name: str,
-    output_path: Path,
+    file_path: Path,
 ) -> None:
-    """Extract causal accuracy metrics from an explanation and append them to a CSV."""
+    """Extract causal accuracy metrics from an explanation and append them to ``file_path``."""
     explanation_top_features, intersection, precision, recall = evaluate_causal_accuracy(
         explanation=explanation,
         gt_features=gt_features,
@@ -369,7 +368,7 @@ def extract_causal_accuracy_to_file(
         intersection=intersection,
         precision=precision,
         recall=recall,
-        output_path=output_path,
+        file_path=file_path,
     )
 
 
@@ -430,9 +429,11 @@ def run_experiments_with_ground_truth(
     scenario, recorded as ``split_idx=0``.
 
     Node-metric rows are appended to a timestamped CSV under ``output_dir``;
-    causal-accuracy rows go to their own timestamped CSV.
+    causal-accuracy rows go to one CSV per run with the same timestamp.
     """
-    node_metrics_path = output_dir / f"node_metrics_{timestamp()}.csv"
+    ts = timestamp()
+    node_metrics_path = output_dir / f"node_metrics_{ts}.csv"
+    accuracy_path = output_dir / f"causal_accuracy_{ts}.csv"
     split_idx = 0
 
     for train_file, test_file, gt_features in scenarios_with_gt:
@@ -476,7 +477,7 @@ def run_experiments_with_ground_truth(
                         run_key=run_key,
                         split_idx=split_idx,
                         metric_name=metric_name,
-                        output_path=output_dir,
+                        file_path=accuracy_path,
                     )
 
             except Exception as exc:  # noqa: BLE001 - keep batch resilient
@@ -492,7 +493,7 @@ def run_experiments_with_ground_truth(
 def main() -> None:
     """Entry point: configure logging and run all experiments."""
     STATES_DIR.mkdir(exist_ok=True)
-    logger = get_logger(__name__, log_file=f"dpg_explainer_{timestamp()}.log")
+    logger = get_logger(__name__, log_file=str(SUITE_DIR / f"dpg_explainer_{timestamp()}.log"))
 
     logger.info("Starting DPG explainer experiments...")
     run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH, OUTPUT_PATH, logger)

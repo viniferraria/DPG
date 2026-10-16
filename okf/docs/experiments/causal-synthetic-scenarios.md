@@ -30,21 +30,100 @@ with `TOP_K = 3`, repeated for each of `METRICS` — `Local reaching centrality`
 Betweenness is the control for percolation: with equal node states percolation reduces to normalized
 betweenness, so any rank difference comes from the traffic-based states.
 
+# SCM scenarios (S1-S16)
+
+Sixteen further scenarios come from an external generator (`generator/causal_dataset_generators/
+dpg_causal_dataset_generators/`, `causal/src/synthetic_scm.py`). Pre-generated data is copied to
+`datasets/scm/<scenario>/seed_<n>/{X.csv, y.csv, ground_truth.yaml, metadata.json}` (29 MB, 16
+scenarios x seeds 42-51, 1000 rows, 8 standard-normal features `X1..X8` plus scenario extras).
+They are opt-in: `uv run python run_dpg_causal_synthetic.py --scm` adds them to the four CSV scenarios
+(160 scenario dirs x 2 models x 2 splits, a long sweep). `scm_ground_truth(root, scenarios, seeds)`
+builds the `{seed_dir: causal_features}` dict from each `ground_truth.yaml` (nothing hard-coded), and
+`load_dataset` reads a directory as `X.csv` + `y.csv`. A subset run:
+
+```python
+gt = scm_ground_truth(scenarios=["s13_mediator"], seeds=[42])
+run_experiments_with_ground_truth(gt, Path("out"), logger)
+```
+
+Run keys are `<scenario>_seed_<n>_<Model>` (e.g. `s13_mediator_seed_42_RandomForest`).
+`SCENARIO_GROUND_TRUTH` and the four CSV scenarios are unchanged. `yaml` is imported from PyYAML,
+which arrives transitively via OmegaConf, not as a direct dependency.
+
+All 16 are classification: 15 binary (balanced 500/500 except `s04_xor` 504/496 and `s09_class_imbalance`
+689/311 at seed 42) and `s16` 4-class. None is regression. `s15` and `s16` run as plain single-table
+runs (see limitations); none are excluded.
+
+## What "causal" means in the ground truth
+
+`causal_features` lists variables that enter the score directly, not everything upstream of Y.
+
+| Scenario | `causal_features` | Notes |
+|---|---|---|
+| s01 linear_additive | X1, X2, X3 | |
+| s02 nonlinear_main | X1, X2, X3 | `X2^2` is non-monotone |
+| s03 redundant_correlated | X1, X2 | `X4 = X1 + noise` is a proxy, not causal |
+| s04 xor | X1, X2 | no marginal effect; 5% label flips |
+| s05 multiplicative | X1, X2, X3 | |
+| s06 threshold_rule | X1, X2, X3 | |
+| s07 sparse_high_dim | X2, X11, X17 | 20 features, 17 distractors |
+| s08 weak_effects | X1, X2, X3 | noise 0.9 vs coefficients 0.3-0.45 |
+| s09 class_imbalance | X1, X2 | Bernoulli(sigmoid) target |
+| s10 nonactionable | age_like, X1, X2 | `age_like` is truly predictive but non-actionable |
+| s11 chain | X2 | X1 -> X2 -> Y; **X1 is not causal here** |
+| s12 hidden_fork | (empty) | latent Z -> X_proxy, Z -> Y; Z unobserved |
+| s13 mediator | M | X1 -> M -> Y; score is `1.4 M + 0.2 X1`, **X1 not in GT** |
+| s14 proxy | X1, X2 | `P = X1 + noise` is a proxy |
+| s15 distribution_shift | X1, X2, X3 | X3 predictive only in the second half |
+| s16 multi_outcome_shared | X1, X2, X3 | 4-class code `2*a + b` |
+
+Consequences for judging rankings:
+
+- Mediator/chain: a DPG that ranks X1 highly is penalised (precision) although X1 drives M. In s13 the
+  generator even adds `0.2 * X1` directly to the score, yet X1 stays out of GT.
+- Proxy (s03, s14): a proxy ranked above its source costs recall; the GT does not credit it.
+- s12: GT is empty, so see the limitation below.
+
+## Limitations and side effects
+
+- **Empty ground truth (s12).** `evaluate_causal_accuracy` returns precision 0.0 and recall 0.0
+  whenever GT is empty, and the CSV `ground_truth`/`intersection` fields are blank. Example from the
+  smoke run: `s12_hidden_fork_seed_42_RandomForest,0,3,,X3;X5;X6,Local reaching centrality,,0.0,0.0`.
+  Those zeros mean "undefined", not "failed"; averaging them into other scenarios deflates means. Judge
+  s12 by whether `X_proxy` (the observed stand-in for Z) tops the ranking instead.
+- **Duplicate feature names in top-k** (existing behaviour) also applies: `X3;X5;X3` keeps repeats.
+- **s15 pooled, not shifted.** Rows 0-499 and 500-999 are two environments (X3 shifted by +1.5 in the
+  second), but `StratifiedShuffleSplit` mixes them across train/test, so no out-of-distribution test is
+  run. GT lists X3 although it matters only in half the rows, so its recovery is not evidence of
+  robustness to the shift.
+- **s16 is one 4-class target.** The label encodes two binary outcomes (`2*a + b`); DPG explains the
+  joint class. Classes 0/3 are 327 rows and 1/2 are 173 rows at seed 42; per-outcome attribution is not
+  separable, so X2 (only in outcome a) and X3 (only in b) share one GT.
+- **Result files unseparated.** SCM rows land in the same `results/causal_accuracy_*.csv` as the four
+  CSV scenarios, distinguished only by the `s..._seed_..` run key.
+- **Gaps not covered.** A high-cardinality-noise scenario and a shuffled-label null scenario cannot be
+  produced from `synthetic_scm.py` by configuration: the CLI only exposes `--scenarios`, `--n-samples`
+  and `--seeds`; the feature count is a hard-coded argument (`n_features=20` only in `s07`) and no
+  scenario permutes labels or has an empty-signal mechanism or categorical high-cardinality features.
+  They need two new scenario functions (e.g. `_package(..., causal_features=[])` over pure noise with
+  `y` from `rng.permutation`, and a wide/categorical `_base_features`). Not written here.
+
 # Layout
 
 ```
 experiments/causal_synthetic_scenarios/
 ├── run_dpg_causal_synthetic.py   # the maintained runner (pure helpers + main())
-├── run_dpg_synthetic.py          # older top-level-script variant, no main()
+├── run_dpg_synthetic.py          # older variant; reads test_datasets/
 ├── datasets/
 │   ├── scenario_1.csv            # 1000 rows: F1,F2,F3_A,F3_B,F3_C,Y
 │   ├── scenario_2_updated.csv    # 1000 rows: F1,F2,F3,F4,F5_A,F5_B,F5_C,Y
 │   ├── scenario_3.csv            # 1000 rows: F1,F2,F3,F4,F5_A,F5_B,F5_C,Y
-│   └── scenario_5.csv            # 1000 rows: F1..F6,F7_A/B/C,F8_X/Y/Z,Y
+│   ├── scenario_5.csv            # 1000 rows: F1..F6,F7_A/B/C,F8_X/Y/Z,Y
+│   └── scm/<scenario>/seed_<n>/  # X.csv, y.csv, ground_truth.yaml, metadata.json (S1-S16)
 ├── generator/
-│   ├── scenario_1_generator.py   # -> test_datasets/scenario_1.csv
+│   ├── scenario_1_generator.py   # -> <suite>/test_datasets/scenario_1.csv
 │   ├── scenario_2_generator.py   # -> <suite>/test_datasets/scenario_2_updated.csv
-│   ├── scenario_3_generator.py   # -> test_datasets/scenario_3.csv
+│   ├── scenario_3_generator.py   # -> <suite>/test_datasets/scenario_3.csv
 │   ├── scenario_5_generator.py   # -> <suite>/test_datasets/scenario_5.csv
 │   ├── dataset_scenario1.py      # -> scenario_01_sanity_check.csv  (exploratory)
 │   ├── dataset_scenario1_bin.py  # -> scenario_01b_binary_y.csv     (exploratory)
@@ -80,7 +159,7 @@ dependence: `perc_var=0.0001`, `decimal_threshold=3`, `n_jobs=-1`. `strict=True`
 Regenerating a dataset (writes to `test_datasets/`, not `datasets/` — see Gotchas):
 
 ```bash
-cd experiments/causal_synthetic_scenarios && uv run python generator/scenario_3_generator.py
+uv run python experiments/causal_synthetic_scenarios/generator/scenario_3_generator.py
 ```
 
 # Outputs
@@ -98,8 +177,10 @@ create `results/` itself; without it every split fails with `FileNotFoundError`,
   only when the file does not already exist (`write_records_to_csv` opens in `"a+"`).
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
   explanation_top_features, metric, intersection, precision, recall`; list fields `;`-joined.
-  `write_causal_accuracy_to_csv` recomputes `timestamp()` on **every call**, so one run scatters rows
-  across many tiny files rather than one.
+  `run_experiments_with_ground_truth` takes one `timestamp()` per run and passes the path down as
+  `file_path`, so every (scenario, model, split, metric) row of a run lands in this one file, which
+  shares its timestamp with that run's `node_metrics_<timestamp>.csv` (before 2026-10-13 each call
+  recomputed `timestamp()` and scattered a run across many tiny files).
 - `states/<scenario>_<Model>_split<N>_dpg_explainer_<timestamp>.pkl` (pickled `DPGExplainer`) and
   `states/<scenario>_<Model>_split<N>_explanation_<timestamp>.pkl` (pickled `DPGExplanation`), sharing
   one `ts` per split — e.g. `scenario_5_ExtraTrees_split1_explanation_2026-07-26T23-13-17.pkl`.
@@ -117,7 +198,7 @@ grows monotonically because nothing is overwritten or cleaned.
 `make_splitter` (reproducibility, `N_SPLITS`), `evaluate_accuracy`, `records_from_explanation` (column
 mapping, types, 4-dp rounding, empty frame), `write_records_to_csv` (roundtrip and no duplicate header),
 `save_pickle`, `mean_or_nan`, `iter_splits`, and `extract_top_k_features` (with and without
-`drop_duplicates`).
+`drop_duplicates`), and `load_dataset` / `scm_ground_truth` on the SCM directory layout.
 `test_records_from_real_node_metrics_have_all_runner_columns` runs the real
 `NodeMetrics.extract_node_metrics` on a tiny graph and checks every `METRICS` name and every
 `NodeMetricRecord` source column exists — a missing column would otherwise raise a `KeyError` that
@@ -142,11 +223,10 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
   not pass it, so a default run still writes repeats. Don't compare a de-duplicated run against the
   history without saying so. MONK's copy of the function always de-duplicates.
 - **Generators do not write where the runner reads.** All four `scenario_*_generator.py` scripts write
-  to `test_datasets/` (CWD-relative for scenarios 1 and 3, `<suite>/test_datasets/` for 2 and 5) while
-  the runner reads `datasets/`, and `test_datasets/` does not exist in the tree. Regenerating a
-  scenario therefore does not update the file the runner uses — copy it across by hand.
-- **`run_dpg_synthetic.py` is dead as-committed.** No `main()` guard (importing it runs the experiment),
-  its only enabled input `test_datasets/scenario_2.csv` does not exist, it writes node metrics to
+  to `<suite>/test_datasets/` while the runner reads `datasets/`. Regenerating a scenario therefore
+  does not update the file the runner uses — copy it across by hand.
+- **`run_dpg_synthetic.py` is a legacy runner.** It reads `test_datasets/scenario_2_updated.csv`
+  (run the generators first to create it), writes node metrics to
   `datasets/node_metrics_3.csv` in `"w+"` (overwriting), and it constructs `DPGExplainer` with no
   `config_file`, falling back to CWD-relative resolution. Prefer `run_dpg_causal_synthetic.py`.
 - **The `dataset_scenario*.py` generators are exploratory.** They print diagnostics (permutation

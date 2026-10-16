@@ -39,6 +39,8 @@ Dependencies:
 """
 
 # ── 1. Imports & config ────────────────────────────────────────────────────────
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -283,7 +285,7 @@ if noisy_irrelevants:
 
 # ── 9. Export ──────────────────────────────────────────────────────────────────
 out_cols = feature_cols + ["Y"]
-out_path = "scenario_01b_binary_y.csv"
+out_path = Path(__file__).parent / "scenario_01b_binary_y.csv"
 df[out_cols].to_csv(out_path, index=False)
 print(f"[Saved] {out_path}  ({N} rows × {len(out_cols)} cols)")
 print(SEP)

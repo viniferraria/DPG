@@ -1,5 +1,74 @@
 # Bundle Update Log
 
+## 2026-10-15
+
+* **Add**: three opportunities from arXiv 2308.03369 (drop-and-relearn importance) and combining node
+  metrics: [combined centrality score](/opportunities/combined-centrality-score.md) (with a 2026-10-15
+  Spearman check showing LRC/closeness/harmonic at 0.96-0.99 and betweenness/percolation at 0.98, about
+  0.4-0.65 between groups), [role-guided node ablation](/opportunities/role-guided-node-ablation.md) and
+  [feature drop and relearn](/opportunities/feature-drop-and-relearn.md). No runner changed.
+* **Update**: [role-guided node ablation](/opportunities/role-guided-node-ablation.md) tested once in a
+  scratchpad prototype through the reference scoring; results and limits recorded on the page.
+* **Add**: [binary features become hub nodes on RandomForest DPGs](/side-effects/binary-feature-hub-nodes.md),
+  the diagnosed cause of near-zero RandomForest precision on causal-synthetic scenarios 2, 3 and 5.
+* **Add**: `experiments/run_all.sh` runs every experiment suite through `uv` with default arguments.
+  Added [running all experiment suites](/workflows/run-all-experiments.md).
+* **Update**: experiment scripts resolve dataset, results, states and log paths from their own
+  `__file__`, so they run from the repo root. `test_datasets/` is now created by the scenario
+  generators, and `run_dpg_synthetic.py` reads `scenario_2_updated.csv` and runs. Updated
+  [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md).
+
+## 2026-10-13
+
+* **Update**: the causal-synthetic, MONK's and COMPAS runners write one `causal_accuracy_<ts>.csv` per
+  run instead of one per call. `write_causal_accuracy_to_csv` and its caller
+  (`save_feature_extraction_results` / `extract_causal_accuracy_to_file`) now take `file_path`, the
+  pattern ACIC 2019 already used; each run computes `ts` once and shares it with `node_metrics_<ts>.csv`.
+  Columns unchanged. Updated [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md)
+  and [MONK's](/experiments/monks.md).
+
+## 2026-10-07
+
+* **Feature**: `run_dpg_causal_synthetic.py` can run the 16 SCM scenarios (S1-S16, seeds 42-51, copied to
+  `experiments/causal_synthetic_scenarios/datasets/scm/`). New `scm_ground_truth` reads
+  `causal_features` from each `ground_truth.yaml`; `load_dataset` accepts a seed directory
+  (`X.csv` + `y.csv`); `main(include_scm=True)` / `--scm` opts in. Default run and
+  `SCENARIO_GROUND_TRUTH` unchanged. Documented ground-truth semantics (mediator/chain GT excludes the
+  upstream cause; s12 GT is empty so precision/recall are 0.0) and limitations in
+  [causal synthetic scenarios](/experiments/causal-synthetic-scenarios.md). Not generated: high-cardinality
+  noise and shuffled-label null scenarios (need new generator code).
+
+* **Update**: causal-forest docs corrected against the code. The old regressor-tuple name does not exist in
+  source (only stale `.pyc`); every page now describes `is_regression_model` (`dpg/core.py:51`, call sites
+  `core.py:532`, `core.py:573`, `explainer.py:649`, `explainer.py:1020`) in
+  [regressor detection](/conventions/regressor-detection.md), [dpg.core](/modules/dpg-core.md) and
+  [dpg.sklearn_normalizer](/modules/dpg-sklearn-normalizer.md); older 2026-09-09 log entries were
+  reworded only to drop the dead name. [Causal forest support](/concepts/causal-forest-support.md):
+  `n_relevant_outputs_ = T.shape[1]` (not `T.shape[1]*y.shape[1]`); new sections for the
+  `CausalForestDML` rejection and its `est.model_cate.estimators_[0]` workaround, the
+  `criterion="mse"` effect-modifier-vs-prognostic limitation (LRC 0.33 / 4.88 mse, 2.06 / 0.43 het,
+  3.97 / 0.13 DML inner forest, x0 / x1), and leaf mean = `predict_tree_average` != `predict`.
+  [Faithfulness on regressors](/concepts/faithfulness-regressors.md): `_original_model.predict`,
+  refreshed line citations, `faithfulness_score` is a constant 0.5 for any regressor, and the
+  "average leaf values" fix is qualified. `CLAUDE.md`: the stale GradientBoostingRegressor
+  known-breakage bullet (fixed by `is_regression_model`) replaced by the remaining leaf-value-vs-`predict`
+  gap. New tests in `tests/test_causal_forest.py`.
+* **Note**: `config.yaml` has a `metrics.graph_backend: networkx` key that no code reads (the live key is
+  `metrics.backend`, `igraph` by default); documented only, `config.yaml` left unchanged.
+* **Fix**: betweenness and percolation centrality weight semantics in all three metrics backends: they
+  used the frequency `weight` as a path length (inverted); they now use `distance = W / w` like
+  closeness, harmonic, and LRC. The networkx backend uses exact `Fraction` distances for these two so
+  tied shortest paths match igraph. Updated [metrics backends](/modules/metrics-backends.md) and
+  added the side effect
+  [betweenness-percolation-inverted-weights](/side-effects/betweenness-percolation-inverted-weights.md):
+  results produced before 2026-10-07 (including `experiments/*/results` CSVs) are inverted. Ground-truth
+  fixtures regenerated from networkx on the distance graph.
+* **Feature**: new COMPAS experiment `experiments/compas/run_compas.py` (+ `tests/test_run_compas.py`),
+  modelled on the MONK's runner. Scores summed per feature with one-hot dummies merged, against a
+  *reference ranking* (priors, age; Vuk et al., arXiv:2512.11081v2) rather than a ground truth. CSV is
+  git-ignored and downloaded on first run. See [COMPAS](/experiments/compas.md).
+
+
 ## 2026-10-01
 
 * **Fix**: `GraphMetrics.clustering` (`metrics/graph.py`) solves `(I - Q) B = R` with
@@ -125,7 +194,7 @@
 
 ## 2026-09-09
 
-* **Creation**: [Regressor detection](/conventions/regressor-detection.md) — `REGRESSOR_MODELS` as
+* **Creation**: [Regressor detection](/conventions/regressor-detection.md) — the regressor tuple (since replaced by `is_regression_model`) as
   the single source of truth for the classifier/regressor tracing branch, shared by `dpg/core.py` and
   `dpg/explainer.py`, and the side effect of closing the prior `GradientBoostingRegressor` mismatch
   between the two modules.
@@ -136,18 +205,18 @@
   limitation, verified by running `explain_local` / `evaluate_faithfulness` against a fitted
   `RandomForestRegressor`: the `"Class "`-gated voting/evidence logic in `dpg/explainer.py` never
   fires for `"Pred "` leaves, so `majority_vote` is always `None` and `output_fidelity` is always
-  `0.0` for a pure regressor. Not fixed by the `REGRESSOR_MODELS` change.
-* **Update**: [dpg.core](/modules/dpg-core.md) — documented `REGRESSOR_MODELS` (module-level table,
+  `0.0` for a pure regressor. Not fixed by the regressor-detection change.
+* **Update**: [dpg.core](/modules/dpg-core.md) — documented the regressor tuple (module-level table,
   now including `econml.grf.CausalForest` when `econml` is importable), the `n_relevant_outputs_`
   guard in `__init__`, and that a `CausalForest` leaf's `Pred` value is a CATE estimate.
 * **Update**: [dpg.sklearn_normalizer](/modules/dpg-sklearn-normalizer.md) — added a `CausalForest`
   row to the estimator support matrix, and rewrote the pitfalls bullet that previously described
   `GradientBoostingRegressor` as missing from the explainer's regressor tuple (fixed by the shared
-  `REGRESSOR_MODELS` constant).
+  regressor-detection constant).
 * **Update**: [Event label contract](/conventions/label-contract.md) — noted that a `CausalForest`
   `Pred <value>` leaf is the leaf's CATE estimate, rounded the same way as any other regressor leaf.
 * **Update**: `CLAUDE.md` — removed the known-breakage bullet about `dpg/explainer.py` omitting
-  `GradientBoostingRegressor` (resolved by `REGRESSOR_MODELS`), and added a note that
+  `GradientBoostingRegressor` (resolved by the shared regressor tuple), and added a note that
   `econml.grf.CausalForest` (single treatment, single outcome) is traversed as a regressor, requiring
   the `causal` extra.
 
@@ -281,3 +350,38 @@
   [config resolution](/conventions/config-resolution.md) (`metrics.backend` resolution and the
   no-disagreement row) to match. Updated `CLAUDE.md`'s `metrics/` section, Config table, and
   Development setup.
+
+## 2026-10-07 (ACIC 2019)
+
+* **Feature**: new experiment suite `experiments/acic2019/` (`run_acic2019.py`, `fetch_acic2019.py`)
+  fitting `econml.grf.CausalForest(criterion="het")` on ACIC 2019 low-dimensional DGP 64 (student
+  performance 2, scenario 4) and scoring top-k features, summed per feature, against the single known
+  effect modifier `V3` (age). Data is fetched, not checked in. Documented the ATE-versus-feature-ranking
+  mismatch and each limitation in [ACIC 2019](/experiments/acic2019.md); added it to the experiments
+  index and `tests/test_run_acic2019.py`.
+
+## 2026-10-07 (ACIC 2019, spam email)
+
+* **Feature**: `experiments/acic2019/` gained the paper's spam-email scenario (DGP 39, `generate_simSpam_cont.R`
+  Mod 3; true effect modifiers `V8` and `V19`, 20 files merged per n = 10,000 dataset) and per-run
+  `best_true_rank` / `mean_true_rank` columns in `causal_accuracy_<ts>.csv`; `SCENARIO_GROUND_TRUTH` entries are
+  now `(dgp_id, features, n_merge)`. Documented in [ACIC 2019](/experiments/acic2019.md): the 31-versus-29 input
+  question (a column count; DGP 64 and `V3` unchanged), the paper's "Scenario 4" mapping to the script's Mod 3 for
+  spam, bootstrap duplicates in merged files, and an observed one-dataset smoke result (forest finds `V8`, DPG
+  centrality ranks `V22` first).
+
+## 2026-10-08
+
+* **Change**: the ACIC 2019 and COMPAS runners now score as the reference runner does (`extract_top_k_features`
+  with `drop_duplicates=False`, `calculate_causal_accuracy`, `TOP_K = 3`, reference `METRICS` and CSV columns).
+  Removed per-feature summing, `rank_true_features`, `best_true_rank` / `mean_true_rank` (ACIC), `race_rank`
+  (COMPAS) and ACIC's `TOP_KS = (1, 3)`. Named deviations: COMPAS maps one-hot dummies to the parent feature;
+  ACIC also excludes `Pred` sinks. Earlier smoke results in [ACIC 2019](/experiments/acic2019.md) and
+  [COMPAS](/experiments/compas.md) are marked superseded (summed scoring). Added `tests/test_run_acic2019.py` and
+  `tests/test_run_compas.py` checks against the reference function.
+* **New**: [opportunities/](opportunities/index.md) for untested ideas
+  ([per-feature score aggregation](opportunities/per-feature-score-aggregation.md),
+  [true-feature rank column](opportunities/true-feature-rank-column.md)), linked from the bundle index.
+* **New**: opportunity pages for the two scores tested in the 2026-10-07 scratchpad analysis,
+  [class-separation gain (C1)](opportunities/class-separation-gain.md) and
+  [intervention contrast (C2)](opportunities/intervention-contrast.md). Neither is in a runner.

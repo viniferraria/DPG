@@ -44,6 +44,22 @@ def test_load_dataset_splits_last_column_as_target(tmp_path):
     assert y.tolist() == [0, 1]
 
 
+def test_load_dataset_and_ground_truth_from_scm_dir(tmp_path):
+    d = tmp_path / "s13_mediator" / "seed_42"
+    d.mkdir(parents=True)
+    pd.DataFrame({"X1": [1, 2], "M": [3, 4]}).to_csv(d / "X.csv", index=False)
+    pd.DataFrame({"target": [0, 1]}).to_csv(d / "y.csv", index=False)
+    (d / "ground_truth.yaml").write_text("causal_features:\n- M\n")
+
+    X, y = m.load_dataset(d)
+    gt = m.scm_ground_truth(tmp_path, seeds=[42])
+
+    assert list(X.columns) == ["X1", "M"]
+    assert y.tolist() == [0, 1]
+    assert gt == {str(d): ["M"]}
+    assert m.scm_ground_truth(tmp_path, seeds=[43]) == {}
+
+
 # --- make_splitter -----------------------------------------------------------
 
 

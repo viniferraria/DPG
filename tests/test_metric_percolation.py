@@ -1,8 +1,10 @@
 """Percolation centrality: every backend must reproduce
-``nx.percolation_centrality(G, states=percolation_states(G), weight="weight")``.
+``nx.percolation_centrality(D, states=percolation_states(G), weight="dist")``,
+where ``D`` is ``G`` with ``dist = total_weight / weight`` per edge.
 """
 
 import random
+from fractions import Fraction
 from typing import Any
 
 import networkx as nx
@@ -47,15 +49,30 @@ def _helper(name: str, graph: nx.DiGraph, states: dict[Any, float]) -> dict[Any,
     index = {node_id: i for i, node_id in enumerate(node_ids)}
     gt_graph = gt.Graph(directed=True)
     gt_graph.add_vertex(len(node_ids))
-    weight_prop = gt_graph.new_edge_property("double")
+    dist_prop = gt_graph.new_edge_property("double")
+    total_weight = sum(data["weight"] for _, _, data in graph.edges(data=True))
     gt_graph.add_edge_list(
         [
-            (index[u], index[v], float(data["weight"]))
+            (index[u], index[v], total_weight / float(data["weight"]))
             for u, v, data in graph.edges(data=True)
         ],
-        eprops=[weight_prop],
+        eprops=[dist_prop],
     )
-    return helper(gt_graph, weight_prop, node_ids, states)
+    return helper(gt_graph, dist_prop, node_ids, states)
+
+
+def _dist(graph: nx.DiGraph) -> nx.DiGraph:
+    """Independent reference graph: ``dist = total_weight / w`` per edge.
+
+    Exact fractions keep mathematically tied shortest paths tied, which
+    floating-point sums of ``total_weight / w`` would not.
+    """
+    total = sum(d["weight"] for _, _, d in graph.edges(data=True))
+    dist_graph = nx.DiGraph()
+    dist_graph.add_nodes_from(graph.nodes())
+    for u, v, d in graph.edges(data=True):
+        dist_graph.add_edge(u, v, dist=Fraction(total, d["weight"]))
+    return dist_graph
 
 
 def _random_digraph(seed: int, n: int = 25, p: float = 0.12) -> nx.DiGraph:
@@ -121,7 +138,9 @@ def test_percolation_hand_computed(backend_name):
         "d": 2.5 / 2.75 / 4,
         "e": 0.0,
     }
-    reference = nx.percolation_centrality(graph, states=states, weight="weight")
+    reference = nx.percolation_centrality(
+        _dist(graph), states=states, weight="dist"
+    )
     result = _percolation(backend_name, graph)
     for node, value in expected.items():
         assert reference[node] == pytest.approx(value, abs=_TOL)
@@ -134,7 +153,7 @@ def test_percolation_matches_networkx_on_random_digraphs(backend_name, seed):
     _require(backend_name)
     graph = _random_digraph(seed)
     reference = nx.percolation_centrality(
-        graph, states=percolation_states(graph), weight="weight"
+        _dist(graph), states=percolation_states(graph), weight="dist"
     )
     result = _percolation(backend_name, graph)
     assert set(result) == set(reference)
@@ -147,7 +166,9 @@ def test_uniform_states_equal_normalized_betweenness(backend_name):
     _require(backend_name)
     graph = _random_digraph(7)
     uniform = dict.fromkeys(graph.nodes(), 1.0)
-    betweenness = nx.betweenness_centrality(graph, normalized=True, weight="weight")
+    betweenness = nx.betweenness_centrality(
+        _dist(graph), normalized=True, weight="dist"
+    )
     result = _helper(backend_name, graph, uniform)
     for node, value in betweenness.items():
         assert result[node] == pytest.approx(value, abs=_TOL)
@@ -186,7 +207,7 @@ def test_percolation_column_in_node_metrics(backend_name):
     assert "Percolation centrality" in df.columns
     by_label = dict(zip(df["Label"], df["Percolation centrality"], strict=True))
     reference = nx.percolation_centrality(
-        graph, states=percolation_states(graph), weight="weight"
+        _dist(graph), states=percolation_states(graph), weight="dist"
     )
     for node, value in reference.items():
         assert by_label[f"label {node}"] == pytest.approx(value, abs=_TOL)

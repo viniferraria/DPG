@@ -17,7 +17,7 @@ gated on the leaf label starting with `"Class "`. For a pure regressor (all leav
 `"Pred <value>"`), that gate is never satisfied, so voting and evidence scoring are not merely
 imprecise — they are structurally inert. This includes `econml.grf.CausalForest`
 (see [causal forest support](/concepts/causal-forest-support.md)). The
-[regressor detection](/conventions/regressor-detection.md) change that made `explain_local` trace
+[regressor detection](/conventions/regressor-detection.md) change (`is_regression_model`) that made `explain_local` trace
 `CausalForest` and `GradientBoostingRegressor` consistently with the global graph does **not** touch
 any of this — it is orthogonal. This page is the known-limitation record, verified by running a
 fitted `RandomForestRegressor` through `explain_local` / `evaluate_faithfulness` directly.
@@ -27,7 +27,7 @@ fitted `RandomForestRegressor` through `explain_local` / `evaluate_faithfulness`
 ## `class_votes` never accumulates regressor leaves
 
 `DPGExplainer.explain_local` only records a vote when the leaf label starts with `"Class "`
-(`dpg/explainer.py:270-271`):
+(`dpg/explainer.py:277-278`):
 
 ```python
 if path.labels and path.labels[-1].startswith("Class "):
@@ -37,7 +37,7 @@ if path.labels and path.labels[-1].startswith("Class "):
 A regressor's leaf labels are `"Pred <round(value, 2)>"` (see
 [the label contract](/conventions/label-contract.md)), which never satisfies `startswith("Class ")`.
 For a model that is entirely a regressor, `class_votes` stays an **empty** `Counter` for every
-sample, so `majority_vote` (`dpg/explainer.py:273-275`, `class_votes.most_common(1)[0][0]` guarded by
+sample, so `majority_vote` (`dpg/explainer.py:280-282`, `class_votes.most_common(1)[0][0]` guarded by
 `if class_votes:`) stays `None`. Observed directly:
 
 ```python
@@ -50,21 +50,22 @@ sample, so `majority_vote` (`dpg/explainer.py:273-275`, `class_votes.most_common
 
 ## `output_fidelity` is identically `0.0` for a pure regressor, not just unreliable
 
-`evaluate_faithfulness` (`dpg/explainer.py:502-506`) computes:
+`evaluate_faithfulness` (`dpg/explainer.py:510-514`) computes, via the **original** sklearn/econml model
+(`self._original_model`, kept so `predict` uses the library's own path), not the builder's normalized copy:
 
 ```python
-model_pred_raw = self._builder.model.predict(row_for_predict.to_frame().T)[0]   # or reshape(1, -1)
+model_pred_raw = self._original_model.predict(row_for_predict.to_frame().T)[0]   # or reshape(1, -1)
 model_pred = self._normalize_prediction_label(model_pred_raw)
 ```
 
-`_normalize_prediction_label` (`dpg/explainer.py:1044-1054`) special-cases matching against
+`_normalize_prediction_label` (`dpg/explainer.py:1066-1076`) special-cases matching against
 `target_names`/`classes_` and a leading `"Class "` prefix; regressors have neither, so it falls
 through to `return str(value)`. For a plain sklearn regressor `model_pred` is the full-precision
 string form of a `numpy.float64` (e.g. `"1.6734732418416916"`); observed for `CausalForest`
 (`predict(X)` returns shape `(n, n_relevant_outputs_)`, so `predict(row)[0]` is a 1-element
 `ndarray`, not a scalar), `model_pred` is `str(ndarray)`, i.e. `"[1.53729555]"`.
 
-`record["matches_model"] = bool(local_pred == model_pred)` (`dpg/explainer.py:517`) then compares
+`record["matches_model"] = bool(local_pred == model_pred)` (`dpg/explainer.py:525`) then compares
 `local_pred = local.majority_vote` against that string. Since `majority_vote` is `None` for a pure
 regressor, this is `bool(None == "1.6734732418416916")` — always `False`, unconditionally, not merely
 unlikely to match. Observed end to end on a fitted `RandomForestRegressor`:
@@ -85,20 +86,37 @@ every dataset of a pure regressor — a hard zero baked into the composite, not 
 
 ## Vote-confidence and evidence metrics are hard zero too
 
-`_compute_sample_confidence` (`dpg/explainer.py:809-825`) derives `class_scores` from `class_votes`;
+`_compute_sample_confidence` (`dpg/explainer.py:792`, vote scores at 828-841) derives `class_scores` from `class_votes`;
 with `class_votes == {}`, `total_votes == 0`, so `class_scores == {}` and both `vote_confidence` and
 `score_margin` are set to `0.0` via the `if not sorted_scores:` branch — always, for every regressor
 sample.
 
-`_compute_evidence_scores` (`dpg/explainer.py:883-908`) independently walks `tree_paths` and skips
-any leaf label that does not start with `"Class "` (`dpg/explainer.py:892-894`), so `class_support`
+`_compute_evidence_scores` (`dpg/explainer.py:898`) independently walks `tree_paths` and skips
+any leaf label that does not start with `"Class "` (`dpg/explainer.py:908-909`), so `class_support`
 stays `{}`. With `total_support == 0` it falls back to `dict(class_scores)` — also `{}`. So
-`evidence_scores == {}`, `evidence_score_pred` stays `None` (`if class_votes:` guard at
-`dpg/explainer.py:833` never fires), and `evidence_score_margin` is `None`
+`evidence_scores == {}`, `evidence_score_pred` stays `None` (`if class_votes:` guard in
+`_compute_sample_confidence` never fires), and `evidence_score_margin` is `None`
 (`sorted_evidence` empty). In the aggregate details dict, `_mean_records` treats every `None` as
 excluded and defaults the mean to `0.0` when nothing remains, so
 `mean_vote_confidence == mean_evidence_score_pred == mean_evidence_score_margin == 0.0` for a pure
 regressor — again unconditionally, not approximately.
+
+## `faithfulness_score` is a constant 0.5 for any regressor
+
+The composite (`dpg/explainer.py:604-609`) is `0.35*output_fidelity + 0.30*mean_trace_coverage_score +
+0.20*(1 - mean_recombination_rate) + 0.15*mean_evidence_score_margin`. For a regressor
+`output_fidelity == 0.0` and `mean_evidence_score_margin == 0.0` (both above), while trace coverage
+and recombination saturate under the default config, so the score is `0.30*1.0 + 0.20*1.0 = 0.5`.
+Observed on `CausalForest` **and** `RandomForestRegressor`, same data:
+
+```python
+>>> explainer.evaluate_faithfulness(X[:30], return_details=True)  # both models
+{'faithfulness_score': 0.5, 'output_fidelity': 0.0, 'mean_recombination_rate': 0.0, 'n_local_failures': 0}
+```
+
+So the headline number carries no information about regressors: it cannot distinguish a good
+explanation from a poor one unless an aggressive `perc_var` pushes coverage/recombination off their
+saturated values.
 
 ## What is NOT affected
 
@@ -111,32 +129,41 @@ content) and remain meaningful.
 
 # Known limitation — exact code paths
 
-- `dpg/explainer.py:270-271` — the `startswith("Class ")` gate in `explain_local` that keeps
+- `dpg/explainer.py:277-278` — the `startswith("Class ")` gate in `explain_local` that keeps
   `class_votes` empty for regressor leaves.
-- `dpg/explainer.py:273-275` — `majority_vote` selection, `None` when `class_votes` is empty.
-- `dpg/explainer.py:502-506` — `model_pred_raw` / `model_pred` computation inside
+- `dpg/explainer.py:280-282` — `majority_vote` selection, `None` when `class_votes` is empty.
+- `dpg/explainer.py:510-514` — `model_pred_raw` / `model_pred` computation inside
   `evaluate_faithfulness`.
-- `dpg/explainer.py:517` — `matches_model = bool(local_pred == model_pred)`.
-- `dpg/explainer.py:1044-1054` — `_normalize_prediction_label`, which has no numeric branch.
-- `dpg/explainer.py:809-825` — `vote_confidence` / `score_margin` derivation from `class_votes`.
-- `dpg/explainer.py:883-908` — `_compute_evidence_scores`, gated the same way on `"Class "`.
+- `dpg/explainer.py:525` — `matches_model = bool(local_pred == model_pred)`.
+- `dpg/explainer.py:1066-1076` — `_normalize_prediction_label`, which has no numeric branch.
+- `dpg/explainer.py:828-841` — `vote_confidence` / `score_margin` derivation from `class_votes`.
+- `dpg/explainer.py:898-920` — `_compute_evidence_scores`, gated the same way on `"Class "`.
 
-This is **not** fixed by the `REGRESSOR_MODELS` / `CausalForest` change in
+This is **not** fixed by the `is_regression_model` / `CausalForest` change in
 [regressor detection](/conventions/regressor-detection.md) — that change only made `explain_local`'s
 leaf labels agree with the graph's leaf labels (both `"Pred <value>"`); it did not touch any of the
 `"Class "`-gated voting or scoring logic above, nor `_normalize_prediction_label`.
 
-For a **mixed** ensemble where `REGRESSOR_MODELS` is somehow inapplicable but individual trees still
+For a **mixed** ensemble where `is_regression_model` is somehow inapplicable but individual trees still
 emit `"Class "` labels this section would not apply as written — but no code path in `dpg/core.py` or
 `dpg/explainer.py` currently produces that mix; the regressor/classifier branch is chosen once per
-model via a single `isinstance` check, so leaves are uniformly `"Pred "` or uniformly `"Class "` for
+model via a single `is_regression_model` call, so leaves are uniformly `"Pred "` or uniformly `"Class "` for
 any one model.
 
 # What a regression-aware variant would need
 
 - **A numeric local prediction**, since `majority_vote` (a mode over discrete class labels) has no
-  regressor analogue. A mean (or `path_confidence`-weighted mean) of parsed leaf values across tree
-  paths is the natural substitute for "local prediction."
+  regressor analogue. Averaging the parsed leaf values across tree paths gives the natural
+  "local prediction", but be precise about what it reproduces: the mean of DPG's leaf values equals
+  `predict_tree_average` for a `CausalForest`, **not** `predict`. `CausalForest.predict` is
+  `pinv(mean J) @ mean alpha` (`econml/grf/_base_grf.py`, `predict`), not the mean of per-tree
+  estimates; measured on `n=2000`, 100 trees, the two differ by 0.028 on average and 0.17 at most.
+  A tolerance-based fidelity check against `predict` would therefore fail by construction for part of
+  the samples, and `GradientBoosting*` has the same shape of problem (`predict` adds the init
+  estimator and sums learning-rate-scaled trees). Compare against `predict_tree_average` for
+  `CausalForest`, or document the expected gap. See
+  [causal forest support](/concepts/causal-forest-support.md) and
+  `tests/test_causal_forest.py::test_dpg_leaf_mean_equals_tree_average_not_predict`.
 - **Numeric tolerance instead of string/`None` equality** for `output_fidelity` / `matches_model`:
   compare the numeric local prediction against `model_pred_raw` (unwrapped from its length-1 array
   for `CausalForest`) within an absolute or target-scale-relative tolerance.

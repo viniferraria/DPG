@@ -27,6 +27,8 @@ Dependencies:
 """
 
 # ── 1. Imports & config ───────────────────────────────────────────────────────
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -123,7 +125,7 @@ assert imp_perm.index[0] == "F1", "Permutation FAILED: F1 not top feature"
 print("\n[PASS] F1 is the top-ranked feature by both MDI and permutation importance.")
 
 # ── 8. Export ─────────────────────────────────────────────────────────────────
-out_path = "scenario_01_sanity_check.csv"
+out_path = Path(__file__).parent / "scenario_01_sanity_check.csv"
 df[["F1", "F3"] + ohe_cols + ["Y"]].to_csv(out_path, index=False)
 print(f"\n[Saved] {out_path}  ({N} rows x {len(feature_cols)+1} cols)")
 print("=" * 55)

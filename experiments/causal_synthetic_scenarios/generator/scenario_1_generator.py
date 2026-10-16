@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -92,7 +94,7 @@ print("\nFirst rows:")
 print(dataset.head())
 
 # Optional: save dataset
-dataset.to_csv("test_datasets/scenario_1.csv", index=False)
+dataset.to_csv(Path(__file__).parent.parent / "test_datasets" / "scenario_1.csv", index=False)
 
 # def plot_pca(df, title):
 #     pca = PCA(n_components=2)

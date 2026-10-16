@@ -80,9 +80,12 @@ weights; `m` = number of edges; `n` = number of nodes. All graphs are directed. 
 reproduce these seven definitions to an absolute tolerance of `1e-3`; `networkx_backend.py`'s
 docstring calls its own calls "the reference definitions."
 
-1. **Betweenness** — shortest paths using the raw weight `w` as distance (not inverted), directed,
-   endpoints excluded, normalized by `1 / ((n-1)(n-2))` (`1.0` when `n <= 2`). Reference call:
-   `nx.betweenness_centrality(G, normalized=True, weight="weight")`.
+1. **Betweenness** — shortest paths using distance `d = W / w` per edge (the weight is a transition
+   frequency, so frequent transitions are short), directed, endpoints excluded, normalized by
+   `1 / ((n-1)(n-2))` (`1.0` when `n <= 2`). Reference call:
+   `nx.betweenness_centrality(D, normalized=True, weight="dist")` where `D` is `G` with
+   `dist = W / w`. Before 2026-10-07 this used the raw `w` as the length and was inverted — see
+   [betweenness-percolation-inverted-weights](/side-effects/betweenness-percolation-inverted-weights.md).
 2. **Local reaching centrality** — distance `d = W / w` per edge. For source `v`, take one
    shortest path (by `d`) to every reachable `t != v`; for each path, average the *original*
    weights `w` of its edges; sum those averages; divide by `(n - 1)`; then divide by `W / m`.
@@ -105,11 +108,12 @@ docstring calls its own calls "the reference definitions."
    (`nx.single_source_shortest_path_length(G, i, cutoff=ℓ)`).
 6. **Local clustering coefficient** (directed, unweighted, Fagiolo) — reference call:
    `nx.clustering(G)` on the DiGraph, no `weight`.
-7. **Percolation centrality** — shortest paths on the raw weight `w` as distance, like betweenness.
+7. **Percolation centrality** — shortest paths on distance `d = W / w`, like betweenness (the states
+   still come from the original flows, never from distances).
    State `x_v` = `percolation_states(G)[v]`: the node's flow (sum of incoming weights; outgoing
    weights for a node with no incoming edges) divided by the largest flow. `X = Σ x`. Value =
    `(1/(n-2)) · Σ_{s≠v} x_s·δ_s(v) / (X - x_v)` with `δ_s(v)` the Brandes source dependency.
-   Reference call: `nx.percolation_centrality(G, states=percolation_states(G), weight="weight")`.
+   Reference call: `nx.percolation_centrality(D, states=percolation_states(G), weight="dist")`.
    Where NetworkX would divide by zero, every backend returns `0.0` instead: all nodes when
    `n <= 2`, and node `v` when `X - x_v == 0`.
 
@@ -117,13 +121,13 @@ docstring calls its own calls "the reference definitions."
 
 | Metric | `networkx` | `igraph` | `graph_tool` |
 |---|---|---|---|
-| Betweenness | `nx.betweenness_centrality(dpg_model, normalized=True, weight="weight")` | `ig_graph.betweenness(directed=True, normalized=False, weights="weight")`, divided by `(n-1)(n-2)` | `graph_tool.centrality.betweenness(graph, weight=weight_prop, norm=n>2)` on the **raw** weight (not the distance) property |
+| Betweenness | `nx.betweenness_centrality(exact_distance_graph, normalized=True, weight="dist")` | `ig_graph.betweenness(directed=True, normalized=False, weights="distance")`, divided by `(n-1)(n-2)` | `graph_tool.centrality.betweenness(graph, weight=dist_prop, norm=n>2)` on the distance property |
 | Local reaching | `nx.local_reaching_centrality(dpg_model, node, weight="weight")` per node | `ig_graph.get_shortest_paths(i, mode="out", weights="distance", output="vpath")`, averaged by hand | `graph_tool.topology.shortest_distance(graph, source=v, weights=dist_prop, pred_map=True)`, path reconstructed by walking `pred_map` back to the source and averaging original weights by hand |
 | Closeness | `nx.closeness_centrality(reversed_dist_graph, distance="dist", wf_improved=True)` | `ig_graph.distances(i, mode="out", weights="distance")`, Wasserman–Faust formula applied by hand | `graph_tool.centrality.closeness(graph, weight=dist_prop, harmonic=False, norm=True)`, then a further `* r / (n-1)` correction (see below) |
 | Harmonic | `nx.harmonic_centrality(reversed_dist_graph, distance="dist")` | `ig_graph.distances(i, mode="out", weights="distance")`, `sum(1/d)` applied by hand | `graph_tool.centrality.closeness(graph, weight=dist_prop, harmonic=True, norm=False)` |
 | Collective influence | `nx.single_source_shortest_path_length(G, v, cutoff=ℓ)` per node | `ig_graph.outdegree()` + one `ig_graph.neighborhood(order=ℓ, mode="out", mindist=ℓ)` call | `graph.get_out_degrees(...)` (cast to `int64` — it is unsigned, so `k - 1` on a sink would wrap) + `graph_tool.topology.shortest_distance(graph, source=v, max_dist=ℓ)` per node |
 | Local clustering | `nx.clustering(dpg_model)` | `ig_graph.get_adjacency_sparse()`, Fagiolo formula in `scipy.sparse` (below) | `graph_tool.spectral.adjacency(graph)`, same `scipy.sparse` formula |
-| Percolation | `nx.percolation_centrality(dpg_model, states=..., weight="weight")` with `np.float64` states so zero denominators yield `nan` (then overwritten with `0.0`) | `ig_graph.betweenness(directed=True, weights="weight", sources=[...])` once per distinct non-zero state value, scaled by that value, then divided by `(X - x_v)(n - 2)` | `graph_tool.centrality.betweenness(graph, pivots=..., weight=weight_prop, norm=False)` per distinct state value, same scaling |
+| Percolation | `nx.percolation_centrality(exact_distance_graph, states=..., weight="dist")` with `np.float64` states so zero denominators yield `nan` (then overwritten with `0.0`) | `ig_graph.betweenness(directed=True, weights="distance", sources=[...])` once per distinct non-zero state value, scaled by that value, then divided by `(X - x_v)(n - 2)` | `graph_tool.centrality.betweenness(graph, pivots=..., weight=dist_prop, norm=False)` per distinct state value, same scaling |
 
 # Per-backend notes
 
@@ -133,8 +137,10 @@ Calls NetworkX's own centrality functions directly — this is the module the ot
 are checked against (`tests/test_metrics_backends.py` and the ground-truth fixtures both trace to
 these calls, never to a backend). `_distance_graph` builds a fresh `nx.DiGraph` carrying
 `dist = total_weight / w` per edge (`inf` when `w <= 0`), and reverses it once for the
-closeness/harmonic calls. Betweenness runs on the original graph with the raw `weight` attribute,
-unreversed. Raises `DPGMetricError.non_positive_lrc_weight()` when total weight is `<= 0`, checked
+closeness/harmonic calls. Betweenness and percolation run unreversed on a second distance graph
+built with `exact=True`, whose `dist` values are `Fraction`s: float sums of `W / w` break
+mathematically tied shortest paths, which igraph's epsilon comparison keeps tied, so exact
+fractions are what keep the two backends in parity. Raises `DPGMetricError.non_positive_lrc_weight()` when total weight is `<= 0`, checked
 right before the local-reaching loop.
 
 ## `igraph_backend.py`

@@ -18,6 +18,10 @@ that was actually executed.
 * [communities-regressor-valueerror](communities-regressor-valueerror.md) - `extract_communities` on a regression DPG now raises a clear `ValueError` instead of an opaque `numpy.linalg.LinAlgError`.
 * [gb-predict-original-model](gb-predict-original-model.md) - `evaluate_faithfulness` on a `GradientBoostingClassifier` used to crash; fixed pre-release by keeping `_original_model` for sklearn's own `predict()`.
 
+## Fixed regressions (2026-10-07)
+
+* [betweenness-percolation-inverted-weights](betweenness-percolation-inverted-weights.md) - Betweenness and percolation used the frequency weight as a path length (inverted); now `W / w` like the other shortest-path metrics. Results produced earlier are inverted.
+
 ## New config surface and its failure modes
 
 * [decimal-threshold-auto-warning](decimal-threshold-auto-warning.md) - `decimal_threshold="auto"` derives precision from the data and warns when a threshold lands off that grid; `get_decimal_threshold()` errors before `fit()`.
@@ -26,6 +30,7 @@ that was actually executed.
 ## Pre-existing / deferred limitations
 
 * [regression-sink-collisions](regression-sink-collisions.md) - A regression sink is only as unique as its 2-decimal rounded leaf value; distinct leaves with distinct predictions can collide into one graph sink.
+* [binary-feature-hub-nodes](binary-feature-hub-nodes.md) - On RandomForest DPGs a 0/1 column merges into two hub nodes that top betweenness, collective influence and percolation even when the model ignores it; continuous features fragment into hundreds of nodes.
 
 ## See also
 

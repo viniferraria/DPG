@@ -90,8 +90,9 @@ Both under `results/`, created by `write_records_to_csv` / `write_causal_accurac
   `header=not output_path.exists()`, so the four (scenario × model) runs append into one file.
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
   explanation_top_features, metric, intersection, precision, recall`, list fields `;`-joined.
-  `write_causal_accuracy_to_csv` recomputes `timestamp()` on every call, so one run scatters its rows
-  across several tiny files rather than one.
+  One path per run, sharing its timestamp with `node_metrics_<timestamp>.csv`;
+  `run_experiments_with_ground_truth` passes it down as `file_path` (before 2026-10-13 each call
+  recomputed `timestamp()` and scattered a run across several tiny files).
 - `states/<monks-N>_<Model>_split0_dpg_explainer_<timestamp>.pkl` and
   `states/<monks-N>_<Model>_split0_explanation_<timestamp>.pkl` — e.g.
   `monks-1_RandomForest_split0_explanation_2026-08-02T19-22-44.pkl`. `run_key` is

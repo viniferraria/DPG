@@ -59,11 +59,11 @@ def _clustering(graph: gt.Graph, node_ids: list[Any]) -> dict[Any, float]:
 
 def _percolation(
     graph: gt.Graph,
-    weight_prop: Any,
+    dist_prop: Any,
     node_ids: list[Any],
     states: dict[Any, float],
 ) -> dict[Any, float]:
-    """Percolation centrality with raw weights as distances."""
+    """Percolation centrality with ``total_weight / w`` edge distances."""
     n = len(node_ids)
     if n <= 2:
         return dict.fromkeys(node_ids, 0.0)
@@ -79,7 +79,7 @@ def _percolation(
     weighted_dependency = np.zeros(n)
     for value, pivots in pivots_by_state.items():
         vertex_bc, _ = gt_centrality.betweenness(
-            graph, pivots=np.array(pivots), weight=weight_prop, norm=False
+            graph, pivots=np.array(pivots), weight=dist_prop, norm=False
         )
         weighted_dependency += value * vertex_bc.a
     return {
@@ -125,10 +125,10 @@ class GraphToolBackend(GraphBackend):
         )
         edge_weight = {(s, t): w for s, t, w in edges}
 
-        # Betweenness uses the RAW weight as distance; graph-tool normalises
+        # Betweenness uses the inverted distance; graph-tool normalises
         # directed graphs by 1 / ((n-1)(n-2)), the NetworkX convention.
         vertex_bc, _ = gt_centrality.betweenness(
-            graph, weight=weight_prop, norm=n > 2
+            graph, weight=dist_prop, norm=n > 2
         )
         betweenness = {node_ids[i]: float(vertex_bc.a[i]) for i in range(n)}
 
@@ -193,6 +193,6 @@ class GraphToolBackend(GraphBackend):
             collective_influence=_collective_influence(graph, node_ids, ci_radius),
             clustering=_clustering(graph, node_ids),
             percolation=_percolation(
-                graph, weight_prop, node_ids, percolation_states(dpg_model)
+                graph, dist_prop, node_ids, percolation_states(dpg_model)
             ),
         )

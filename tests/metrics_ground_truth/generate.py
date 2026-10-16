@@ -10,6 +10,7 @@ checked against, so they are computed directly from ``networkx`` (never via
 """
 
 import json
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -20,14 +21,17 @@ from tests.metrics_ground_truth.scenarios import SCENARIOS, build_scenario_graph
 _OUTPUT_DIR = Path(__file__).resolve().parent
 
 
-def _distance_graph(graph: nx.DiGraph) -> nx.DiGraph:
-    """Same graph with an added ``dist = W / w`` edge attribute."""
+def _distance_graph(graph: nx.DiGraph, exact: bool = False) -> nx.DiGraph:
+    """Same graph with an added ``dist = W / w`` edge attribute (``Fraction``
+    if ``exact``, which keeps mathematically tied shortest paths tied)."""
     total_weight = sum(d.get("weight", 1.0) for _, _, d in graph.edges(data=True))
     dist_graph = nx.DiGraph()
     dist_graph.add_nodes_from(graph.nodes())
     for u, v, d in graph.edges(data=True):
         w = d.get("weight", 1.0)
-        dist_graph.add_edge(u, v, dist=total_weight / w)
+        dist_graph.add_edge(
+            u, v, dist=Fraction(total_weight) / Fraction(w) if exact else total_weight / w
+        )
     return dist_graph
 
 
@@ -66,7 +70,10 @@ def compute_ground_truth(
     for node_id, _ in nodes_list:
         assert node_id in graph.nodes, f"node {node_id!r} missing from graph"
 
-    betweenness = nx.betweenness_centrality(graph, normalized=True, weight="weight")
+    exact_graph = _distance_graph(graph, exact=True)
+    betweenness = nx.betweenness_centrality(
+        exact_graph, normalized=True, weight="dist"
+    )
     local_reaching = {
         node: nx.local_reaching_centrality(
             graph, node, weight="weight", normalized=True
@@ -84,7 +91,7 @@ def compute_ground_truth(
     collective_influence = _collective_influence(graph, CI_RADIUS)
     clustering = nx.clustering(graph)
     percolation = nx.percolation_centrality(
-        graph, states=_percolation_states(graph), weight="weight"
+        exact_graph, states=_percolation_states(graph), weight="dist"
     )
 
     nodes: dict[str, Any] = {}

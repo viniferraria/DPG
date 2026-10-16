@@ -34,6 +34,8 @@ Dependencies:
 """
 
 # ── 1. Imports & config ────────────────────────────────────────────────────────
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -266,7 +268,7 @@ if noisy_irrelevants:
     print("       Likely finite-sample noise — rerun with larger N to confirm.")
 
 # ── 9. Export ──────────────────────────────────────────────────────────────────
-out_path = "scenario_02_moderate_noise_weak_corr.csv"
+out_path = Path(__file__).parent / "scenario_02_moderate_noise_weak_corr.csv"
 df.to_csv(out_path, index=False)
 print(f"\n[Saved] {out_path}  ({N} rows × {len(feature_cols) + 1} cols)")
 print(SEP)

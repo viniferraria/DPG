@@ -6,6 +6,7 @@ Operational playbooks: how to set the project up, verify it, ship it, and run it
 * [Testing, linting, and type checking](testing-and-linting.md) - Run pytest, ruff, and mypy exactly as the Feature CI workflow does, including the repo-root working-directory requirement and the narrow mypy scope.
 * [CI pipelines](ci-pipelines.md) - What each file in .github/workflows actually does — triggers, jobs, installed toolchains — and which of them are currently commented out and never run.
 * [Running the DPG CLI entrypoints](cli-entrypoints.md) - How to run examples/run_dpg_standard.py and examples/run_dpg_custom.py, what flags they accept, what they write to disk, and how they relate to the packaged dpg console script.
+* [Running all experiment suites](run-all-experiments.md) - How experiments/run_all.sh runs every experiment suite through uv with default arguments, in what order, and how to update it when a suite is added or changed.
 
 ## The short version
 
