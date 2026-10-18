@@ -1,5 +1,35 @@
 # Bundle Update Log
 
+## 2026-10-17
+
+* **Add**: `experiments/sql/node_metrics_to_causal_accuracy.sql` rebuilds a causal-synthetic
+  `causal_accuracy_<ts>.csv` from `node_metrics_<ts>.csv` in DuckDB with the reference scoring. Verified on two
+  runs: 99 of 102 overlapping rows exact, 3 tie-order only, 0 other. Added
+  [rebuilding causal_accuracy with DuckDB](/workflows/reconstruct-causal-accuracy.md). No runner changed.
+* **Change**: `node_metrics_to_causal_accuracy.sql` now joins ground truth by scenario prefix
+  (`starts_with(experiment, scenario || '_')`) instead of stripping the model name with a hardcoded regex.
+  Output on `2026-10-15T05-08-31` is byte-identical (96 rows; 94 exact, 2 tie-only, 0 other). Caveat
+  documented: a scenario that is a prefix of another would double-match.
+
+* **Add**: [experiments.causal_accuracy](/modules/experiments-causal-accuracy.md), the shared module that now
+  holds the reference scoring (`TOP_K`, `METRICS`, `extract_top_k_features`, `evaluate_causal_accuracy`) and the
+  `node_metrics` / `causal_accuracy` CSV writers. The reference runner, MONK's, ACIC 2019 and COMPAS import it;
+  deviations are call-site keywords (MONK's `feature_name`, `drop_duplicates=True`; COMPAS `feature_name`; ACIC
+  none). Adding a metric is one edit to `METRICS`.
+* **Change**: MONK's, ACIC and COMPAS `node_metrics_<ts>.csv` now use the reference schema (`node_idx`,
+  `in_degree`, `out_degree`, `split`; `experiment` first; COMPAS `seed` last). `intersection` is written sorted in
+  every suite and `Pred` labels are excluded in every suite (no effect on classifier DPGs; ACIC unchanged).
+  Reference writes `node_metrics` once at the end, others per split. Updated the four suite pages and the
+  experiments index. Old files in `results/` keep their old headers.
+* **Add**: side-effect pages [node_metrics schema change](/side-effects/node-metrics-schema-unification.md) (rename
+  mapping, reading old and new together) and [CSV line endings](/side-effects/csv-line-endings-lf.md) (`append_csv`
+  writes LF; the old `csv.DictWriter` wrote CRLF for all `causal_accuracy` files and the causal-synthetic
+  `node_metrics`).
+* **Change**: `node_metrics_to_causal_accuracy.sql` `predicates` CTE also drops `Pred%` labels. Re-verified on
+  `2026-10-15T05-08-31`: 96 rows, 94 exact, 2 tie-only, 0 other. The workflow page's ACIC section became "Other
+  suites": what still differs per suite (ground truth source, MONK/COMPAS `feature_name`, MONK de-dup). No new
+  variants built. `.claude/agents/duckdb-causal-accuracy.md` and CLAUDE.md "Experiment protocol" updated.
+
 ## 2026-10-15
 
 * **Add**: three opportunities from arXiv 2308.03369 (drop-and-relearn importance) and combining node

@@ -60,11 +60,10 @@ cd experiments/monks
 uv run python run_monk.py
 ```
 
-No CLI flags exist. The knobs are module constants: `RANDOM_STATE = 42`, `TOP_K = 3`,
-`ATTRIBUTES = ["a1".."a6"]`, `MODEL_FACTORIES = {"RandomForest", "ExtraTrees"}` (both
-`random_state=42`, otherwise sklearn defaults), and
-`METRICS = ["Local reaching centrality", "Closeness centrality", "Harmonic centrality",
-"Betweenness centrality", "Collective influence", "Percolation centrality"]`.
+No CLI flags exist. The knobs are module constants: `RANDOM_STATE = 42`,
+`ATTRIBUTES = ["a1".."a6"]`, and `MODEL_FACTORIES = {"RandomForest", "ExtraTrees"}` (both
+`random_state=42`, otherwise sklearn defaults). `TOP_K = 3` and `METRICS` are not defined here any more:
+they live in the shared [experiments.causal_accuracy](/modules/experiments-causal-accuracy.md) module.
 `main()` creates `states/` and calls `run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH,
 OUTPUT_PATH, logger)`.
 
@@ -78,21 +77,36 @@ the repo-root file, located from `__file__` rather than the CWD, so the run gets
 `pd.get_dummies` call** (`dtype=bool`, `drop_first=False`), so both end up with an identical column set.
 Only the category vocabulary is shared — the target never enters, so this leaks nothing.
 
+# Scoring
+
+The reference protocol, through the shared module: `causal_accuracy_rows(explanation.node_metrics,
+gt_features, run_key, split_idx, feature_name=base_feature_name, drop_duplicates=True)`.
+Named deviations (both forced by the data, both call-site keywords):
+
+- `feature_name=base_feature_name`: one-hot columns are mapped back to their source attribute
+  (`a1_2` to `a1`, only a trailing `_<digits>` is stripped).
+- `drop_duplicates=True`: features are de-duplicated *before* `head(TOP_K)`, so the result is three
+  distinct attributes. The reference keeps repeats (`F2;F2;F2`); MONK's does not, which makes its
+  precision/recall not directly comparable with the causal-synthetic history.
+
+`Class` and `Pred` labels are both excluded (MONK's is a classifier, so `Pred` never occurs; before
+2026-10-17 only `Class` was excluded here).
+
 # Outputs
 
-Both under `results/`, created by `write_records_to_csv` / `write_causal_accuracy_to_csv`:
+Both under `results/`, written by `append_csv` (which creates the directory):
 
-- `results/node_metrics_<timestamp>.csv` — one path per run; every column of
-  `explanation.node_metrics` is carried through verbatim, plus `node_index` and the fixed columns
-  `experiment`, `split_idx`, `processing_time`. Column names are snake-cased by `to_snake_case`
-  ("In degree nodes" → `in_degree_nodes`), so the newer metrics land as `collective_influence`,
-  `local_clustering_coefficient`, and `percolation_centrality` with no runner change. Written with `mode="a"` and
-  `header=not output_path.exists()`, so the four (scenario × model) runs append into one file.
+- `results/node_metrics_<timestamp>.csv` — the reference schema (`experiment, split, node, degree,
+  in_degree, out_degree`, every `NodeMetrics` column snake-cased in frame order, `node_idx, label,
+  processing_time`). A new `NodeMetrics` column flows through with no edit. Appended per (scenario, model),
+  header only when the file is new, so the four runs share one file. The columns used to be `node_index`,
+  `in_degree_nodes`, `out_degree_nodes`, `split_idx` with `experiment`/`split_idx` after `label`; old files
+  keep that layout, see [node_metrics schema change](/side-effects/node-metrics-schema-unification.md).
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
-  explanation_top_features, metric, intersection, precision, recall`, list fields `;`-joined.
-  One path per run, sharing its timestamp with `node_metrics_<timestamp>.csv`;
-  `run_experiments_with_ground_truth` passes it down as `file_path` (before 2026-10-13 each call
-  recomputed `timestamp()` and scattered a run across several tiny files).
+  explanation_top_features, metric, intersection, precision, recall`, list fields `;`-joined and
+  `intersection` sorted. One path per run, sharing its timestamp with `node_metrics_<timestamp>.csv`
+  (before 2026-10-13 each call recomputed `timestamp()` and scattered a run across several tiny files).
+- Both files are written with LF line endings ([why](/side-effects/csv-line-endings-lf.md)).
 - `states/<monks-N>_<Model>_split0_dpg_explainer_<timestamp>.pkl` and
   `states/<monks-N>_<Model>_split0_explanation_<timestamp>.pkl` — e.g.
   `monks-1_RandomForest_split0_explanation_2026-08-02T19-22-44.pkl`. `run_key` is
@@ -106,12 +120,13 @@ source. Nothing is cleaned or overwritten between runs, so both directories grow
 
 `tests/test_run_monk.py` is minimal. The suite has no `__init__.py`, so the test loads `run_monk.py`
 by file path (`importlib.util.spec_from_file_location`) in a module-scoped fixture, after `chdir` to a
-temp dir because importing the module opens a log file in the CWD. It checks that every `METRICS`
+temp dir because importing the module opens a log file in the CWD. It checks that every shared `METRICS`
 name is a column of the real `NodeMetrics.extract_node_metrics` output (a missing one would raise a
-`KeyError` swallowed by the per-run `except Exception`), that `extract_top_k_features` maps one-hot
-labels back to distinct `aN` names, and the snake-case names of the new node-metric columns. The
-other helpers (`load_dataset`, `pre_process_dataset`, `calculate_causal_accuracy`, ...) are still
-untested. `run_monk.py` is tracked in git.
+`KeyError` swallowed by the per-run `except Exception`), and, with `causal_accuracy_rows` and the dataset
+helpers monkeypatched, that `run_experiments_with_ground_truth` passes `feature_name=base_feature_name` and
+`drop_duplicates=True` and that `base_feature_name("a5_2") == "a5"`. Scoring and CSV schema are covered once
+in `tests/test_causal_accuracy.py`. `load_dataset` and `pre_process_dataset` are untested. `run_monk.py` is
+tracked in git.
 
 # Gotchas
 
@@ -124,9 +139,9 @@ untested. `run_monk.py` is tracked in git.
   which implicates all six attributes — so a top-3 ground-truth set would be ill-defined.
 - **Predicate labels are one-hot column names.** After encoding, a node reads `a1_2 <= 0.5`.
   `extract_top_k_features` takes the token before the first space, maps it back with
-  `base_feature_name` (strips a trailing `_<digits>` only), then `drop_duplicates(subset="Label")`
-  *before* `head(top_k)` — so the result is 3 distinct source attributes, comparable to a ground truth
-  written in raw `aN` names. This mapping step does not exist in the causal-synthetic runner.
+  `feature_name=base_feature_name`, then (`drop_duplicates=True`) de-duplicates *before* `head(top_k)` —
+  so the result is 3 distinct source attributes, comparable to a ground truth written in raw `aN` names.
+  The reference runner passes neither keyword.
 - **The module-level `logger` shadows the parameter.** `logger` is assigned at import time (line ~123),
   which means importing `run_monk` immediately creates a `dpg_explainer_<timestamp>.log` file as a side
   effect. `_build_explanation` uses that module-level logger; `run_experiments_with_ground_truth`
@@ -138,6 +153,7 @@ untested. `run_monk.py` is tracked in git.
 - **`y_train` is used for `target_names`** (`np.unique(y_train)`), unlike the causal runner which uses
   the full `y`. With MONK's balanced binary labels this is equivalent in practice, but the two runners
   do differ.
-- `explanation.node_metrics` columns are passed through untyped, so the node-metrics CSV schema follows
-  whatever [`DPGExplainer.explain_global`](/modules/dpg-explainer.md) currently emits — there is no
-  dataclass pinning it, in contrast to `NodeMetricRecord` in the causal suite.
+- The node-metrics CSV schema follows whatever [`DPGExplainer.explain_global`](/modules/dpg-explainer.md)
+  currently emits: `node_metrics_rows` writes every non-fixed `NodeMetrics` column in frame order, with no
+  dataclass pinning it (the causal suite's `NodeMetricRecord` is gone). A new metric is exported
+  automatically but scored only once added to `METRICS`.

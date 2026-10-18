@@ -7,7 +7,6 @@ thin imperative shell (``main``). Importing this module has no side effects, so
 each function can be unit-tested in isolation.
 """
 
-import csv
 import datetime
 import logging
 import pickle
@@ -15,7 +14,6 @@ import sys
 import time
 import traceback
 from collections.abc import Callable, Iterator
-from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +26,11 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from dpg import DPGExplainer
 from dpg.explainer import DPGExplanation
+from experiments.causal_accuracy import (  # noqa: F401 - re-exported for the other suites' tests
+    append_csv,
+    causal_accuracy_rows,
+    node_metrics_rows,
+)
 
 
 def get_logger(name, log_file=None):
@@ -70,7 +73,6 @@ def get_logger(name, log_file=None):
 RANDOM_STATE = 42
 N_SPLITS = 2
 TEST_SIZE = 0.2
-TOP_K = 3
 
 SUITE_DIR = Path(__file__).parent
 STATES_DIR = SUITE_DIR / "states"
@@ -85,14 +87,6 @@ SCENARIO_GROUND_TRUTH: dict[str, list[str]] = {
 SCENARIOS_WITH_GT: list[str] = list(SCENARIO_GROUND_TRUTH)
 SCM_ROOT = SUITE_DIR / "datasets/scm"  # <scenario>/seed_<n>/{X.csv,y.csv,ground_truth.yaml}
 
-METRICS = [
-    "Local reaching centrality",
-    "Closeness centrality",
-    "Harmonic centrality",
-    "Betweenness centrality",
-    "Collective influence",
-    "Percolation centrality",
-]
 CONFIG_PATH = ((Path(__file__).parent).parent) / "../config.yaml"
 
 # Each entry maps a model name to a zero-arg factory producing a fresh estimator.
@@ -101,28 +95,6 @@ MODEL_FACTORIES: dict[str, ModelFactory] = {
     "RandomForest": lambda: RandomForestClassifier(random_state=RANDOM_STATE),
     "ExtraTrees": lambda: ExtraTreesClassifier(random_state=RANDOM_STATE),
 }
-
-
-@dataclass
-class NodeMetricRecord:
-    """Single row in the metrics CSV export."""
-
-    experiment: str
-    split: int
-    node: str
-    degree: int
-    in_degree: int
-    out_degree: int
-    betweenness_centrality: float
-    local_reaching_centrality: float
-    closeness_centrality: float
-    harmonic_centrality: float
-    collective_influence: float
-    local_clustering_coefficient: float
-    percolation_centrality: float
-    node_idx: int
-    label: str
-    processing_time: float
 
 
 # --- Pure helpers ------------------------------------------------------------
@@ -172,99 +144,6 @@ def evaluate_accuracy(model: Any, X_test: Any, y_test: Any) -> float:
     return float(accuracy_score(y_test, model.predict(X_test)))
 
 
-def extract_top_k_features(
-    explanation: pd.DataFrame,
-    top_k: int,
-    metric: str = "Local reaching centrality",
-    drop_duplicates: bool = False,
-) -> list[str]:
-    """Return the top-k features by ``metric`` from a DPG explanation.
-
-    Several predicates on one feature can fill the top-k (e.g. ``F2;F2;F2``).
-    That is kept by default so the CSV history stays comparable;
-    ``drop_duplicates=True`` keeps only each feature's best-ranked predicate.
-    """
-    results = explanation[~(explanation["Label"].str.startswith("Class"))].copy()
-    results["Label"] = results["Label"].str.extract(r"([^\s]+)")
-    ranked = results.sort_values(by=metric, ascending=False)["Label"]
-    if drop_duplicates:
-        ranked = ranked.drop_duplicates()
-    return ranked.head(top_k).tolist()
-
-
-def evaluate_causal_accuracy(
-    ground_truth: list[str],
-    explanation: list[str],
-) -> tuple[set[str], float, float]:
-    """Return the causal accuracy of an explanation against a ground-truth feature list."""
-    set_gt = set(ground_truth)
-    set_expl = set(explanation)
-
-    # intersection c_k = |E ∩ GT|, where E is the set of top-k features in the explanation and GT
-    intersection_expl_gt = set_expl.intersection(set_gt)  # c_k ∩ c
-    cardinality_intersection_expl_gt = len(intersection_expl_gt)  # |c_k ∩ c|
-
-    cardinality_expl = len(set_expl)  # |c_k|
-    cardinality_gt = len(set_gt)  # |c|
-    precision = (
-        cardinality_intersection_expl_gt / cardinality_expl
-        if cardinality_expl > 0
-        else 0.0
-    )
-    recall = (
-        cardinality_intersection_expl_gt / cardinality_gt if cardinality_gt > 0 else 0.0
-    )
-    return intersection_expl_gt, precision, recall
-
-
-def records_from_explanation(
-    explanation: Any,
-    experiment: str,
-    split_idx: int,
-    processing_time: float,
-) -> list[NodeMetricRecord]:
-    """Convert a DPG explanation's node-metrics frame into typed records.
-
-    Pure transformation: depends only on its arguments, so it can be tested with
-    a lightweight stand-in object exposing a ``node_metrics`` DataFrame.
-    """
-    df = explanation.node_metrics
-    return [
-        NodeMetricRecord(
-            experiment=experiment,
-            split=split_idx,
-            node=str(row["Node"]),
-            degree=int(row["Degree"]),
-            in_degree=int(row["In degree nodes"]),
-            out_degree=int(row["Out degree nodes"]),
-            betweenness_centrality=float(row["Betweenness centrality"]),
-            local_reaching_centrality=float(row["Local reaching centrality"]),
-            closeness_centrality=float(row["Closeness centrality"]),
-            harmonic_centrality=float(row["Harmonic centrality"]),
-            collective_influence=float(row["Collective influence"]),
-            local_clustering_coefficient=float(row["Local clustering coefficient"]),
-            percolation_centrality=float(row["Percolation centrality"]),
-            node_idx=int(node_idx),
-            label=str(row["Label"]),
-            processing_time=round(processing_time, 4),
-        )
-        for node_idx, row in df.iterrows()
-    ]
-
-
-def write_records_to_csv(records: list[NodeMetricRecord], output_path: Path) -> None:
-    """Write all ``records`` to ``output_path`` (header + one row each)."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    file_exists = output_path.exists()
-    fieldnames = [f.name for f in fields(NodeMetricRecord)]
-    with open(output_path, "a+", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        if not file_exists:
-            writer.writeheader()
-        for record in records:
-            writer.writerow(asdict(record))
-
-
 def save_pickle(obj: Any, path: Path) -> None:
     """Pickle ``obj`` to ``path``."""
     with open(path, "wb") as f:
@@ -274,82 +153,6 @@ def save_pickle(obj: Any, path: Path) -> None:
 def mean_or_nan(values: list[float]) -> float:
     """Mean of ``values``, or NaN when empty."""
     return sum(values) / len(values) if values else float("nan")
-
-
-def write_causal_accuracy_to_csv(
-    run_key: str,
-    k: int,
-    ground_truth: list[str],
-    explanation_top_features: list[str],
-    split_idx: int,
-    metric: str,
-    intersection: set[str],
-    precision: float,
-    recall: float,
-    file_path: Path,
-) -> None:
-    """Append a row with causal accuracy metrics to the CSV at ``file_path``."""
-    fieldnames = [
-        "experiment",
-        "split",
-        "k",
-        "ground_truth",
-        "explanation_top_features",
-        "metric",
-        "intersection",
-        "precision",
-        "recall",
-    ]
-    file_exists = file_path.exists()
-    with open(file_path, "a+", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        if not file_exists:
-            writer.writeheader()
-
-        writer.writerow({
-            "experiment": run_key,
-            "split": split_idx,
-            "k": k,
-            "ground_truth": ";".join(ground_truth),
-            "explanation_top_features": ";".join(explanation_top_features),
-            "metric": metric,
-            "intersection": ";".join(intersection),
-            "precision": precision,
-            "recall": recall,
-        })
-
-
-def save_feature_extraction_results(
-    explanation: pd.DataFrame,
-    gt_features: list[str],
-    run_key: str,
-    split_idx: int,
-    metric_name: str,
-    file_path: Path,
-) -> None:
-    """Save the results of feature extraction to the CSV at ``file_path``."""
-    explanation_top_features_lrc = extract_top_k_features(
-        explanation=explanation,
-        top_k=TOP_K,
-        metric=metric_name,
-    )
-    intersection, precision, recall = evaluate_causal_accuracy(
-        ground_truth=gt_features,
-        explanation=explanation_top_features_lrc,
-    )
-    write_causal_accuracy_to_csv(
-        run_key=run_key,
-        k=TOP_K,
-        ground_truth=gt_features,
-        explanation_top_features=explanation_top_features_lrc,
-        split_idx=split_idx,
-        metric=metric_name,
-        intersection=intersection,
-        precision=precision,
-        recall=recall,
-        file_path=file_path,
-    )
 
 
 # --- Orchestration (impure shell) -------------------------------------------
@@ -421,8 +224,8 @@ def explain_split(
     run_key: str,
     split_idx: int,
     processing_logger: Any,
-) -> list[NodeMetricRecord]:
-    """Fit a DPG explainer on one split and return its node-metric records.
+) -> pd.DataFrame:
+    """Fit a DPG explainer on one split and return its node-metric rows.
 
     ``X`` is the held-out split for this fold; the explanation itself is built
     from ``X_train`` only, to avoid test-data leak.
@@ -438,16 +241,16 @@ def explain_split(
         split_idx=split_idx,
         processing_logger=processing_logger,
     )
-    return records_from_explanation(explanation, run_key, split_idx, processing_time)
+    return node_metrics_rows(explanation, run_key, split_idx, processing_time)
 
 
 def run_experiments(
     scenario_files: list[str],
     output_path: Path,
     logger: Any,
-) -> list[NodeMetricRecord]:
-    """Run every (scenario, model, split) combination and return their node-metric records."""
-    all_records: list[NodeMetricRecord] = []
+) -> pd.DataFrame:
+    """Run every (scenario, model, split) combination and return their node-metric rows."""
+    frames: list[pd.DataFrame] = []
     splitter = make_splitter()
 
     for scenario_file in scenario_files:
@@ -469,7 +272,7 @@ def run_experiments(
                 split_accuracies.append(accuracy)
 
                 try:
-                    all_records.extend(
+                    frames.append(
                         explain_split(
                             model=model,
                             X=X_test,
@@ -490,22 +293,25 @@ def run_experiments(
                 f"{mean_accuracy:.4f}"
             )
 
-    write_records_to_csv(all_records, output_path)
-    return all_records
+    all_rows = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if frames:
+        append_csv(all_rows, output_path)
+    return all_rows
 
 
 def run_experiments_with_ground_truth(
     scenarios_with_gt: dict[str, list[str]],
     output_dir: Path,
     logger: Any,
-) -> list[NodeMetricRecord]:
+) -> pd.DataFrame:
     """Run experiments per scenario, additionally tracking causal accuracy against
     each scenario's ground-truth causal features.
 
-    Node-metric records and causal-accuracy rows each go to one CSV per run
-    under ``output_dir``, sharing the run's timestamp.
+    Node-metric rows (written once at the end) and causal-accuracy rows (appended
+    per split) each go to one CSV per run under ``output_dir``, sharing the
+    run's timestamp.
     """
-    all_records: list[NodeMetricRecord] = []
+    frames: list[pd.DataFrame] = []
     splitter = make_splitter()
     ts = timestamp()
     accuracy_path = output_dir / f"causal_accuracy_{ts}.csv"
@@ -538,21 +344,17 @@ def run_experiments_with_ground_truth(
                         split_idx=split_idx,
                         processing_logger=logger,
                     )
-                    all_records.extend(
-                        records_from_explanation(
+                    frames.append(
+                        node_metrics_rows(
                             explanation, run_key, split_idx, processing_time
                         )
                     )
-
-                    for metric_name in METRICS:
-                        save_feature_extraction_results(
-                            explanation=explanation.node_metrics,
-                            gt_features=gt_features,
-                            run_key=run_key,
-                            split_idx=split_idx,
-                            metric_name=metric_name,
-                            file_path=accuracy_path,
-                        )
+                    append_csv(
+                        causal_accuracy_rows(
+                            explanation.node_metrics, gt_features, run_key, split_idx
+                        ),
+                        accuracy_path,
+                    )
 
                 except Exception as exc:  # noqa: BLE001 - keep batch resilient
                     logger.error(f"Failed: {run_key} split={split_idx}: {exc}")
@@ -564,8 +366,10 @@ def run_experiments_with_ground_truth(
                 f"{mean_accuracy:.4f}"
             )
 
-    write_records_to_csv(all_records, output_dir / f"node_metrics_{ts}.csv")
-    return all_records
+    all_rows = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if frames:
+        append_csv(all_rows, output_dir / f"node_metrics_{ts}.csv")
+    return all_rows
 
 
 def main(include_scm: bool = True) -> None:

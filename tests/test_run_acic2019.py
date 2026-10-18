@@ -7,13 +7,11 @@ because importing ``run_acic2019`` opens a log file in the CWD.
 import importlib.util
 from pathlib import Path
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 
-import experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic as reference
-from metrics.nodes import NodeMetrics
+from experiments.causal_accuracy import METRICS, causal_accuracy_rows
 
 RUN_ACIC = (
     Path(__file__).resolve().parent.parent / "experiments/acic2019/run_acic2019.py"
@@ -31,61 +29,6 @@ def m(tmp_path_factory):
         yield module
     finally:
         mp.undo()
-
-
-def test_every_ranked_metric_is_a_node_metrics_column(m):
-    G = nx.DiGraph()
-    G.add_weighted_edges_from([("n0", "n1", 4), ("n0", "n2", 2), ("n1", "n3", 3), ("n2", "n3", 1)])
-    labels = ["V3 <= 17.5", "V9 <= 1.5", "V9 > 1.5", "Pred 2.5"]
-    df = NodeMetrics.extract_node_metrics(G, [[f"n{i}", label] for i, label in enumerate(labels)])
-
-    assert set(m.METRICS) <= set(df.columns)
-
-
-def test_extract_top_k_features_matches_reference_apart_from_pred_sinks(m):
-    node_metrics = pd.DataFrame(
-        {
-            "Label": ["V1 <= 1.5", "V2 <= 1.5", "V2 > 1.5", "V2 <= 3.5", "V3 <= 0.5", "Class 1"],
-            "Percolation centrality": [0.9, 0.8, 0.7, 0.6, 0.5, 5.0],
-        }
-    )
-    with_pred = pd.concat(
-        [node_metrics, pd.DataFrame({"Label": ["Pred 9.0"], "Percolation centrality": [7.0]})],
-        ignore_index=True,
-    )
-
-    ours = m.extract_top_k_features(node_metrics, top_k=3, metric="Percolation centrality")
-
-    assert ours == reference.extract_top_k_features(
-        node_metrics, top_k=3, metric="Percolation centrality"
-    )
-    # Top node labels, not summed features: V2 fills two of the three slots.
-    assert ours == ["V1", "V2", "V2"]
-    # Named deviation: Pred sinks are dropped here, kept (as "Pred") by the reference.
-    assert m.extract_top_k_features(with_pred, 3, "Percolation centrality") == ours
-    assert reference.extract_top_k_features(with_pred, 3, "Percolation centrality")[0] == "Pred"
-
-
-def test_causal_accuracy_csv_columns_match_reference(m, tmp_path):
-    path = tmp_path / "acc.csv"
-    m.write_causal_accuracy_to_csv(
-        "run", 3, ["V3"], ["V3"], 0, "Closeness centrality", {"V3"}, 1.0, 1.0, path
-    )
-
-    assert m.TOP_K == reference.TOP_K and m.METRICS == reference.METRICS
-    header = path.read_text().splitlines()[0].split(",")
-    assert header == [
-        "experiment", "split", "k", "ground_truth", "explanation_top_features",
-        "metric", "intersection", "precision", "recall",
-    ]
-
-
-def test_calculate_causal_accuracy(m):
-    inter, precision, recall = m.calculate_causal_accuracy(["V3"], ["V29", "V3", "V27"])
-
-    assert inter == {"V3"}
-    assert precision == pytest.approx(1 / 3)
-    assert recall == 1.0
 
 
 def test_true_cate_dgp64_is_rank_of_age(m):
@@ -144,5 +87,6 @@ def test_build_explanation_runs_on_a_causal_forest(m, tmp_path):
     explanation, _ = m._build_explanation(model, X, "t", 0, tmp_path)
 
     # Regression DPG: communities must stay off or extract_communities raises.
-    assert set(m.METRICS) <= set(explanation.node_metrics.columns)
-    assert m.extract_top_k_features(explanation.node_metrics, 3)
+    rows = causal_accuracy_rows(explanation.node_metrics, ["V3"], "t", 0)
+    assert rows["metric"].tolist() == METRICS
+    assert rows["explanation_top_features"].ne("").all()

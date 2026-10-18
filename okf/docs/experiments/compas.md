@@ -14,7 +14,7 @@ COMPAS is used in "Provable Recovery of Locally Important Signed Features and In
 Forest" (Vuk, Ihlo, Behr; https://arxiv.org/abs/2512.11081v2, Sec. 5.3). That paper is about a random
 forest local-importance method, not DPG; this suite only reuses its dataset and its qualitative finding.
 The structure mirrors [MONK's problems](monks.md): same `METRICS`, top-k scoring, `results/` / `states/`
-outputs.
+outputs, all through the shared [experiments.causal_accuracy](/modules/experiments-causal-accuracy.md) module.
 
 # Reference, not ground truth
 
@@ -39,17 +39,29 @@ score*, not recovery of a cause. The `ground_truth` column keeps the monks name 
 
 `dpg_config` is passed explicitly (`perc_var=0.0001`, `decimal_threshold=3`, igraph backend).
 
+# Outputs
+
+`results/node_metrics_<ts>.csv` in the reference schema (`experiment, split, node, degree, in_degree,
+out_degree`, every `NodeMetrics` column in frame order, `node_idx, label, processing_time`) plus `seed` as
+the **last** column (`node_metrics_rows(..., seed=seed)`); `split` is the seed's index in `SEEDS`, `seed`
+the value. Old files have `node_index`, `in_degree_nodes`, `out_degree_nodes`, `split_idx` and `seed`
+before `processing_time`, see [node_metrics schema change](/side-effects/node-metrics-schema-unification.md).
+`results/causal_accuracy_<ts>.csv` has the reference columns. Both are appended per (seed, model) with LF
+line endings ([why](/side-effects/csv-line-endings-lf.md)); `states/` pickles as before.
+
 # Scoring
 
-Same as the reference `run_dpg_causal_synthetic.py`, copied into the runner the way `run_monk.py` copies it:
-`extract_top_k_features` ranks predicate nodes by the metric (`drop_duplicates=False`), takes the top
-`TOP_K` node labels and maps each to its feature name; `calculate_causal_accuracy` computes precision and recall.
-`METRICS` and the CSV columns (`experiment, split, k, ground_truth, explanation_top_features, metric,
-intersection, precision, recall`) are the reference's.
+The reference scoring, imported from the shared module: `causal_accuracy_rows` ranks predicate nodes by each
+metric, takes the top `TOP_K` node labels, maps each to its feature name and computes precision and recall
+(`extract_top_k_features` and `evaluate_causal_accuracy` underneath). `TOP_K`, `METRICS` and the CSV columns
+(`experiment, split, k, ground_truth, explanation_top_features, metric, intersection, precision, recall`,
+`intersection` sorted) are the reference's.
 
-Named deviation (forced by the data): one-hot dummies are mapped back to their parent feature before scoring
-(`race_Caucasian` -> `race`, via `base_feature_name`), as MONK's does. Unlike MONK's, features are not
-de-duplicated. COMPAS is a classifier, so only `Class` sinks are excluded, as in the reference.
+Named deviation (forced by the data), a call-site keyword: `feature_name=base_feature_name` maps one-hot
+dummies back to their parent feature before scoring (`race_Caucasian` -> `race`), as MONK's does. Unlike
+MONK's, `drop_duplicates` is left at its default, so features are not de-duplicated. `Class` and `Pred`
+labels are both excluded; COMPAS is a classifier, so `Pred` never occurs (before 2026-10-17 only `Class`
+was excluded).
 
 An earlier version summed node scores per feature and wrote a `race_rank` column. Both were removed; they
 are recorded as untested ideas in [per-feature score aggregation](/opportunities/per-feature-score-aggregation.md)

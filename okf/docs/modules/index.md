@@ -22,6 +22,10 @@ centrality implementations `nodes` delegates to).
 * [metrics.edges — EdgeMetrics](metrics-edges.md) - Flattens a DPG's directed edges into a pandas DataFrame carrying each edge's weight plus the resolved source and target predicate labels.
 * [metrics.graph — GraphMetrics](metrics-graph.md) - Graph-level DPG analysis — LPA communities, absorbing-Markov-chain clustering toward class nodes, and per-class feature boundary extraction from predicate labels.
 
+## experiments — shared experiment code
+
+* [experiments.causal_accuracy](experiments-causal-accuracy.md) - The reference causal-accuracy scoring and the node_metrics / causal_accuracy CSV writers shared by every experiment suite; deviations are call-site keywords and adding a metric is one edit to `METRICS`.
+
 ## See also
 
 * [The DPG pipeline](/pipeline.md) - How these modules compose, stage by stage.

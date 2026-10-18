@@ -27,6 +27,12 @@ Ground truth is hard-coded in `SCENARIO_GROUND_TRUTH` in `run_dpg_causal_synthet
 Scoring is set-based (`evaluate_causal_accuracy`): precision `|E ∩ GT| / |E|`, recall `|E ∩ GT| / |GT|`
 with `TOP_K = 3`, repeated for each of `METRICS` — `Local reaching centrality`, `Closeness centrality`,
 `Harmonic centrality`, `Betweenness centrality`, `Collective influence`, `Percolation centrality`.
+This scoring is the reference protocol for every suite. It now lives in
+[`experiments/causal_accuracy.py`](/modules/experiments-causal-accuracy.md) (`TOP_K`, `METRICS`,
+`extract_top_k_features`, `evaluate_causal_accuracy`, `node_metrics_rows`, `causal_accuracy_rows`,
+`append_csv`), and `run_dpg_causal_synthetic.py` imports and re-exports those names. This runner passes
+no deviation keywords. `Class` and `Pred` labels are both excluded (before 2026-10-17 only `Class`; no
+effect here, these are classifier DPGs). Adding a metric means one edit to `METRICS` in the shared module.
 Betweenness is the control for percolation: with equal node states percolation reduces to normalized
 betweenness, so any rank difference comes from the traffic-based states.
 
@@ -145,8 +151,8 @@ uv run python run_dpg_causal_synthetic.py
 ```
 
 There is no argparse and no CLI flag — everything is module-level constants: `RANDOM_STATE = 42`,
-`N_SPLITS = 2`, `TEST_SIZE = 0.2`, `TOP_K = 3`, `MODEL_FACTORIES = {"RandomForest", "ExtraTrees"}`
-(both `random_state=42`, otherwise sklearn defaults). `main()` calls
+`N_SPLITS = 2`, `TEST_SIZE = 0.2`, `MODEL_FACTORIES = {"RandomForest", "ExtraTrees"}`
+(both `random_state=42`, otherwise sklearn defaults); `TOP_K = 3` comes from the shared module. `main()` calls
 `run_experiments_with_ground_truth(SCENARIO_GROUND_TRUTH, OUTPUT_PATH, logger)`.
 Splits come from `StratifiedShuffleSplit(n_splits=2, test_size=0.2, random_state=42)`; the DPG
 explainer is fitted on `X_train.values` only, then `explain_global(communities=True)` is called.
@@ -164,23 +170,30 @@ uv run python experiments/causal_synthetic_scenarios/generator/scenario_3_genera
 
 # Outputs
 
-Written under `results/` and `states/`, both created by `main()` before any experiment runs.
-`write_causal_accuracy_to_csv` does not create its folder, so a caller that bypasses `main()` must
-create `results/` itself; without it every split fails with `FileNotFoundError`, which the per-run
-`except Exception` logs as `Failed:` while the run carries on (that was the case before 2026-09-30):
+Written under `results/` and `states/`, both created by `main()` before any experiment runs. `append_csv`
+creates the parent directory of a CSV itself, so a caller that bypasses `main()` no longer fails with
+`FileNotFoundError` on a missing `results/` (before 2026-10-17 `write_causal_accuracy_to_csv` did not, and
+every split failed, logged as `Failed:` while the run carried on).
 
-- `results/node_metrics_<timestamp>.csv` — one row per graph node per (scenario, model, split), columns
-  from `NodeMetricRecord`: `experiment, split, node, degree, in_degree, out_degree,
-  betweenness_centrality, local_reaching_centrality, closeness_centrality, harmonic_centrality,
-  collective_influence, local_clustering_coefficient, percolation_centrality, node_idx, label,
-  processing_time`. Header written
-  only when the file does not already exist (`write_records_to_csv` opens in `"a+"`).
+- `results/node_metrics_<timestamp>.csv` — one row per graph node per (scenario, model, split):
+  `experiment, split, node, degree, in_degree, out_degree`, then every `NodeMetrics` column in frame order
+  (`betweenness_centrality, local_reaching_centrality, closeness_centrality, harmonic_centrality,
+  collective_influence, local_clustering_coefficient, percolation_centrality`), then `node_idx, label,
+  processing_time` (16 columns today). This is the reference schema that MONK's, ACIC and COMPAS now share.
+  A new `NodeMetrics` column appears here with no edit. **Written once, at the end of the run**, from the
+  rows of all splits (`append_csv`, header only when the file is new); the other suites append per split.
+  A crash mid-run therefore loses this file but not `causal_accuracy`. A run that produced no rows writes no
+  file. Older files in `results/` have 10 or 11 columns (fewer metrics, no `split` in the oldest); see
+  [node_metrics schema change](/side-effects/node-metrics-schema-unification.md).
 - `results/causal_accuracy_<timestamp>.csv` — `experiment, split, k, ground_truth,
-  explanation_top_features, metric, intersection, precision, recall`; list fields `;`-joined.
-  `run_experiments_with_ground_truth` takes one `timestamp()` per run and passes the path down as
-  `file_path`, so every (scenario, model, split, metric) row of a run lands in this one file, which
-  shares its timestamp with that run's `node_metrics_<timestamp>.csv` (before 2026-10-13 each call
-  recomputed `timestamp()` and scattered a run across many tiny files).
+  explanation_top_features, metric, intersection, precision, recall`; list fields `;`-joined and
+  `intersection` **sorted** (it used to follow Python set order). Appended per split, one block of six
+  `METRICS` rows each (`causal_accuracy_rows`). `run_experiments_with_ground_truth` takes one `timestamp()` per
+  run, so every row of a run lands in this one file, which shares its timestamp with that run's
+  `node_metrics_<timestamp>.csv` (before 2026-10-13 each call recomputed `timestamp()` and scattered a run
+  across many tiny files).
+- Line endings are LF; the previous `csv.DictWriter` wrote CRLF, so new files differ byte-wise from old ones
+  with equal content, see [CSV line endings](/side-effects/csv-line-endings-lf.md).
 - `states/<scenario>_<Model>_split<N>_dpg_explainer_<timestamp>.pkl` (pickled `DPGExplainer`) and
   `states/<scenario>_<Model>_split<N>_explanation_<timestamp>.pkl` (pickled `DPGExplanation`), sharing
   one `ts` per split — e.g. `scenario_5_ExtraTrees_split1_explanation_2026-07-26T23-13-17.pkl`.
@@ -193,21 +206,23 @@ grows monotonically because nothing is overwritten or cleaned.
 # Test coverage
 
 `tests/test_run_dpg_causal_synthetic.py` imports
-`experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic` and exercises the pure helpers only:
+`experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic` and exercises the pure helpers:
 `timestamp` (fixed datetime + filesystem safety), `load_dataset` (last column is the target),
-`make_splitter` (reproducibility, `N_SPLITS`), `evaluate_accuracy`, `records_from_explanation` (column
-mapping, types, 4-dp rounding, empty frame), `write_records_to_csv` (roundtrip and no duplicate header),
-`save_pickle`, `mean_or_nan`, `iter_splits`, and `extract_top_k_features` (with and without
-`drop_duplicates`), and `load_dataset` / `scm_ground_truth` on the SCM directory layout.
-`test_records_from_real_node_metrics_have_all_runner_columns` runs the real
-`NodeMetrics.extract_node_metrics` on a tiny graph and checks every `METRICS` name and every
-`NodeMetricRecord` source column exists — a missing column would otherwise raise a `KeyError` that
-the per-run `except Exception` swallows, silently dropping rows. Two hygiene tests assert importing the module has no
-side effects and that `MODEL_FACTORIES` yields fresh instances.
+`make_splitter` (reproducibility, `N_SPLITS`), `evaluate_accuracy`, `save_pickle`, `mean_or_nan`,
+`iter_splits`, and `load_dataset` / `scm_ground_truth` on the SCM directory layout. Two hygiene tests assert
+importing the module has no side effects and that `MODEL_FACTORIES` yields fresh instances.
 
 `test_run_experiments_wiring_with_stubs` drives `run_experiments` end-to-end with `explain_split`
-monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with_ground_truth`, `evaluate_causal_accuracy`, `write_causal_accuracy_to_csv`,
-`_build_explanation`, the generator scripts, or `run_dpg_synthetic.py`.
+monkeypatched out, and `test_run_experiments_with_ground_truth_wiring` drives
+`run_experiments_with_ground_truth` with `_build_explanation` stubbed: node metrics are written once at the
+end, causal accuracy appended per split (`len(acc) == n_runs * len(METRICS)`).
+
+The scoring and the CSV schema themselves are tested in `tests/test_causal_accuracy.py` against the shared
+module, including parity with this runner's re-exported functions (see
+[experiments.causal_accuracy](/modules/experiments-causal-accuracy.md)). The old
+`records_from_explanation`, `write_records_to_csv`, `NodeMetricRecord`, `write_causal_accuracy_to_csv` and
+`save_feature_extraction_results` no longer exist, and neither do their tests. Nothing covers the
+generator scripts or `run_dpg_synthetic.py`.
 
 # Gotchas
 
@@ -219,9 +234,9 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
   on one feature can fill the whole top-k (e.g. `F2;F2;F2`), which caps precision/recall for every
   metric. Repeats are kept so new `causal_accuracy_*.csv` rows stay comparable with the accumulated
   history in `results/`, all of which was produced this way. Pass `drop_duplicates=True` to keep only
-  each feature's best-ranked predicate; the runner's call in `save_feature_extraction_results` does
+  each feature's best-ranked predicate; the runner's call to `causal_accuracy_rows` does
   not pass it, so a default run still writes repeats. Don't compare a de-duplicated run against the
-  history without saying so. MONK's copy of the function always de-duplicates.
+  history without saying so. MONK's passes `drop_duplicates=True` at its call site.
 - **Generators do not write where the runner reads.** All four `scenario_*_generator.py` scripts write
   to `<suite>/test_datasets/` while the runner reads `datasets/`. Regenerating a scenario therefore
   does not update the file the runner uses — copy it across by hand.
@@ -237,7 +252,8 @@ monkeypatched out, so no DPG pipeline runs. Nothing covers `run_experiments_with
   CSVs — check the log before trusting a results file.
 - **Categorical features arrive pre-one-hot.** `scenario_1.csv` already carries `F3_A/F3_B/F3_C`, so
   predicate labels read `F3_B <= 0.5`; `extract_top_k_features` takes the token before the first space
-  and does *not* map one-hot columns back to a source attribute (unlike the MONK's runner). `y` is also
+  and does *not* map one-hot columns back to a source attribute (unlike the MONK's and COMPAS runners,
+  which pass `feature_name=base_feature_name`). `y` is also
   passed whole into `_build_explanation`, so `target_names` come from the full dataset, not the split.
 - Node IDs in `node_metrics_*.csv` are sha1-derived id strings (`"n" + sha1(label)[:12]`), stable only
   for byte-identical labels.

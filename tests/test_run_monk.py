@@ -12,6 +12,7 @@ import networkx as nx
 import pandas as pd
 import pytest
 
+from experiments.causal_accuracy import METRICS
 from metrics.nodes import NodeMetrics
 
 RUN_MONK = Path(__file__).resolve().parent.parent / "experiments/monks/run_monk.py"
@@ -30,7 +31,7 @@ def m(tmp_path_factory):
         mp.undo()
 
 
-def test_every_ranked_metric_is_a_node_metrics_column(m):
+def test_every_ranked_metric_is_a_node_metrics_column():
     edges = [("n0", "n1", 4), ("n0", "n2", 2), ("n1", "n3", 3), ("n2", "n3", 1)]
     G = nx.DiGraph()
     G.add_weighted_edges_from(edges)
@@ -39,35 +40,31 @@ def test_every_ranked_metric_is_a_node_metrics_column(m):
 
     df = NodeMetrics.extract_node_metrics(G, nodes_list)
 
-    assert set(m.METRICS) <= set(df.columns)
+    assert set(METRICS) <= set(df.columns)
 
 
-def test_extract_top_k_features_maps_one_hot_labels_to_attributes(m):
-    node_metrics = pd.DataFrame(
-        {
-            "Label": [
-                "a3_1 <= 0.5",
-                "a5_2 > 0.5",
-                "a5_1 <= 0.5",
-                "a1_3 <= 0.5",
-                "Class 0",
-            ],
-            "Percolation centrality": [0.1, 0.9, 0.5, 0.3, 2.0],
-        }
+def test_run_passes_monk_deviation_keywords_to_shared_scoring(m, monkeypatch, tmp_path):
+    """MONK maps one-hot columns to attributes and de-duplicates them."""
+    node_metrics = pd.DataFrame({"Label": ["a5_2 > 0.5", "Class 0"]})
+    seen = {}
+
+    def fake_rows(nm, gt, experiment, split, **kwargs):
+        seen.update(kwargs)
+        return pd.DataFrame({"experiment": [experiment]})
+
+    monkeypatch.setattr(m, "causal_accuracy_rows", fake_rows)
+    monkeypatch.setattr(m, "node_metrics_rows", lambda *a, **k: pd.DataFrame({"x": [1]}))
+    monkeypatch.setattr(m, "load_dataset", lambda p: (pd.DataFrame({"a1": [1]}), pd.Series([0])))
+    monkeypatch.setattr(m, "pre_process_dataset", lambda *f: list(f))
+    monkeypatch.setattr(m, "evaluate_accuracy", lambda *a: 1.0)
+    monkeypatch.setattr(
+        m, "_build_explanation",
+        lambda **k: (type("E", (), {"node_metrics": node_metrics})(), 0.1),
     )
+    monkeypatch.setattr(m, "MODEL_FACTORIES", {"RF": lambda: type("F", (), {"fit": lambda s, X, y: None})()})
 
-    top = m.extract_top_k_features(
-        node_metrics, top_k=3, metric="Percolation centrality"
-    )
+    m.run_experiments_with_ground_truth([("t.train", "t.test", ["a5"])], tmp_path, m.logger)
 
-    # Class sink excluded; a5 deduplicated to its best-ranked occurrence.
-    assert top == ["a5", "a1", "a3"]
-
-
-def test_new_metric_columns_snake_case_for_node_csv(m):
-    assert m.to_snake_case("Collective influence") == "collective_influence"
-    assert (
-        m.to_snake_case("Local clustering coefficient")
-        == "local_clustering_coefficient"
-    )
-    assert m.to_snake_case("Percolation centrality") == "percolation_centrality"
+    assert seen["feature_name"] is m.base_feature_name
+    assert seen["drop_duplicates"] is True
+    assert m.base_feature_name("a5_2") == "a5"

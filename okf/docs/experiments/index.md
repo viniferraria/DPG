@@ -10,15 +10,21 @@ output, not source.
 * [MONK's problems](monks.md) - Runs the DPG causal-accuracy protocol against the UCI MONK's benchmark, whose target concepts are exactly known, using the benchmark's canonical train/test split.
 * [COMPAS recidivism score](compas.md) - Fits tree ensembles to ProPublica's COMPAS violent-recidivism score and checks DPG feature rankings against the priors/age reference ranking of Vuk et al.; real data, so no ground truth.
 
+All four causal-accuracy suites score and write through one shared module,
+[experiments.causal_accuracy](/modules/experiments-causal-accuracy.md) (reference scoring, `METRICS`,
+`node_metrics` / `causal_accuracy` CSV writers). Suite pages name only what differs: ground-truth source and
+call-site keywords.
+
 ## Test coverage at a glance
 
 | Suite | Package? | Covered by |
 |---|---|---|
 | `causal_synthetic_scenarios/` | no `__init__.py` | `tests/test_run_dpg_causal_synthetic.py` |
 | `local_explanation/` | yes — the only one | `tests/test_smoke.py` |
-| `monks/` | no `__init__.py` | none |
+| `monks/` | no `__init__.py` | `tests/test_run_monk.py` (metric columns, deviation keywords) |
 | `acic2019/` | no `__init__.py` | `tests/test_run_acic2019.py` |
 | `compas/` | no `__init__.py` | `tests/test_run_compas.py` |
+| shared `causal_accuracy.py` | module (no package) | `tests/test_causal_accuracy.py` |
 
 ## See also
 

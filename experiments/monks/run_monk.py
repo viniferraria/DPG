@@ -4,7 +4,6 @@
 """Run DPG explainer experiments across monk datasets.
 """
 
-import csv
 import datetime
 import logging
 import pickle
@@ -22,6 +21,11 @@ from sklearn.metrics import accuracy_score
 
 from dpg import DPGExplainer
 from dpg.explainer import DPGExplanation
+from experiments.causal_accuracy import (
+    append_csv,
+    causal_accuracy_rows,
+    node_metrics_rows,
+)
 
 
 def get_logger(name, log_file=None):
@@ -61,7 +65,6 @@ def get_logger(name, log_file=None):
 
 # --- Configuration -----------------------------------------------------------
 RANDOM_STATE = 42
-TOP_K = 3
 
 SUITE_DIR = Path(__file__).parent
 STATES_DIR = SUITE_DIR / "states"
@@ -84,14 +87,6 @@ SCENARIO_GROUND_TRUTH: list[tuple[str, str, list[str]]] = [
 ]
 SCENARIOS_WITH_GT: list[str] = [train for train, _, _ in SCENARIO_GROUND_TRUTH]
 
-METRICS = [
-    "Local reaching centrality",
-    "Closeness centrality",
-    "Harmonic centrality",
-    "Betweenness centrality",
-    "Collective influence",
-    "Percolation centrality",
-]
 CONFIG_PATH = ((Path(__file__).parent).parent) / "../config.yaml"
 
 # Each entry maps a model name to a zero-arg factory producing a fresh estimator.
@@ -102,17 +97,6 @@ MODEL_FACTORIES: dict[str, ModelFactory] = {
 }
 
 # --- Pure helpers ------------------------------------------------------------
-
-
-def to_snake_case(name: str) -> str:
-    """Normalise a DataFrame column label to snake_case.
-
-    Handles the spaced titles produced by the metrics layer ("In degree nodes")
-    as well as CamelCase, collapsing any run of non-alphanumerics to a single
-    underscore.
-    """
-    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", str(name))
-    return re.sub(r"[^0-9a-zA-Z]+", "_", spaced).strip("_").lower()
 
 
 def timestamp(now: datetime.datetime | None = None) -> str:
@@ -183,193 +167,10 @@ def evaluate_accuracy(model: Any, X_test: Any, y_test: Any) -> float:
     return float(accuracy_score(y_test, model.predict(X_test)))
 
 
-def extract_top_k_features(
-    explanation: pd.DataFrame,
-    top_k: int,
-    metric: str = "Local reaching centrality",
-) -> list[str]:
-    """Return the top-k source attributes by ``metric`` from a DPG explanation.
-
-    Predicate labels are one-hot column names ("a1_2 <= 0.5"), so each is mapped
-    back to its source attribute and de-duplicated — keeping the highest-ranked
-    occurrence — before taking the top ``top_k``. That keeps the result
-    comparable to a ground truth expressed in raw attribute names, and keeps its
-    cardinality at ``top_k`` rather than collapsing duplicates later.
-    """
-    results = explanation[~(explanation["Label"].str.startswith("Class"))].copy()
-    results["Label"] = results["Label"].str.extract(r"([^\s]+)")
-    results["Label"] = results["Label"].map(base_feature_name)
-    top_features = (
-        results.sort_values(by=metric, ascending=False)
-        .drop_duplicates(subset="Label")
-        .head(top_k)["Label"]
-        .tolist()
-    )
-    return top_features
-
-
-def calculate_causal_accuracy(
-    ground_truth: list[str],
-    explanation: list[str],
-) -> tuple[set[str], float, float]:
-    """Return the causal accuracy of an explanation against a ground-truth feature list."""
-    set_gt = set(ground_truth)
-    set_expl = set(explanation)
-
-    # intersection c_k = |E ∩ GT|, where E is the set of top-k features in the explanation and GT
-    intersection_expl_gt = set_expl.intersection(set_gt)  # c_k ∩ c
-    cardinality_intersection_expl_gt = len(intersection_expl_gt)  # |c_k ∩ c|
-
-    cardinality_expl = len(set_expl)  # |c_k|
-    cardinality_gt = len(set_gt)  # |c|
-    precision = (
-        cardinality_intersection_expl_gt / cardinality_expl
-        if cardinality_expl > 0
-        else 0.0
-    )
-    recall = (
-        cardinality_intersection_expl_gt / cardinality_gt if cardinality_gt > 0 else 0.0
-    )
-    return intersection_expl_gt, precision, recall
-
-
-def records_from_explanation(explanation: Any) -> list[dict[str, Any]]:
-    """Convert a DPG explanation's node-metrics frame into a list of dicts.
-
-    Every column of ``explanation.node_metrics`` is carried through as-is, plus
-    the frame's positional index as ``node_index``. Column labels are left in
-    their original form here; :func:`write_records_to_csv` snake-cases them.
-
-    Pure transformation: depends only on its argument, so it can be tested with
-    a lightweight stand-in object exposing a ``node_metrics`` DataFrame.
-    """
-    df = explanation.node_metrics
-    return [
-        {"node_index": node_index, **row.to_dict()}
-        for node_index, row in df.iterrows()
-    ]
-
-
-def write_records_to_csv(
-    records: list[dict[str, Any]],
-    output_path: Path,
-    **fixed_values: Any,
-) -> None:
-    """Append ``records`` to ``output_path`` as CSV, snake-casing the columns.
-
-    Each keyword in ``fixed_values`` becomes a column holding that single value
-    for every row — used for per-split constants such as ``experiment``,
-    ``split_idx`` and ``processing_time``. The header is written only when the
-    file does not yet exist, so repeated calls append to one file.
-    """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    df = pd.DataFrame(records)
-    for column, value in fixed_values.items():
-        df[column] = value
-    df.columns = [to_snake_case(column) for column in df.columns]
-    df.to_csv(
-        output_path,
-        mode="a",
-        header=not output_path.exists(),
-        index=False,
-    )
-
-
 def save_pickle(obj: Any, path: Path) -> None:
     """Pickle ``obj`` to ``path``."""
     with open(path, "wb") as f:
         pickle.dump(obj, f)
-
-
-def write_causal_accuracy_to_csv(
-    run_key: str,
-    k: int,
-    ground_truth: list[str],
-    explanation_top_features: list[str],
-    split_idx: int,
-    metric: str,
-    intersection: set[str],
-    precision: float,
-    recall: float,
-    file_path: Path,
-) -> None:
-    """Append a row with causal accuracy metrics to the CSV at ``file_path``."""
-    fieldnames = [
-        "experiment",
-        "split",
-        "k",
-        "ground_truth",
-        "explanation_top_features",
-        "metric",
-        "intersection",
-        "precision",
-        "recall",
-    ]
-    file_exists = file_path.exists()
-    with open(file_path, "a+", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        if not file_exists:
-            writer.writeheader()
-
-        writer.writerow({
-            "experiment": run_key,
-            "split": split_idx,
-            "k": k,
-            "ground_truth": ";".join(ground_truth),
-            "explanation_top_features": ";".join(explanation_top_features),
-            "metric": metric,
-            "intersection": ";".join(intersection),
-            "precision": precision,
-            "recall": recall,
-        })
-
-
-
-def evaluate_causal_accuracy(
-    explanation: pd.DataFrame,
-    gt_features: list[str],
-    metric_name: str,
-) -> tuple[list[str], set[str], float, float]:
-    explanation_top_features = extract_top_k_features(
-        explanation=explanation,
-        top_k=TOP_K,
-        metric=metric_name,
-    )
-    intersection, precision, recall = calculate_causal_accuracy(
-        ground_truth=gt_features,
-        explanation=explanation_top_features,
-    )
-    return explanation_top_features, intersection, precision, recall
-
-
-def extract_causal_accuracy_to_file(
-    explanation: pd.DataFrame,
-    gt_features: list[str],
-    run_key: str,
-    split_idx: int,
-    metric_name: str,
-    file_path: Path,
-) -> None:
-    """Extract causal accuracy metrics from an explanation and append them to ``file_path``."""
-    explanation_top_features, intersection, precision, recall = evaluate_causal_accuracy(
-        explanation=explanation,
-        gt_features=gt_features,
-        metric_name=metric_name,
-    )
-
-    write_causal_accuracy_to_csv(
-        run_key=run_key,
-        k=TOP_K,
-        ground_truth=gt_features,
-        explanation_top_features=explanation_top_features,
-        split_idx=split_idx,
-        metric=metric_name,
-        intersection=intersection,
-        precision=precision,
-        recall=recall,
-        file_path=file_path,
-    )
 
 
 # --- Orchestration (impure shell) -------------------------------------------
@@ -461,24 +262,26 @@ def run_experiments_with_ground_truth(
                     run_key=run_key,
                     split_idx=split_idx,
                 )
-                records = records_from_explanation(explanation)
-                write_records_to_csv(
-                    records,
+                append_csv(
+                    node_metrics_rows(
+                        explanation,
+                        run_key,
+                        split_idx,
+                        processing_time,
+                    ),
                     node_metrics_path,
-                    experiment=run_key,
-                    split_idx=split_idx,
-                    processing_time=round(processing_time, 4),
                 )
-
-                for metric_name in METRICS:
-                    extract_causal_accuracy_to_file(
-                        explanation=explanation.node_metrics,
-                        gt_features=gt_features,
-                        run_key=run_key,
-                        split_idx=split_idx,
-                        metric_name=metric_name,
-                        file_path=accuracy_path,
-                    )
+                append_csv(
+                    causal_accuracy_rows(
+                        explanation.node_metrics,
+                        gt_features,
+                        run_key,
+                        split_idx,
+                        feature_name=base_feature_name,
+                        drop_duplicates=True,
+                    ),
+                    accuracy_path,
+                )
 
             except Exception as exc:  # noqa: BLE001 - keep batch resilient
                 logger.error(f"Failed: {run_key}: {exc}")

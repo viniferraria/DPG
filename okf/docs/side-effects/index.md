@@ -32,6 +32,11 @@ that was actually executed.
 * [regression-sink-collisions](regression-sink-collisions.md) - A regression sink is only as unique as its 2-decimal rounded leaf value; distinct leaves with distinct predictions can collide into one graph sink.
 * [binary-feature-hub-nodes](binary-feature-hub-nodes.md) - On RandomForest DPGs a 0/1 column merges into two hub nodes that top betweenness, collective influence and percolation even when the model ignores it; continuous features fragment into hundreds of nodes.
 
+## Experiment output changes (2026-10-17)
+
+* [node-metrics-schema-unification](node-metrics-schema-unification.md) - MONK's, ACIC and COMPAS `node_metrics` CSVs now use the reference header; old files keep the old names, so mixing them needs a rename (rename mapping and a DuckDB/pandas recipe inside).
+* [csv-line-endings-lf](csv-line-endings-lf.md) - `append_csv` writes LF where the old `csv.DictWriter` wrote CRLF, so new files are not byte-identical to old ones although the content is equal.
+
 ## See also
 
 * [dpg.core](/modules/dpg-core.md) - Where most of these behaviors are implemented.

@@ -11,7 +11,7 @@ import networkx as nx
 import pandas as pd
 import pytest
 
-import experiments.causal_synthetic_scenarios.run_dpg_causal_synthetic as reference
+from experiments import causal_accuracy as shared
 from metrics.nodes import NodeMetrics
 
 RUN_COMPAS = (
@@ -37,58 +37,19 @@ def test_every_ranked_metric_is_a_node_metrics_column(m):
 
     df = NodeMetrics.extract_node_metrics(G, nodes_list)
 
-    assert set(m.METRICS) <= set(df.columns)
+    assert set(shared.METRICS) <= set(df.columns)
 
 
-def test_extract_top_k_features_matches_reference_apart_from_one_hot_mapping(m):
+def test_one_hot_mapping_passed_as_feature_name(m):
     node_metrics = pd.DataFrame(
         {
-            "Label": [
-                "age <= 30.5",
-                "race_African-American <= 0.5",
-                "priors_count <= 2.5",
-                "race_Caucasian > 0.5",
-                "Class 1",
-            ],
-            "Local reaching centrality": [0.9, 0.8, 0.7, 0.6, 9.0],
+            "Label": ["age <= 30.5", "race_Caucasian > 0.5", "Class 1"],
+            "Local reaching centrality": [0.9, 0.8, 9.0],
         }
     )
-    metric = "Local reaching centrality"
-
-    ours = m.extract_top_k_features(node_metrics, 4, metric)
-
-    # Reference output, with the named deviation applied afterwards: dummies -> parent.
-    expected = [
-        m.base_feature_name(label)
-        for label in reference.extract_top_k_features(node_metrics, 4, metric)
-    ]
-    assert ours == expected == ["age", "race", "priors_count", "race"]
-    # Without dummies the two functions agree exactly.
-    plain = node_metrics[~node_metrics["Label"].str.startswith("race")]
-    assert m.extract_top_k_features(plain, 2, metric) == reference.extract_top_k_features(
-        plain, 2, metric
-    )
-
-
-def test_causal_accuracy_csv_columns_match_reference(m, tmp_path):
-    written = tmp_path / "acc.csv"
-    m.write_causal_accuracy_to_csv(
-        "run", 3, ["age"], ["age"], 0, "Closeness centrality", {"age"}, 1.0, 1.0, written
-    )
-
-    assert m.TOP_K == reference.TOP_K and m.METRICS == reference.METRICS
-    assert written.read_text().splitlines()[0].split(",") == [
-        "experiment", "split", "k", "ground_truth", "explanation_top_features",
-        "metric", "intersection", "precision", "recall",
-    ]
-
-
-def test_calculate_causal_accuracy_against_reference(m):
-    inter, precision, recall = m.calculate_causal_accuracy(
-        m.REFERENCE_FEATURES, ["priors_count", "race"]
-    )
-    assert inter == {"priors_count"}
-    assert (precision, recall) == (0.5, 0.5)
+    assert shared.extract_top_k_features(
+        node_metrics, 2, feature_name=m.base_feature_name
+    ) == ["age", "race"]
 
 
 def test_base_feature_name_keeps_underscored_numeric_features(m):
