@@ -4,6 +4,7 @@ These calls are the reference definitions of the DPG node centralities; every
 other backend must reproduce them to an absolute tolerance of 1e-3.
 """
 
+from fractions import Fraction
 from typing import Any, ClassVar
 
 import networkx as nx
@@ -12,11 +13,15 @@ import numpy as np
 from .base import GraphBackend, NodeCentralities, percolation_states
 
 
-def _distance_graph(dpg_model: nx.DiGraph) -> tuple[nx.DiGraph, float]:
+def _distance_graph(
+    dpg_model: nx.DiGraph, exact: bool = False
+) -> tuple[nx.DiGraph, float]:
     """Copy the graph with a ``dist = total_weight / w`` attribute per edge.
 
     Heavier edges mean *closer* nodes, so the raw frequency weights are
-    inverted before any shortest-path based metric is computed.
+    inverted before any shortest-path based metric is computed. With
+    ``exact`` the distances are ``Fraction``s, so mathematically tied shortest
+    paths stay tied (float sums of ``total_weight / w`` break such ties).
     """
     total_weight = float(
         sum(data.get("weight", 1.0) for _, _, data in dpg_model.edges(data=True))
@@ -25,9 +30,13 @@ def _distance_graph(dpg_model: nx.DiGraph) -> tuple[nx.DiGraph, float]:
     distance_graph.add_nodes_from(dpg_model.nodes())
     for u, v, data in dpg_model.edges(data=True):
         weight = data.get("weight", 1.0)
-        distance_graph.add_edge(
-            u, v, dist=total_weight / weight if weight > 0 else float("inf")
-        )
+        if weight <= 0:
+            dist: Any = float("inf")
+        elif exact:
+            dist = Fraction(total_weight) / Fraction(weight)
+        else:
+            dist = total_weight / weight
+        distance_graph.add_edge(u, v, dist=dist)
     return distance_graph, total_weight
 
 
@@ -62,8 +71,11 @@ def _percolation(dpg_model: nx.DiGraph, states: dict[Any, float]) -> dict[Any, f
     # those entries are overwritten below.
     np_states = {node: np.float64(value) for node, value in states.items()}
     total = sum(np_states.values())
+    distance_graph, _ = _distance_graph(dpg_model, exact=True)
     with np.errstate(divide="ignore", invalid="ignore"):
-        raw = nx.percolation_centrality(dpg_model, states=np_states, weight="weight")
+        raw = nx.percolation_centrality(
+            distance_graph, states=np_states, weight="dist"
+        )
     return {
         node: float(raw[node]) if total - np_states[node] != 0 else 0.0
         for node in dpg_model.nodes()
@@ -83,8 +95,9 @@ class NetworkXBackend(GraphBackend):
         # graph to obtain the outgoing variant DPG uses.
         reversed_graph = distance_graph.reverse(copy=True)
 
+        exact_graph, _ = _distance_graph(dpg_model, exact=True)
         betweenness: dict[Any, float] = nx.betweenness_centrality(
-            dpg_model, normalized=True, weight="weight"
+            exact_graph, normalized=True, weight="dist"
         )
         closeness: dict[Any, float] = nx.closeness_centrality(
             reversed_graph, distance="dist", wf_improved=True

@@ -26,7 +26,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 
 from dpg import DPGExplainer
 from dpg.explainer import DPGExplanation
-from experiments.causal_accuracy import (  # noqa: F401 - re-exported for the other suites' tests
+from experiments.causal_accuracy import (
     append_csv,
     causal_accuracy_rows,
     node_metrics_rows,
