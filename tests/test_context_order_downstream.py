@@ -63,7 +63,7 @@ def test_to_networkx_two_tuple_shape_preserved(context_order):
     explainer = DPGExplainer(model, iris.feature_names, target_names=target_names, dpg_config=_config(context_order))
     explainer.fit(iris.data)
 
-    result = explainer.builder.to_networkx(explainer._dot)
+    result = explainer.builder.to_networkx()
     assert isinstance(result, tuple)
     assert len(result) == 2
     graph, nodes = result
